@@ -1,21 +1,58 @@
 use std::path::PathBuf;
 
 use clap::Parser;
+use serde::Serialize;
+use serde_with::{serde_as, skip_serializing_none, NoneAsEmptyString};
+use tracing::level_filters::LevelFilter;
 
-use crate::utils::version;
+const VERSION_MESSAGE: &str =
+  concat!(env!("CARGO_PKG_VERSION"), "-", env!("VERGEN_GIT_DESCRIBE"), " (", env!("VERGEN_BUILD_DATE"), ")");
 
-#[derive(Parser, Debug)]
-#[command(author, version = version(), about)]
+pub fn version() -> String {
+  let author = clap::crate_authors!();
+
+  format!(
+    "\
+{VERSION_MESSAGE}
+
+Authors: {author}
+
+"
+  )
+}
+
+/// Command line arguments.
+///
+/// Implements Serialize so that we can use it as a source for Figment configuration.
+#[serde_as]
+#[skip_serializing_none]
+#[derive(Debug, Default, Parser, Serialize)]
+#[command(author, version = version(), about, long_about = None)]
 pub struct Cli {
   #[arg(short, long, value_name = "FLOAT", help = "Tick rate, i.e. number of ticks per second", default_value_t = 1.0)]
   pub tick_rate: f64,
+
+  /// A path to a crates-tui configuration file.
+  #[arg(short, long, value_name = "FILE")]
+  pub config: Option<PathBuf>,
 
   #[arg(
     short,
     long,
     value_name = "FLOAT",
     help = "Frame rate, i.e. number of frames per second",
-    default_value_t = 20.0
+    default_value_t = 15.0
   )]
   pub frame_rate: f64,
+
+  /// The directory to use for storing application data.
+  #[arg(long, value_name = "DIR")]
+  pub data_dir: Option<PathBuf>,
+
+  /// The log level to use.
+  ///
+  /// Valid values are: error, warn, info, debug, trace, off. The default is info.
+  #[arg(long, value_name = "LEVEL", default_value = "info", alias = "log")]
+  #[serde_as(as = "NoneAsEmptyString")]
+  pub log_level: Option<LevelFilter>,
 }

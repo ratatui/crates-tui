@@ -1,12 +1,10 @@
 use std::{
   cell::RefCell,
-  collections::HashMap,
   rc::Rc,
   sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
   },
-  time::Duration,
 };
 
 use color_eyre::eyre::Result;
@@ -14,15 +12,13 @@ use crossterm::event::{KeyCode, KeyEvent};
 use itertools::Itertools;
 use num_format::{Locale, ToFormattedString};
 use ratatui::{prelude::*, style::palette::tailwind::*, widgets::*};
-use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::UnboundedSender;
 use tui_input::backend::crossterm::EventHandler;
 
-use crate::{action::Action, config, mode::Mode, tui::Event};
+use crate::{action::Action, config, mode::Mode};
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Picker {
-  command_tx: Option<UnboundedSender<Action>>,
   action_tx: Option<UnboundedSender<Action>>,
   mode: Rc<RefCell<Mode>>,
   last_events: Vec<KeyEvent>,
@@ -152,19 +148,19 @@ impl Picker {
         all_crates.sort_by(|a, b| b.downloads.cmp(&a.downloads));
         crates.lock().unwrap().drain(0..);
         *crates.lock().unwrap() = all_crates;
-        if let Some(action_tx) = action_tx {
+        if let Some(tx) = action_tx {
           if crates.lock().unwrap().len() > 0 {
-            action_tx.send(Action::StoreTotalNumberOfCrates(page.meta.total)).unwrap_or_default();
-            action_tx.send(Action::Tick).unwrap_or_default();
-            action_tx.send(Action::MoveSelectionNext).unwrap_or_default();
+            tx.send(Action::StoreTotalNumberOfCrates(page.meta.total)).unwrap_or_default();
+            tx.send(Action::Tick).unwrap_or_default();
+            tx.send(Action::MoveSelectionNext).unwrap_or_default();
           } else {
-            action_tx.send(Action::Error("Something went wrong".into())).unwrap_or_default();
+            tx.send(Action::Error("Something went wrong".into())).unwrap_or_default();
           }
         }
         loading_status.store(false, Ordering::SeqCst);
       } else {
-        if let Some(action_tx) = action_tx {
-          action_tx.send(Action::Error("Something went wrong".into())).unwrap_or_default();
+        if let Some(tx) = action_tx {
+          tx.send(Action::Error("Something went wrong".into())).unwrap_or_default();
         }
         loading_status.store(false, Ordering::SeqCst);
       }
@@ -184,6 +180,7 @@ impl Picker {
     } else {
       return;
     };
+    let action_tx = self.action_tx.clone();
     if !name.is_empty() {
       let crate_info = self.crate_info.clone();
       tokio::spawn(async move {
@@ -194,7 +191,11 @@ impl Picker {
         .unwrap();
         match client.get_crate(&name).await {
           Ok(_crate_info) => *crate_info.lock().unwrap() = Some(_crate_info.crate_data),
-          Err(err) => {},
+          Err(_err) => {
+            if let Some(tx) = action_tx {
+              tx.send(Action::Error("Unable to get crate information".into())).unwrap_or_default()
+            }
+          },
         }
       });
     }
@@ -295,14 +296,7 @@ impl Picker {
     Ok(None)
   }
 
-  pub fn handle_events(&mut self, evt: Event) -> Result<Option<Action>> {
-    if let Event::Key(key) = evt {
-      return self.handle_key_events(key);
-    }
-    Ok(None)
-  }
-
-  pub fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+  pub fn handle_key_events(&mut self, key: KeyEvent, last_key_events: &[KeyEvent]) -> Result<Option<Action>> {
     let cmd = match *self.mode.borrow() {
       Mode::Picker => {
         match key.code {
@@ -312,10 +306,9 @@ impl Picker {
           KeyCode::Char('j') | KeyCode::Down => Action::MoveSelectionNext,
           KeyCode::Char('k') | KeyCode::Up => Action::MoveSelectionPrevious,
           KeyCode::Char('g') => {
-            if let Some(KeyEvent { code: KeyCode::Char('g'), .. }) = self.last_events.last() {
+            if let Some(KeyEvent { code: KeyCode::Char('g'), .. }) = last_key_events.last() {
               Action::MoveSelectionTop
             } else {
-              self.last_events.push(key.clone());
               return Ok(None);
             }
           },
@@ -406,7 +399,6 @@ impl Picker {
 
   pub fn render_table(&mut self, f: &mut Frame, area: Rect) {
     let selected_style = Style::default();
-    let normal_style = Style::default().bg(Color::White).fg(Color::Black);
     let header = Row::new(
       ["Name", "Description", "Downloads", "Last Updated"]
         .iter()
@@ -416,8 +408,12 @@ impl Picker {
     .height(3);
     let highlight_symbol = if *self.mode.borrow() == Mode::Picker { " \u{2022} " } else { "   " };
 
-    let widths = [Constraint::Max(20), Constraint::Min(0), Constraint::Max(10), Constraint::Max(20)];
-    let [_, size, _, _] = Layout::horizontal(&widths).spacing(2).areas(area);
+    let widths =
+      [Constraint::Length(1), Constraint::Max(20), Constraint::Min(0), Constraint::Max(10), Constraint::Max(20)];
+
+    let (areas, spacers) =
+      Layout::horizontal(&widths).spacing(1).split_with_spacers(area.inner(&Margin { horizontal: 1, vertical: 0 }));
+    let size = areas[2];
 
     let crates = self.filtered_crates.clone();
     let rows = crates.iter().enumerate().map(|(i, item)| {
@@ -447,13 +443,29 @@ impl Picker {
       })
       .height(3)
     });
+
+    let widths = [Constraint::Max(20), Constraint::Min(0), Constraint::Max(10), Constraint::Max(20)];
     let table_widget = Table::new(rows, widths)
       .header(header)
       .column_spacing(1)
       .highlight_style(selected_style)
-      .highlight_symbol(Text::from(vec!["".into(), " █ ".into(), "".into()]))
+      .highlight_symbol(Text::from(vec!["".into(), highlight_symbol.into(), "".into()]))
       .highlight_spacing(HighlightSpacing::Always);
     f.render_stateful_widget(table_widget, area, &mut self.state);
+    for space in spacers.iter().skip(2).cloned() {
+      f.render_widget(
+        Text::from(
+          std::iter::once(" ")
+            .chain(std::iter::once(" "))
+            .chain(std::iter::once(" "))
+            .chain(std::iter::repeat("│").take(space.height.into()))
+            .map(Line::from)
+            .collect_vec(),
+        )
+        .style(Style::default().fg(Color::DarkGray)),
+        space,
+      );
+    }
   }
 
   fn background(&self) -> impl Widget {
@@ -462,7 +474,11 @@ impl Picker {
 
   fn render_scrollbar(&mut self, f: &mut Frame<'_>, area: Rect) {
     let mut state = self.scrollbar_state;
-    f.render_stateful_widget(Scrollbar::default().begin_symbol(None).end_symbol(None), area, &mut state);
+    f.render_stateful_widget(
+      Scrollbar::default().track_symbol(Some(" ")).begin_symbol(None).end_symbol(None),
+      area,
+      &mut state,
+    );
   }
 
   fn input_block(&self) -> impl Widget {
@@ -527,6 +543,9 @@ impl Picker {
 
     let [table, input] = Layout::vertical([Constraint::Fill(0), Constraint::Length(5)]).areas(area);
 
+    let [table, scrollbar] = Layout::horizontal([Constraint::Fill(0), Constraint::Length(1)]).areas(table);
+    self.render_scrollbar(f, scrollbar);
+
     let table = if self.show_crate_info {
       let [table, info] = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(table);
       self.render_crate_info(f, info);
@@ -534,10 +553,8 @@ impl Picker {
     } else {
       table
     };
-    self.render_table(f, table);
 
-    let [table, scrollbar] = Layout::horizontal([Constraint::Fill(0), Constraint::Length(1)]).areas(table);
-    self.render_scrollbar(f, scrollbar);
+    self.render_table(f, table);
 
     self.render_input(f, input);
     self.render_cursor(f, input);

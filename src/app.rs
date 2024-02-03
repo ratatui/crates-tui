@@ -3,28 +3,28 @@ use std::{cell::RefCell, rc::Rc};
 use color_eyre::eyre::{Context, Result};
 use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
-use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 
 use crate::{
   action::Action,
-  config::Config,
   mode::Mode,
   picker::Picker,
   tui::{self, Tui},
 };
 
+#[derive(Debug, Default)]
 pub struct App {
   pub should_quit: bool,
   pub mode: Rc<RefCell<Mode>>,
   pub picker: Picker,
+  pub last_tick_key_events: Vec<KeyEvent>,
 }
 
 impl App {
   pub fn new() -> Result<Self> {
     let mode = Rc::new(RefCell::new(Mode::PickerSearchQueryEditing));
     let picker = Picker::new(mode.clone());
-    Ok(Self { should_quit: Default::default(), mode, picker })
+    Ok(Self { mode, picker, ..Default::default() })
   }
 
   pub async fn run(&mut self, tui: &mut Tui) -> Result<()> {
@@ -43,9 +43,10 @@ impl App {
           tui::Event::Resize(x, y) => action_tx.send(Action::Resize(x, y))?,
           tui::Event::Key(key) => {
             log::debug!("Received key {:?}", key);
-            if let Some(action) = self.picker.handle_events(e.clone())? {
+            if let Some(action) = self.picker.handle_key_events(key, &self.last_tick_key_events)? {
               action_tx.send(action)?;
             }
+            self.last_tick_key_events.push(key);
           },
           _ => {},
         }
@@ -59,7 +60,9 @@ impl App {
           action_tx.send(action)?
         };
         match action {
-          Action::Tick => {},
+          Action::Tick => {
+            self.last_tick_key_events.drain(..);
+          },
           Action::Quit => self.should_quit = true,
           Action::Resize(w, h) => {
             tui.resize(Rect::new(0, 0, w, h))?;

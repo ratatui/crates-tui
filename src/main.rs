@@ -1,26 +1,16 @@
-#![allow(dead_code)]
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-#![feature(iter_intersperse)]
-
 pub mod action;
 pub mod app;
 pub mod cli;
 pub mod config;
+pub mod errors;
+pub mod logging;
 pub mod mode;
 pub mod picker;
 pub mod tui;
-pub mod utils;
 
-use clap::Parser;
-use cli::Cli;
 use color_eyre::eyre::Result;
-use config::initialize_config;
 
-use crate::{
-  app::App,
-  utils::{initialize_logging, initialize_panic_handler, version},
-};
+use crate::{app::App, config::initialize_config, errors::initialize_panic_handler, logging::initialize_logging};
 
 async fn tokio_main() -> Result<()> {
   initialize_config()?;
