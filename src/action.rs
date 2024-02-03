@@ -20,6 +20,8 @@ pub enum Action {
   GetCrates,
   EnterSearchQueryInsert,
   EnterFilterInsert,
+  IncrementPage,
+  DecrementPage,
   EnterNormal,
   MoveSelectionBottom,
   MoveSelectionTop,
@@ -30,4 +32,6 @@ pub enum Action {
   ShowPicker,
   ReloadData,
   ToggleShowHelp,
+  ToggleShowCrateInfo,
+  StoreTotalNumberOfCrates(u64),
 }

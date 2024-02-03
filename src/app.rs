@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use color_eyre::eyre::Result;
+use color_eyre::eyre::{Context, Result};
 use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
 use serde::{Deserialize, Serialize};
@@ -30,6 +30,8 @@ impl App {
   pub async fn run(&mut self, tui: &mut Tui) -> Result<()> {
     let (action_tx, mut action_rx) = mpsc::unbounded_channel();
 
+    self.picker.register_action_handler(action_tx.clone())?;
+
     tui.enter()?;
 
     loop {
@@ -53,29 +55,29 @@ impl App {
         if action != Action::Tick && action != Action::Render {
           log::debug!("{action:?}");
         }
+        if let Some(action) = self.picker.update(action.clone())? {
+          action_tx.send(action)?
+        };
         match action {
           Action::Tick => {},
           Action::Quit => self.should_quit = true,
           Action::Resize(w, h) => {
             tui.resize(Rect::new(0, 0, w, h))?;
-            tui.draw(|f| {
-              let r = self.picker.draw(f, f.size());
-              r.unwrap();
-            })?;
+            action_tx.send(Action::Render)?;
           },
           Action::Render => {
             tui.draw(|f| {
               let r = self.picker.draw(f, f.size());
               if let Err(e) = r {
-                action_tx.send(Action::Error(format!("Failed to draw: {:?}", e))).unwrap();
+                action_tx
+                  .send(Action::Error(format!("Failed to draw: {:?}", e)))
+                  .with_context(|| "Unable to send error message on action channel")
+                  .unwrap();
               }
             })?;
           },
           _ => {},
         }
-        if let Some(action) = self.picker.update(action.clone())? {
-          action_tx.send(action)?
-        };
       }
       if self.should_quit {
         tui.stop()?;

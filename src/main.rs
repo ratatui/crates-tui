@@ -6,7 +6,6 @@
 pub mod action;
 pub mod app;
 pub mod cli;
-pub mod color;
 pub mod config;
 pub mod mode;
 pub mod picker;

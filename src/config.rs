@@ -7,6 +7,7 @@ use figment::{
   providers::{Env, Format, Serialized, Toml},
   Figment,
 };
+use ratatui::style::palette::tailwind::*;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, skip_serializing_none, DisplayFromStr, NoneAsEmptyString};
 use tracing::level_filters::LevelFilter;
@@ -74,12 +75,28 @@ pub struct Config {
   pub tick_rate: f64,
 
   pub frame_rate: f64,
+
+  #[serde_as(as = "DisplayFromStr")]
+  pub background_color: ratatui::style::Color,
+
+  #[serde_as(as = "DisplayFromStr")]
+  pub search_query_outline_color: ratatui::style::Color,
+
+  #[serde_as(as = "DisplayFromStr")]
+  pub filter_query_outline_color: ratatui::style::Color,
 }
 
 impl Default for Config {
   fn default() -> Self {
-    let data_dir = default_data_dir();
-    Self { data_dir, log_level: LevelFilter::INFO, tick_rate: 1.0, frame_rate: 4.0 }
+    Self {
+      data_dir: default_data_dir(),
+      log_level: LevelFilter::INFO,
+      tick_rate: 1.0,
+      frame_rate: 4.0,
+      background_color: GRAY.c900,
+      search_query_outline_color: GREEN.c400,
+      filter_query_outline_color: GREEN.c400,
+    }
   }
 }
 
