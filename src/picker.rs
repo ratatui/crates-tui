@@ -134,7 +134,6 @@ impl Picker {
     let page = self.page.clamp(1, u64::MAX);
     let page_size = self.page_size;
     tokio::spawn(async move {
-      crates.lock().unwrap().drain(0..);
       loading_status.store(true, Ordering::SeqCst);
       let client =
         crates_io_api::AsyncClient::new("crates-tui (crates-tui@kdheepak.com)", std::time::Duration::from_millis(1000))
@@ -151,6 +150,7 @@ impl Picker {
           all_crates.push(_crate.clone())
         }
         all_crates.sort_by(|a, b| b.downloads.cmp(&a.downloads));
+        crates.lock().unwrap().drain(0..);
         *crates.lock().unwrap() = all_crates;
         if let Some(action_tx) = action_tx {
           if crates.lock().unwrap().len() > 0 {
