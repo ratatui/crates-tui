@@ -404,7 +404,7 @@ impl Picker {
         .iter()
         .map(|h| Text::from(vec![Line::from(""), Line::from(h.bold()), Line::from("")])),
     )
-    .bg(GRAY.c900)
+    .bg(config::get().background_color)
     .height(3);
     let highlight_symbol = if *self.mode.borrow() == Mode::Picker { " \u{2022} " } else { "   " };
 
@@ -437,8 +437,8 @@ impl Picker {
         ]),
       ])
       .bg(match i % 2 {
-        0 => GRAY.c900,
-        1 => GRAY.c800,
+        0 => config::get().row_background_color_1,
+        1 => config::get().row_background_color_2,
         _ => unreachable!("Cannot reach this line"),
       })
       .height(3)

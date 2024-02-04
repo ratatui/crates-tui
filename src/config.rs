@@ -42,6 +42,12 @@ pub struct Config {
 
   #[serde_as(as = "DisplayFromStr")]
   pub filter_query_outline_color: ratatui::style::Color,
+
+  #[serde_as(as = "DisplayFromStr")]
+  pub row_background_color_1: ratatui::style::Color,
+
+  #[serde_as(as = "DisplayFromStr")]
+  pub row_background_color_2: ratatui::style::Color,
 }
 
 impl Default for Config {
@@ -54,6 +60,8 @@ impl Default for Config {
       background_color: GRAY.c900,
       search_query_outline_color: GREEN.c400,
       filter_query_outline_color: GREEN.c400,
+      row_background_color_1: GRAY.c900,
+      row_background_color_2: GRAY.c800,
     }
   }
 }
