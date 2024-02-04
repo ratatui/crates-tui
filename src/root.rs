@@ -464,72 +464,75 @@ impl Root {
   }
 
   pub fn render_crates_table(&mut self, f: &mut Frame, area: Rect) {
-    let selected_style = Style::default();
-    let header = Row::new(
-      ["Name", "Description", "Downloads", "Last Updated"]
-        .iter()
-        .map(|h| Text::from(vec![Line::from(""), Line::from(h.bold()), Line::from("")])),
-    )
-    .bg(config::get().background_color)
-    .height(3);
-    let highlight_symbol = if self.mode == Mode::Picker { " \u{2022} " } else { "   " };
-
     let widths =
       [Constraint::Length(1), Constraint::Max(20), Constraint::Min(0), Constraint::Max(10), Constraint::Max(20)];
-
     let (areas, spacers) =
       Layout::horizontal(&widths).spacing(1).split_with_spacers(area.inner(&Margin { horizontal: 1, vertical: 0 }));
-    let size = areas[2];
+    let description_area = areas[2];
+    let text_wrap_width = description_area.width as usize;
 
-    let crates = self.filtered_crates.clone();
-    let rows = crates.iter().enumerate().map(|(i, item)| {
-      let desc = item.description.clone().unwrap_or_default();
-      let mut desc = textwrap::wrap(&desc, size.width as usize).iter().map(|s| Line::from(s.to_string())).collect_vec();
-      desc.insert(0, Line::from(""));
-      let height = desc.len();
-      Row::new([
-        Text::from(vec![Line::from(""), Line::from(item.name.clone()), Line::from("")]),
-        Text::from(desc),
-        Text::from(vec![Line::from(""), Line::from(item.downloads.to_formatted_string(&Locale::en)), Line::from("")]),
-        Text::from(vec![
-          Line::from(""),
-          Line::from(item.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-          Line::from(""),
-        ]),
-      ])
-      .bg(match i % 2 {
-        0 => config::get().row_background_color_1,
-        1 => config::get().row_background_color_2,
-        _ => unreachable!("Cannot reach this line"),
-      })
-      .height(height.saturating_add(1) as u16)
-    });
+    let table_widget = {
+      let selected_style = Style::default();
+      let header = Row::new(
+        ["Name", "Description", "Downloads", "Last Updated"]
+          .iter()
+          .map(|h| Text::from(vec!["".into(), Line::from(h.bold()), "".into()])),
+      )
+      .bg(config::get().background_color)
+      .height(3);
+      let highlight_symbol = if self.mode == Mode::Picker { " \u{2022} " } else { "   " };
 
-    let widths = [Constraint::Max(20), Constraint::Min(0), Constraint::Max(10), Constraint::Max(20)];
-    let table_widget = Table::new(rows, widths)
-      .header(header)
-      .column_spacing(1)
-      .highlight_style(selected_style)
-      .highlight_symbol(Text::from(vec!["".into(), highlight_symbol.into(), "".into()]))
-      .highlight_spacing(HighlightSpacing::Always);
+      let crates = self.filtered_crates.clone();
+      let rows = crates.iter().enumerate().map(|(i, item)| {
+        let mut desc = textwrap::wrap(&item.description.clone().unwrap_or_default(), text_wrap_width)
+          .iter()
+          .map(|s| Line::from(s.to_string()))
+          .collect_vec();
+        desc.insert(0, "".into());
+        let height = desc.len();
+        Row::new([
+          Text::from(vec!["".into(), Line::from(item.name.clone()), "".into()]),
+          Text::from(desc),
+          Text::from(vec!["".into(), Line::from(item.downloads.to_formatted_string(&Locale::en)), "".into()]),
+          Text::from(vec!["".into(), Line::from(item.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()), "".into()]),
+        ])
+        .bg(match i % 2 {
+          0 => config::get().row_background_color_1,
+          1 => config::get().row_background_color_2,
+          _ => unreachable!("Cannot reach this line"),
+        })
+        .height(height.saturating_add(1) as u16)
+      });
+
+      let widths = [Constraint::Max(20), Constraint::Min(0), Constraint::Max(10), Constraint::Max(20)];
+      Table::new(rows, widths)
+        .header(header)
+        .column_spacing(1)
+        .highlight_style(selected_style)
+        .highlight_symbol(Text::from(vec!["".into(), highlight_symbol.into(), "".into()]))
+        .highlight_spacing(HighlightSpacing::Always)
+    };
     f.render_stateful_widget(table_widget, area, &mut self.table_state);
 
+    // only render margins when there's items in the table
     if !self.filtered_crates.is_empty() {
+      // don't render margin for the first column
       for space in spacers.iter().skip(2).cloned() {
-        f.render_widget(
-          Text::from(
-            std::iter::once(" ")
-              .chain(std::iter::once(" "))
-              .chain(std::iter::once(" "))
-              .chain(std::iter::repeat("│").take(space.height.into()))
-              .map(Line::from)
-              .collect_vec(),
-          )
-          .style(Style::default().fg(Color::DarkGray)),
-          space,
-        );
+        f.render_widget(self.table_margin(space.height as usize), space);
       }
     }
+  }
+
+  fn table_margin(&self, height: usize) -> Text {
+    Text::from(
+      std::iter::once(" ")
+        .chain(std::iter::once(" "))
+        .chain(std::iter::once(" "))
+        .chain(std::iter::repeat("│").take(height))
+        .map(Line::from)
+        .collect_vec(),
+    )
+    .style(Style::default().fg(Color::DarkGray))
   }
 
   fn render_scrollbar(&mut self, f: &mut Frame<'_>, area: Rect) {
