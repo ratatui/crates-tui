@@ -11,7 +11,7 @@ use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use itertools::Itertools;
 use num_format::{Locale, ToFormattedString};
-use ratatui::{prelude::*, style::palette::tailwind::*, widgets::*};
+use ratatui::{prelude::*, widgets::*};
 use tokio::sync::mpsc::UnboundedSender;
 use tui_input::backend::crossterm::EventHandler;
 
@@ -112,12 +112,20 @@ impl Picker {
 
   fn increment_page(&mut self) {
     if let Some(n) = self.total_num_crates {
-      self.page = self.page.saturating_add(1).min((n / self.page_size) + 1);
+      let max_page_size = (n / self.page_size) + 1;
+      if self.page < max_page_size {
+        self.page = self.page.saturating_add(1).min(max_page_size);
+        self.reload_data();
+      }
     }
   }
 
   fn decrement_page(&mut self) {
-    self.page = self.page.saturating_sub(1).max(1);
+    let min_page_size = 1;
+    if self.page > min_page_size {
+      self.page = self.page.saturating_sub(1).max(min_page_size);
+      self.reload_data();
+    }
   }
 
   fn reload_data(&mut self) {
@@ -279,11 +287,9 @@ impl Picker {
       },
       Action::IncrementPage => {
         self.increment_page();
-        self.reload_data();
       },
       Action::DecrementPage => {
         self.decrement_page();
-        self.reload_data();
       },
       Action::ToggleShowCrateInfo => {
         self.show_crate_info = !self.show_crate_info;
@@ -305,6 +311,8 @@ impl Picker {
           KeyCode::Char('/') => Action::EnterFilterInsert,
           KeyCode::Char('j') | KeyCode::Down => Action::MoveSelectionNext,
           KeyCode::Char('k') | KeyCode::Up => Action::MoveSelectionPrevious,
+          KeyCode::Char('l') | KeyCode::Right => Action::IncrementPage,
+          KeyCode::Char('h') | KeyCode::Left => Action::DecrementPage,
           KeyCode::Char('g') => {
             if let Some(KeyEvent { code: KeyCode::Char('g'), .. }) = last_key_events.last() {
               Action::MoveSelectionTop
@@ -315,8 +323,6 @@ impl Picker {
           KeyCode::PageUp => Action::MoveSelectionTop,
           KeyCode::Char('G') | KeyCode::PageDown => Action::MoveSelectionBottom,
           KeyCode::Char('r') => Action::ReloadData,
-          KeyCode::Char('+') => Action::IncrementPage,
-          KeyCode::Char('-') => Action::DecrementPage,
           KeyCode::Home => Action::MoveSelectionTop,
           KeyCode::End => Action::MoveSelectionBottom,
           KeyCode::Esc => Action::Quit,
@@ -418,14 +424,9 @@ impl Picker {
     let crates = self.filtered_crates.clone();
     let rows = crates.iter().enumerate().map(|(i, item)| {
       let desc = item.description.clone().unwrap_or_default();
-      let desc = desc
-        .chars()
-        .collect::<Vec<char>>()
-        .chunks(size.width as usize)
-        .map(|c| c.iter().collect::<String>())
-        .collect::<Vec<String>>()
-        .join("\n"); // TODO: this is quite inefficient. is there a better way?
-      let desc = format!("\n{desc}");
+      let mut desc = textwrap::wrap(&desc, size.width as usize).iter().map(|s| Line::from(s.to_string())).collect_vec();
+      desc.insert(0, Line::from(""));
+      let height = desc.len();
       Row::new([
         Text::from(vec![Line::from(""), Line::from(item.name.clone()), Line::from("")]),
         Text::from(desc),
@@ -441,7 +442,7 @@ impl Picker {
         1 => config::get().row_background_color_2,
         _ => unreachable!("Cannot reach this line"),
       })
-      .height(3)
+      .height(height.saturating_add(1) as u16)
     });
 
     let widths = [Constraint::Max(20), Constraint::Min(0), Constraint::Max(10), Constraint::Max(20)];
@@ -452,19 +453,22 @@ impl Picker {
       .highlight_symbol(Text::from(vec!["".into(), highlight_symbol.into(), "".into()]))
       .highlight_spacing(HighlightSpacing::Always);
     f.render_stateful_widget(table_widget, area, &mut self.state);
-    for space in spacers.iter().skip(2).cloned() {
-      f.render_widget(
-        Text::from(
-          std::iter::once(" ")
-            .chain(std::iter::once(" "))
-            .chain(std::iter::once(" "))
-            .chain(std::iter::repeat("│").take(space.height.into()))
-            .map(Line::from)
-            .collect_vec(),
-        )
-        .style(Style::default().fg(Color::DarkGray)),
-        space,
-      );
+
+    if !self.filtered_crates.is_empty() {
+      for space in spacers.iter().skip(2).cloned() {
+        f.render_widget(
+          Text::from(
+            std::iter::once(" ")
+              .chain(std::iter::once(" "))
+              .chain(std::iter::once(" "))
+              .chain(std::iter::repeat("│").take(space.height.into()))
+              .map(Line::from)
+              .collect_vec(),
+          )
+          .style(Style::default().fg(Color::DarkGray)),
+          space,
+        );
+      }
     }
   }
 
