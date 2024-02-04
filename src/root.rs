@@ -26,7 +26,7 @@ pub enum Mode {
 
 #[derive(Debug)]
 pub struct Root {
-  action_tx: UnboundedSender<Action>,
+  tx: UnboundedSender<Action>,
   page: u64,
   page_size: u64,
   mode: Mode,
@@ -38,7 +38,7 @@ pub struct Root {
   crates: Arc<Mutex<Vec<crates_io_api::Crate>>>,
   crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
   total_num_crates: Option<u64>,
-  state: TableState,
+  table_state: TableState,
   scrollbar_state: ScrollbarState,
   input: tui_input::Input,
   show_crate_info: bool,
@@ -48,7 +48,7 @@ pub struct Root {
 impl Root {
   pub fn new(tx: UnboundedSender<Action>) -> Self {
     Self {
-      action_tx: tx,
+      tx,
       page: 1,
       page_size: 25,
       mode: Mode::default(),
@@ -60,7 +60,7 @@ impl Root {
       crates: Default::default(),
       crate_info: Default::default(),
       total_num_crates: Default::default(),
-      state: Default::default(),
+      table_state: Default::default(),
       scrollbar_state: Default::default(),
       input: Default::default(),
       show_crate_info: Default::default(),
@@ -70,10 +70,10 @@ impl Root {
 
   pub fn next(&mut self) {
     if self.filtered_crates.len() == 0 {
-      self.state.select(None)
+      self.table_state.select(None)
     } else {
       // wrapping behavior
-      let i = match self.state.selected() {
+      let i = match self.table_state.selected() {
         Some(i) => {
           if i >= self.filtered_crates.len().saturating_sub(1) {
             0
@@ -83,17 +83,17 @@ impl Root {
         },
         None => 0,
       };
-      self.state.select(Some(i));
+      self.table_state.select(Some(i));
       self.scrollbar_state = self.scrollbar_state.position(i);
     }
   }
 
   pub fn previous(&mut self) {
     if self.filtered_crates.len() == 0 {
-      self.state.select(None)
+      self.table_state.select(None)
     } else {
       // wrapping behavior
-      let i = match self.state.selected() {
+      let i = match self.table_state.selected() {
         Some(i) => {
           if i == 0 {
             self.filtered_crates.len().saturating_sub(1)
@@ -103,25 +103,25 @@ impl Root {
         },
         None => 0,
       };
-      self.state.select(Some(i));
+      self.table_state.select(Some(i));
       self.scrollbar_state = self.scrollbar_state.position(i);
     }
   }
 
   pub fn top(&mut self) {
     if self.filtered_crates.len() == 0 {
-      self.state.select(None)
+      self.table_state.select(None)
     } else {
-      self.state.select(Some(0));
+      self.table_state.select(Some(0));
       self.scrollbar_state = self.scrollbar_state.position(0);
     }
   }
 
   pub fn bottom(&mut self) {
     if self.filtered_crates.len() == 0 {
-      self.state.select(None)
+      self.table_state.select(None)
     } else {
-      self.state.select(Some(self.filtered_crates.len() - 1));
+      self.table_state.select(Some(self.filtered_crates.len() - 1));
       self.scrollbar_state = self.scrollbar_state.position(self.filtered_crates.len() - 1);
     }
   }
@@ -145,12 +145,12 @@ impl Root {
   }
 
   fn reload_data(&mut self) {
-    self.state.select(None);
+    self.table_state.select(None);
     *self.crate_info.lock().unwrap() = None;
     let crates = self.crates.clone();
     let search = self.search.clone();
     let loading_status = self.loading_status.clone();
-    let tx = self.action_tx.clone();
+    let tx = self.tx.clone();
     let page = self.page.clamp(1, u64::MAX);
     let page_size = self.page_size;
     tokio::spawn(async move {
@@ -191,19 +191,19 @@ impl Root {
   }
 
   fn get_info(&mut self) {
-    let name = if let Some(index) = self.state.selected() {
+    let name = if let Some(index) = self.table_state.selected() {
       if self.filtered_crates.len() > 0 {
         self.filtered_crates[index].name.clone()
       } else {
         return;
       }
     } else if self.filtered_crates.len() > 0 {
-      self.state.select(Some(0));
+      self.table_state.select(Some(0));
       self.filtered_crates[0].name.clone()
     } else {
       return;
     };
-    let tx = self.action_tx.clone();
+    let tx = self.tx.clone();
     if !name.is_empty() {
       let crate_info = self.crate_info.clone();
       tokio::spawn(async move {
@@ -284,8 +284,8 @@ impl Root {
       },
       Action::EnterNormal => {
         self.mode = Mode::Picker;
-        if self.filtered_crates.len() > 0 && self.state.selected().is_none() {
-          self.state.select(Some(0))
+        if self.filtered_crates.len() > 0 && self.table_state.selected().is_none() {
+          self.table_state.select(Some(0))
         }
       },
       Action::SubmitSearchQuery => {
@@ -377,7 +377,7 @@ impl Root {
           _ => {
             self.input.handle_event(&crossterm::event::Event::Key(key));
             self.filter = self.input.value().into();
-            self.state.select(None);
+            self.table_state.select(None);
             Action::GetInfo
           },
         }
@@ -481,7 +481,7 @@ impl Root {
       .highlight_style(selected_style)
       .highlight_symbol(Text::from(vec!["".into(), highlight_symbol.into(), "".into()]))
       .highlight_spacing(HighlightSpacing::Always);
-    f.render_stateful_widget(table_widget, area, &mut self.state);
+    f.render_stateful_widget(table_widget, area, &mut self.table_state);
 
     if !self.filtered_crates.is_empty() {
       for space in spacers.iter().skip(2).cloned() {
@@ -521,7 +521,7 @@ impl Root {
     } else {
       format!(
         "{}/{}",
-        self.state.selected().map_or(0, |n| (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1),
+        self.table_state.selected().map_or(0, |n| (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1),
         ncrates
       )
     };
