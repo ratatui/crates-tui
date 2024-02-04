@@ -1,12 +1,12 @@
 use color_eyre::eyre::{Context, Result};
 use crossterm::event::KeyEvent;
-use ratatui::prelude::Rect;
+use ratatui::{prelude::Rect, widgets::Block};
 use tokio::sync::mpsc;
 
 use crate::{
   action::Action,
   picker::Picker,
-  tui::{self, Tui},
+  tui::{self, key_event_to_string, Tui},
 };
 
 #[derive(Debug, Default)]
@@ -70,6 +70,16 @@ impl App {
                   .with_context(|| "Unable to send error message on action channel")
                   .unwrap();
               }
+              f.render_widget(
+                Block::default()
+                  .title(format!(
+                    "{:?}",
+                    self.last_tick_key_events.iter().map(|k| key_event_to_string(k)).collect::<Vec<_>>()
+                  ))
+                  .title_position(ratatui::widgets::block::Position::Bottom)
+                  .title_alignment(ratatui::layout::Alignment::Right),
+                f.size(),
+              );
             })?;
           },
           _ => {},
