@@ -247,6 +247,26 @@ impl Root {
       .map(|c| c.clone())
       .collect();
   }
+
+  fn cargo_add(&mut self) {
+    let crate_info = self.crate_info.lock().unwrap().clone();
+    let tx = self.tx.clone();
+    if let Some(ci) = crate_info {
+      tokio::spawn(async move {
+        let output = tokio::process::Command::new("cargo").arg("add").arg(ci.name).output().await;
+        match output {
+          Ok(output) => {
+            let data = String::from_utf8_lossy(&output.stdout).to_string();
+            tx.send(Action::Error(data)).unwrap_or_default();
+          },
+          Err(err) => {
+            let data = format!("ERROR: {:?}", err);
+            tx.send(Action::Error(data)).unwrap_or_default();
+          },
+        }
+      });
+    }
+  }
 }
 
 impl Root {
@@ -319,6 +339,7 @@ impl Root {
         self.error = None;
         self.mode = Mode::PickerSearchQueryEditing;
       },
+      Action::CargoAddCrate => self.cargo_add(),
       _ => {},
     }
     Ok(None)
@@ -342,6 +363,7 @@ impl Root {
           KeyCode::Char('k') | KeyCode::Up => Action::MoveSelectionPrevious,
           KeyCode::Char('l') | KeyCode::Right => Action::IncrementPage,
           KeyCode::Char('h') | KeyCode::Left => Action::DecrementPage,
+          KeyCode::Char('a') => Action::CargoAddCrate,
           KeyCode::Char('g') => {
             if let Some(KeyEvent { code: KeyCode::Char('g'), .. }) = last_key_events.last() {
               Action::MoveSelectionTop
@@ -604,6 +626,7 @@ impl Root {
   fn render_error(&self, f: &mut Frame<'_>, area: Rect, err: &str) {
     let [center] = Layout::vertical([Constraint::Percentage(50)]).flex(Flex::Center).areas(area);
     let [center] = Layout::horizontal([Constraint::Percentage(50)]).flex(Flex::Center).areas(center);
+    f.render_widget(Clear, center);
     f.render_widget(
       Paragraph::new(err)
         .block(Block::bordered().title(block::Title::from("Error")).title(
