@@ -1,8 +1,8 @@
 # crates-tui
 
-A TUI for crates.io
+A TUI viewer for crates.io
 
-https://github.com/ratatui-org/crates-tui/assets/1813121/5e1445ca-81d1-449d-a826-1ba06d925255
+https://github.com/ratatui-org/crates-tui/assets/1813121/c84eaad7-4688-4ebb-91c0-683cc9a0abfe
 
 ## Logging
 
