@@ -1,10 +1,6 @@
-use std::{
-  cell::RefCell,
-  rc::Rc,
-  sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
-  },
+use std::sync::{
+  atomic::{AtomicBool, Ordering},
+  Arc, Mutex,
 };
 
 use color_eyre::eyre::Result;
@@ -12,15 +8,25 @@ use crossterm::event::{KeyCode, KeyEvent};
 use itertools::Itertools;
 use num_format::{Locale, ToFormattedString};
 use ratatui::{prelude::*, widgets::*};
+use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::UnboundedSender;
 use tui_input::backend::crossterm::EventHandler;
 
-use crate::{action::Action, config, mode::Mode};
+use crate::{action::Action, config};
+
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum Mode {
+  Picker,
+  #[default]
+  PickerSearchQueryEditing,
+  PickerFilterEditing,
+  Info,
+}
 
 #[derive(Debug, Default)]
 pub struct Picker {
   action_tx: Option<UnboundedSender<Action>>,
-  mode: Rc<RefCell<Mode>>,
+  mode: Mode,
   last_events: Vec<KeyEvent>,
   loading_status: Arc<AtomicBool>,
   search: String,
@@ -41,8 +47,8 @@ pub struct Picker {
 }
 
 impl Picker {
-  pub fn new(mode: Rc<RefCell<Mode>>) -> Self {
-    Self { page: 1, row_height: 1, page_size: 25, mode, ..Self::default() }
+  pub fn new() -> Self {
+    Self { page: 1, row_height: 1, page_size: 25, ..Self::default() }
   }
 
   pub fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
@@ -104,10 +110,6 @@ impl Picker {
       self.state.select(Some(self.filtered_crates.len() - 1));
       self.scrollbar_state = self.scrollbar_state.position(self.filtered_crates.len() - 1);
     }
-  }
-
-  fn mode_mut(&mut self) -> std::cell::RefMut<'_, Mode> {
-    std::cell::RefCell::<_>::borrow_mut(&self.mode)
   }
 
   fn increment_page(&mut self) {
@@ -264,21 +266,21 @@ impl Picker {
         return Ok(Some(Action::GetInfo));
       },
       Action::EnterSearchQueryInsert => {
-        *self.mode_mut() = Mode::PickerSearchQueryEditing;
+        self.mode = Mode::PickerSearchQueryEditing;
         self.input = self.input.clone().with_value(self.search.clone());
       },
       Action::EnterFilterInsert => {
-        *self.mode_mut() = Mode::PickerFilterEditing;
+        self.mode = Mode::PickerFilterEditing;
         self.input = self.input.clone().with_value(self.filter.clone());
       },
       Action::EnterNormal => {
-        *self.mode_mut() = Mode::Picker;
+        self.mode = Mode::Picker;
         if self.filtered_crates.len() > 0 && self.state.selected().is_none() {
           self.state.select(Some(0))
         }
       },
       Action::SubmitSearchQuery => {
-        *self.mode_mut() = Mode::Picker;
+        self.mode = Mode::Picker;
         self.filter.clear();
         return Ok(Some(Action::ReloadData));
       },
@@ -303,7 +305,7 @@ impl Picker {
   }
 
   pub fn handle_key_events(&mut self, key: KeyEvent, last_key_events: &[KeyEvent]) -> Result<Option<Action>> {
-    let cmd = match *self.mode.borrow() {
+    let cmd = match self.mode {
       Mode::Picker => {
         match key.code {
           KeyCode::Char('q') => Action::Quit,
@@ -412,7 +414,7 @@ impl Picker {
     )
     .bg(config::get().background_color)
     .height(3);
-    let highlight_symbol = if *self.mode.borrow() == Mode::Picker { " \u{2022} " } else { "   " };
+    let highlight_symbol = if self.mode == Mode::Picker { " \u{2022} " } else { "   " };
 
     let widths =
       [Constraint::Length(1), Constraint::Max(20), Constraint::Min(0), Constraint::Max(10), Constraint::Max(20)];
@@ -513,7 +515,7 @@ impl Picker {
       )
       .title(loading_status)
       .title_alignment(Alignment::Right)
-      .border_style(match *self.mode.borrow() {
+      .border_style(match self.mode {
         Mode::PickerSearchQueryEditing => Style::default().fg(config::get().search_query_outline_color),
         Mode::PickerFilterEditing => Style::default().fg(config::get().filter_query_outline_color),
         _ => Style::default().add_modifier(Modifier::DIM),
@@ -521,9 +523,9 @@ impl Picker {
   }
 
   fn input_text(&self) -> impl Widget + '_ {
-    let scroll = if *self.mode.borrow() == Mode::PickerSearchQueryEditing {
+    let scroll = if self.mode == Mode::PickerSearchQueryEditing {
       self.search_horizontal_scroll
-    } else if *self.mode.borrow() == Mode::PickerFilterEditing {
+    } else if self.mode == Mode::PickerFilterEditing {
       self.filter_horizontal_scroll
     } else {
       0
@@ -537,7 +539,7 @@ impl Picker {
   }
 
   fn render_cursor(&mut self, f: &mut Frame<'_>, area: Rect) {
-    if *self.mode.borrow() == Mode::PickerSearchQueryEditing || *self.mode.borrow() == Mode::PickerFilterEditing {
+    if self.mode == Mode::PickerSearchQueryEditing || self.mode == Mode::PickerFilterEditing {
       f.set_cursor((area.x + 2 + self.input.cursor() as u16).min(area.x + area.width.saturating_sub(2)), area.y + 2)
     }
   }

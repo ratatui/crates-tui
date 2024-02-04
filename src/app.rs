@@ -1,5 +1,3 @@
-use std::{cell::RefCell, rc::Rc};
-
 use color_eyre::eyre::{Context, Result};
 use crossterm::event::KeyEvent;
 use ratatui::prelude::Rect;
@@ -7,7 +5,6 @@ use tokio::sync::mpsc;
 
 use crate::{
   action::Action,
-  mode::Mode,
   picker::Picker,
   tui::{self, Tui},
 };
@@ -15,16 +12,14 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct App {
   pub should_quit: bool,
-  pub mode: Rc<RefCell<Mode>>,
   pub picker: Picker,
   pub last_tick_key_events: Vec<KeyEvent>,
 }
 
 impl App {
   pub fn new() -> Result<Self> {
-    let mode = Rc::new(RefCell::new(Mode::PickerSearchQueryEditing));
-    let picker = Picker::new(mode.clone());
-    Ok(Self { mode, picker, ..Default::default() })
+    let picker = Picker::new();
+    Ok(Self { picker, ..Default::default() })
   }
 
   pub async fn run(&mut self, tui: &mut Tui) -> Result<()> {
