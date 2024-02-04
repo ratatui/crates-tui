@@ -12,20 +12,18 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct App {
   pub should_quit: bool,
-  pub picker: Picker,
   pub last_tick_key_events: Vec<KeyEvent>,
 }
 
 impl App {
   pub fn new() -> Result<Self> {
-    let picker = Picker::new();
-    Ok(Self { picker, ..Default::default() })
+    Ok(Self { ..Default::default() })
   }
 
   pub async fn run(&mut self, tui: &mut Tui) -> Result<()> {
     let (action_tx, mut action_rx) = mpsc::unbounded_channel();
 
-    self.picker.register_action_handler(action_tx.clone())?;
+    let mut picker = Picker::new(action_tx.clone());
 
     tui.enter()?;
 
@@ -38,7 +36,7 @@ impl App {
           tui::Event::Resize(x, y) => action_tx.send(Action::Resize(x, y))?,
           tui::Event::Key(key) => {
             log::debug!("Received key {:?}", key);
-            if let Some(action) = self.picker.handle_key_events(key, &self.last_tick_key_events)? {
+            if let Some(action) = picker.handle_key_events(key, &self.last_tick_key_events)? {
               action_tx.send(action)?;
             }
             self.last_tick_key_events.push(key);
@@ -51,7 +49,7 @@ impl App {
         if action != Action::Tick && action != Action::Render {
           log::debug!("{action:?}");
         }
-        if let Some(action) = self.picker.update(action.clone())? {
+        if let Some(action) = picker.update(action.clone())? {
           action_tx.send(action)?
         };
         match action {
@@ -65,7 +63,7 @@ impl App {
           },
           Action::Render => {
             tui.draw(|f| {
-              let r = self.picker.draw(f, f.size());
+              let r = picker.draw(f, f.size());
               if let Err(e) = r {
                 action_tx
                   .send(Action::Error(format!("Failed to draw: {:?}", e)))

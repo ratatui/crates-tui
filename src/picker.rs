@@ -23,9 +23,12 @@ pub enum Mode {
   Info,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Picker {
-  action_tx: Option<UnboundedSender<Action>>,
+  action_tx: UnboundedSender<Action>,
+  page: u64,
+  row_height: usize,
+  page_size: u64,
   mode: Mode,
   last_events: Vec<KeyEvent>,
   loading_status: Arc<AtomicBool>,
@@ -38,20 +41,30 @@ pub struct Picker {
   state: TableState,
   scrollbar_state: ScrollbarState,
   input: tui_input::Input,
-  page: u64,
-  page_size: u64,
   show_crate_info: bool,
-  row_height: usize,
 }
 
 impl Picker {
-  pub fn new() -> Self {
-    Self { page: 1, row_height: 1, page_size: 25, ..Self::default() }
-  }
-
-  pub fn register_action_handler(&mut self, tx: UnboundedSender<Action>) -> Result<()> {
-    self.action_tx = Some(tx);
-    Ok(())
+  pub fn new(tx: UnboundedSender<Action>) -> Self {
+    Self {
+      action_tx: tx,
+      page: 1,
+      row_height: 1,
+      page_size: 25,
+      mode: Mode::default(),
+      last_events: Default::default(),
+      loading_status: Default::default(),
+      search: Default::default(),
+      filter: Default::default(),
+      filtered_crates: Default::default(),
+      crates: Default::default(),
+      crate_info: Default::default(),
+      total_num_crates: Default::default(),
+      state: Default::default(),
+      scrollbar_state: Default::default(),
+      input: Default::default(),
+      show_crate_info: Default::default(),
+    }
   }
 
   pub fn next(&mut self) {
@@ -134,7 +147,7 @@ impl Picker {
     let crates = self.crates.clone();
     let search = self.search.clone();
     let loading_status = self.loading_status.clone();
-    let action_tx = self.action_tx.clone();
+    let tx = self.action_tx.clone();
     let page = self.page.clamp(1, u64::MAX);
     let page_size = self.page_size;
     tokio::spawn(async move {
@@ -156,20 +169,16 @@ impl Picker {
         all_crates.sort_by(|a, b| b.downloads.cmp(&a.downloads));
         crates.lock().unwrap().drain(0..);
         *crates.lock().unwrap() = all_crates;
-        if let Some(tx) = action_tx {
-          if crates.lock().unwrap().len() > 0 {
-            tx.send(Action::StoreTotalNumberOfCrates(page.meta.total)).unwrap_or_default();
-            tx.send(Action::Tick).unwrap_or_default();
-            tx.send(Action::MoveSelectionNext).unwrap_or_default();
-          } else {
-            tx.send(Action::Error("Something went wrong".into())).unwrap_or_default();
-          }
+        if crates.lock().unwrap().len() > 0 {
+          tx.send(Action::StoreTotalNumberOfCrates(page.meta.total)).unwrap_or_default();
+          tx.send(Action::Tick).unwrap_or_default();
+          tx.send(Action::MoveSelectionNext).unwrap_or_default();
+        } else {
+          tx.send(Action::Error("Something went wrong".into())).unwrap_or_default();
         }
         loading_status.store(false, Ordering::SeqCst);
       } else {
-        if let Some(tx) = action_tx {
-          tx.send(Action::Error("Something went wrong".into())).unwrap_or_default();
-        }
+        tx.send(Action::Error("Something went wrong".into())).unwrap_or_default();
         loading_status.store(false, Ordering::SeqCst);
       }
     });
@@ -188,7 +197,7 @@ impl Picker {
     } else {
       return;
     };
-    let action_tx = self.action_tx.clone();
+    let tx = self.action_tx.clone();
     if !name.is_empty() {
       let crate_info = self.crate_info.clone();
       tokio::spawn(async move {
@@ -199,11 +208,7 @@ impl Picker {
         .unwrap();
         match client.get_crate(&name).await {
           Ok(_crate_info) => *crate_info.lock().unwrap() = Some(_crate_info.crate_data),
-          Err(_err) => {
-            if let Some(tx) = action_tx {
-              tx.send(Action::Error("Unable to get crate information".into())).unwrap_or_default()
-            }
-          },
+          Err(_err) => tx.send(Action::Error("Unable to get crate information".into())).unwrap_or_default(),
         }
       });
     }
