@@ -59,7 +59,7 @@ impl Default for Config {
       frame_rate: 4.0,
       background_color: GRAY.c900,
       search_query_outline_color: GREEN.c400,
-      filter_query_outline_color: GREEN.c400,
+      filter_query_outline_color: YELLOW.c400,
       row_background_color_1: GRAY.c900,
       row_background_color_2: GRAY.c800,
     }

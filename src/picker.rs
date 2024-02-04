@@ -7,7 +7,7 @@ use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use itertools::Itertools;
 use num_format::{Locale, ToFormattedString};
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{layout::Flex, prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::UnboundedSender;
 use tui_input::backend::crossterm::EventHandler;
@@ -21,13 +21,13 @@ pub enum Mode {
   PickerSearchQueryEditing,
   PickerFilterEditing,
   Info,
+  Error,
 }
 
 #[derive(Debug)]
 pub struct Picker {
   action_tx: UnboundedSender<Action>,
   page: u64,
-  row_height: usize,
   page_size: u64,
   mode: Mode,
   last_events: Vec<KeyEvent>,
@@ -42,6 +42,7 @@ pub struct Picker {
   scrollbar_state: ScrollbarState,
   input: tui_input::Input,
   show_crate_info: bool,
+  error: Option<String>,
 }
 
 impl Picker {
@@ -49,7 +50,6 @@ impl Picker {
     Self {
       action_tx: tx,
       page: 1,
-      row_height: 1,
       page_size: 25,
       mode: Mode::default(),
       last_events: Default::default(),
@@ -64,6 +64,7 @@ impl Picker {
       scrollbar_state: Default::default(),
       input: Default::default(),
       show_crate_info: Default::default(),
+      error: Default::default(),
     }
   }
 
@@ -71,15 +72,16 @@ impl Picker {
     if self.filtered_crates.len() == 0 {
       self.state.select(None)
     } else {
+      // wrapping behavior
       let i = match self.state.selected() {
         Some(i) => {
-          if i >= self.filtered_crates.len() - 1 {
-            self.row_height / 2
+          if i >= self.filtered_crates.len().saturating_sub(1) {
+            0
           } else {
-            i + self.row_height
+            i + 1
           }
         },
-        None => self.row_height / 2,
+        None => 0,
       };
       self.state.select(Some(i));
       self.scrollbar_state = self.scrollbar_state.position(i);
@@ -90,12 +92,13 @@ impl Picker {
     if self.filtered_crates.len() == 0 {
       self.state.select(None)
     } else {
+      // wrapping behavior
       let i = match self.state.selected() {
         Some(i) => {
-          if i == (self.row_height / 2) {
-            self.filtered_crates.len() - 1
+          if i == 0 {
+            self.filtered_crates.len().saturating_sub(1)
           } else {
-            i - self.row_height
+            i.saturating_sub(1)
           }
         },
         None => 0,
@@ -156,30 +159,33 @@ impl Picker {
         crates_io_api::AsyncClient::new("crates-tui (crates-tui@kdheepak.com)", std::time::Duration::from_millis(1000))
           .unwrap();
       let query = crates_io_api::CratesQueryBuilder::default()
-        .search(search)
+        .search(&search)
         .page(page)
         .page_size(page_size)
         .sort(crates_io_api::Sort::Relevance)
         .build();
-      if let Ok(page) = client.crates(query).await {
-        let mut all_crates = vec![];
-        for _crate in page.crates.iter() {
-          all_crates.push(_crate.clone())
-        }
-        all_crates.sort_by(|a, b| b.downloads.cmp(&a.downloads));
-        crates.lock().unwrap().drain(0..);
-        *crates.lock().unwrap() = all_crates;
-        if crates.lock().unwrap().len() > 0 {
-          tx.send(Action::StoreTotalNumberOfCrates(page.meta.total)).unwrap_or_default();
-          tx.send(Action::Tick).unwrap_or_default();
-          tx.send(Action::MoveSelectionNext).unwrap_or_default();
-        } else {
-          tx.send(Action::Error("Something went wrong".into())).unwrap_or_default();
-        }
-        loading_status.store(false, Ordering::SeqCst);
-      } else {
-        tx.send(Action::Error("Something went wrong".into())).unwrap_or_default();
-        loading_status.store(false, Ordering::SeqCst);
+      match client.crates(query).await {
+        Ok(page) => {
+          let mut all_crates = vec![];
+          for _crate in page.crates.iter() {
+            all_crates.push(_crate.clone())
+          }
+          all_crates.sort_by(|a, b| b.downloads.cmp(&a.downloads));
+          crates.lock().unwrap().drain(0..);
+          *crates.lock().unwrap() = all_crates;
+          if crates.lock().unwrap().len() > 0 {
+            tx.send(Action::StoreTotalNumberOfCrates(page.meta.total)).unwrap_or_default();
+            tx.send(Action::Tick).unwrap_or_default();
+            tx.send(Action::MoveSelectionNext).unwrap_or_default();
+          } else {
+            tx.send(Action::Error(format!("Could not find any crates with query `{}`.", search))).unwrap_or_default();
+          }
+          loading_status.store(false, Ordering::SeqCst);
+        },
+        Err(err) => {
+          tx.send(Action::Error(format!("API Client Error: {:?}", err))).unwrap_or_default();
+          loading_status.store(false, Ordering::SeqCst);
+        },
       }
     });
   }
@@ -302,6 +308,14 @@ impl Picker {
       Action::GetInfo => {
         self.get_info();
       },
+      Action::Error(err) => {
+        self.error = Some(err);
+        self.mode = Mode::Error;
+      },
+      Action::CloseError => {
+        self.error = None;
+        self.mode = Mode::PickerSearchQueryEditing;
+      },
       _ => {},
     }
     Ok(None)
@@ -309,6 +323,13 @@ impl Picker {
 
   pub fn handle_key_events(&mut self, key: KeyEvent, last_key_events: &[KeyEvent]) -> Result<Option<Action>> {
     let cmd = match self.mode {
+      Mode::Error => {
+        match key.code {
+          KeyCode::Enter => Action::CloseError,
+          KeyCode::Esc => Action::CloseError,
+          _ => return Ok(None),
+        }
+      },
       Mode::Picker => {
         match key.code {
           KeyCode::Char('q') => Action::Quit,
@@ -493,7 +514,7 @@ impl Picker {
   fn input_block(&self) -> impl Widget {
     let ncrates = self.total_num_crates.unwrap_or_default();
     let loading_status = if self.loading_status.load(Ordering::SeqCst) {
-      format!("Loaded {}...", ncrates)
+      format!("Loaded {} ...", ncrates)
     } else {
       format!(
         "{}/{}",
@@ -541,6 +562,21 @@ impl Picker {
     }
   }
 
+  fn render_error(&mut self, f: &mut Frame<'_>, area: Rect) {
+    if let Some(err) = &self.error {
+      let [center] = Layout::vertical([Constraint::Percentage(50)]).flex(Flex::Center).areas(area);
+      let [center] = Layout::horizontal([Constraint::Percentage(50)]).flex(Flex::Center).areas(center);
+      f.render_widget(
+        Paragraph::new(err.clone())
+          .block(Block::bordered().title(block::Title::from("Error")).title(
+            block::Title::from("Press `ESC` to exit").position(block::Position::Bottom).alignment(Alignment::Right),
+          ))
+          .wrap(Wrap { trim: true }),
+        center,
+      );
+    }
+  }
+
   pub fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
     f.render_widget(self.background(), area);
 
@@ -561,6 +597,8 @@ impl Picker {
 
     self.render_input(f, input);
     self.render_cursor(f, input);
+
+    self.render_error(f, area);
 
     Ok(())
   }
