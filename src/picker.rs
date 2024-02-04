@@ -304,6 +304,9 @@ impl Picker {
       },
       Action::ToggleShowCrateInfo => {
         self.show_crate_info = !self.show_crate_info;
+        if self.crate_info.lock().unwrap().is_none() {
+          self.show_crate_info = false;
+        }
       },
       Action::GetInfo => {
         self.get_info();
