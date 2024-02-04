@@ -392,9 +392,6 @@ impl Root {
 
     let [table, input] = Layout::vertical([Constraint::Fill(0), Constraint::Length(5)]).areas(area);
 
-    let [table, scrollbar] = Layout::horizontal([Constraint::Fill(0), Constraint::Length(1)]).areas(table);
-    self.render_scrollbar(f, scrollbar);
-
     let table = if self.show_crate_info {
       let [table, info] = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(table);
       self.render_crate_info(f, info);
@@ -402,6 +399,9 @@ impl Root {
     } else {
       table
     };
+
+    let [table, scrollbar] = Layout::horizontal([Constraint::Fill(0), Constraint::Length(1)]).areas(table);
+    self.render_scrollbar(f, scrollbar);
 
     self.render_crates_table(f, table);
 
