@@ -1,4 +1,5 @@
 use color_eyre::eyre::Result;
+use tracing::level_filters::LevelFilter;
 use tracing_error::ErrorLayer;
 use tracing_subscriber::{self, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
 
@@ -6,7 +7,7 @@ use crate::config;
 
 pub fn initialize_logging() -> Result<()> {
   let config = config::get();
-  let directory = config.data_dir.clone();
+  let directory = config.data_home.clone();
   std::fs::create_dir_all(directory.clone())?;
   let log_file = format!("{}.log", env!("CARGO_PKG_NAME"));
   let log_path = directory.join(log_file);
@@ -25,7 +26,7 @@ pub fn initialize_logging() -> Result<()> {
         .add_directive("tokio_util=off".parse().unwrap())
         .add_directive("hyper=off".parse().unwrap())
         .add_directive("reqwest=off".parse().unwrap())
-        .add_directive(config.log_level.into()),
+        .add_directive(LevelFilter::from(config.log_level.unwrap_or(LevelFilter::OFF)).into()),
     )
     .init();
   Ok(())

@@ -32,9 +32,9 @@ pub struct Cli {
   #[arg(short, long, value_name = "FLOAT", help = "Tick rate, i.e. number of ticks per second", default_value_t = 1.0)]
   pub tick_rate: f64,
 
-  /// Print configuration
+  /// Print default configuration
   #[arg(long)]
-  pub print_config: bool,
+  pub print_default_config: bool,
 
   /// A path to a crates-tui configuration file.
   #[arg(short, long, value_name = "FILE")]
@@ -56,7 +56,7 @@ pub struct Cli {
   /// The log level to use.
   ///
   /// Valid values are: error, warn, info, debug, trace, off. The default is info.
-  #[arg(long, value_name = "LEVEL", default_value = "info", alias = "log")]
+  #[arg(long, value_name = "LEVEL", alias = "log")]
   #[serde_as(as = "NoneAsEmptyString")]
   pub log_level: Option<LevelFilter>,
 }

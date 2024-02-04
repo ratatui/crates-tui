@@ -14,10 +14,11 @@ use crate::{app::App, config::initialize_config, errors::initialize_panic_handle
 async fn tokio_main() -> Result<()> {
   let cli = cli::get();
   initialize_config(&cli)?;
+
   initialize_logging()?;
   initialize_panic_handler()?;
 
-  if cli.print_config {
+  if cli.print_default_config {
     println!("{:#?}", config::get());
     return Ok(());
   }

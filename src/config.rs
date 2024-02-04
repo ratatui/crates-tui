@@ -8,7 +8,7 @@ use figment::{
 };
 use ratatui::style::palette::tailwind::*;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr};
+use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
 use tracing::level_filters::LevelFilter;
 
 use crate::cli::Cli;
@@ -22,12 +22,15 @@ static CONFIG: OnceLock<Config> = OnceLock::new();
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
   /// The directory to use for storing application data (logs etc.).
-  pub data_dir: PathBuf,
+  pub data_home: PathBuf,
+
+  /// The directory to use for storing application configuration (colors etc.).
+  pub config_home: PathBuf,
 
   /// The log level to use. Valid values are: error, warn, info, debug, trace, off. The default is
   /// info.
-  #[serde_as(as = "DisplayFromStr")]
-  pub log_level: LevelFilter,
+  #[serde_as(as = "NoneAsEmptyString")]
+  pub log_level: Option<LevelFilter>,
 
   pub tick_rate: f64,
 
@@ -52,8 +55,9 @@ pub struct Config {
 impl Default for Config {
   fn default() -> Self {
     Self {
-      data_dir: default_data_dir(),
-      log_level: LevelFilter::INFO,
+      data_home: default_data_dir(),
+      config_home: default_config_dir(),
+      log_level: None,
       tick_rate: 1.0,
       frame_rate: 4.0,
       background_color: GRAY.c900,
@@ -115,7 +119,7 @@ pub fn initialize_config(cli: &Cli) -> Result<()> {
   let config = Figment::new()
     .merge(Serialized::defaults(Config::default()))
     .merge(Toml::file(config_file))
-    .merge(Env::prefixed("CRATES_TUI_"))
+    .merge(Env::prefixed(concat!(env!("CARGO_CRATE_NAME"), "_")))
     .merge(Serialized::defaults(cli))
     .extract::<Config>()?;
   CONFIG.set(config).map_err(|config| eyre!("failed to set config {config:?}"))
