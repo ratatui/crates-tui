@@ -4,7 +4,7 @@ pub mod cli;
 pub mod config;
 pub mod errors;
 pub mod logging;
-pub mod runner;
+pub mod root;
 pub mod tui;
 
 use color_eyre::eyre::Result;
@@ -24,7 +24,7 @@ async fn tokio_main() -> Result<()> {
   }
 
   let mut tui = tui::Tui::new()?.tick_rate(config::get().tick_rate).frame_rate(config::get().frame_rate);
-  runner::execute(&mut tui).await?;
+  app::run(&mut tui).await?;
 
   Ok(())
 }
