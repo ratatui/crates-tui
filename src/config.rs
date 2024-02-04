@@ -36,6 +36,8 @@ pub struct Config {
 
   pub frame_rate: f64,
 
+  pub prompt_padding: u16,
+
   #[serde_as(as = "DisplayFromStr")]
   pub background_color: ratatui::style::Color,
 
@@ -61,6 +63,7 @@ impl Default for Config {
       tick_rate: 1.0,
       frame_rate: 4.0,
       background_color: GRAY.c900,
+      prompt_padding: 1,
       search_query_outline_color: GREEN.c400,
       filter_query_outline_color: YELLOW.c400,
       row_background_color_1: GRAY.c900,

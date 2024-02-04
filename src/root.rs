@@ -390,7 +390,8 @@ impl Root {
   pub fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
     f.render_widget(self.background(), area);
 
-    let [table, input] = Layout::vertical([Constraint::Fill(0), Constraint::Length(5)]).areas(area);
+    let [table, input] =
+      Layout::vertical([Constraint::Fill(0), Constraint::Length(3 + config::get().prompt_padding * 2)]).areas(area);
 
     let table = if self.show_crate_info {
       let [table, info] = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(table);
@@ -585,10 +586,18 @@ impl Root {
   }
 
   fn render_prompt(&self, f: &mut Frame, area: Rect) {
+    let vertical_margin = 1 + config::get().prompt_padding;
+    let horizontal_margin = 1 + config::get().prompt_padding;
     f.render_widget(self.input_block(), area);
-    f.render_widget(self.input_text(area.width as usize), area.inner(&Margin { horizontal: 2, vertical: 2 }));
+    f.render_widget(
+      self.input_text(area.width as usize),
+      area.inner(&Margin { horizontal: horizontal_margin, vertical: vertical_margin }),
+    );
     if self.mode == Mode::PickerSearchQueryEditing || self.mode == Mode::PickerFilterEditing {
-      f.set_cursor((area.x + 2 + self.input.cursor() as u16).min(area.x + area.width.saturating_sub(2)), area.y + 2)
+      f.set_cursor(
+        (area.x + horizontal_margin + self.input.cursor() as u16).min(area.x + area.width.saturating_sub(2)),
+        area.y + vertical_margin,
+      )
     }
   }
 
