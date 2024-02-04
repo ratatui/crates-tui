@@ -403,11 +403,13 @@ impl Root {
       table
     };
 
-    self.render_table(f, table);
+    self.render_crates_table(f, table);
 
-    self.render_input(f, input);
+    self.render_prompt(f, input);
 
-    self.render_error(f, area);
+    if let Some(err) = &self.error {
+      self.render_error(f, area, err);
+    }
 
     self.render_cursor(f, input);
 
@@ -420,7 +422,7 @@ impl Root {
     Block::default().bg(config::get().background_color)
   }
 
-  pub fn render_crate_info(&mut self, f: &mut Frame, area: Rect) {
+  pub fn render_crate_info(&self, f: &mut Frame, area: Rect) {
     let crate_info = self.crate_info.lock().unwrap().clone();
     let crate_info = if let Some(ci) = crate_info {
       ci
@@ -463,7 +465,7 @@ impl Root {
     f.render_widget(table_widget, area);
   }
 
-  pub fn render_table(&mut self, f: &mut Frame, area: Rect) {
+  pub fn render_crates_table(&mut self, f: &mut Frame, area: Rect) {
     let selected_style = Style::default();
     let header = Row::new(
       ["Name", "Description", "Downloads", "Last Updated"]
@@ -581,7 +583,7 @@ impl Root {
     Paragraph::new(self.input.value()).scroll((0, scroll as u16))
   }
 
-  fn render_input(&mut self, f: &mut Frame, area: Rect) {
+  fn render_prompt(&self, f: &mut Frame, area: Rect) {
     f.render_widget(self.input_block(), area);
     f.render_widget(self.input_text(area.width as usize), area.inner(&Margin { horizontal: 2, vertical: 2 }));
   }
@@ -592,18 +594,16 @@ impl Root {
     }
   }
 
-  fn render_error(&mut self, f: &mut Frame<'_>, area: Rect) {
-    if let Some(err) = &self.error {
-      let [center] = Layout::vertical([Constraint::Percentage(50)]).flex(Flex::Center).areas(area);
-      let [center] = Layout::horizontal([Constraint::Percentage(50)]).flex(Flex::Center).areas(center);
-      f.render_widget(
-        Paragraph::new(err.clone())
-          .block(Block::bordered().title(block::Title::from("Error")).title(
-            block::Title::from("Press `ESC` to exit").position(block::Position::Bottom).alignment(Alignment::Right),
-          ))
-          .wrap(Wrap { trim: true }),
-        center,
-      );
-    }
+  fn render_error(&self, f: &mut Frame<'_>, area: Rect, err: &str) {
+    let [center] = Layout::vertical([Constraint::Percentage(50)]).flex(Flex::Center).areas(area);
+    let [center] = Layout::horizontal([Constraint::Percentage(50)]).flex(Flex::Center).areas(center);
+    f.render_widget(
+      Paragraph::new(err)
+        .block(Block::bordered().title(block::Title::from("Error")).title(
+          block::Title::from("Press `ESC` to exit").position(block::Position::Bottom).alignment(Alignment::Right),
+        ))
+        .wrap(Wrap { trim: true }),
+      center,
+    );
   }
 }
