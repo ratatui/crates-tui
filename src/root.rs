@@ -411,8 +411,6 @@ impl Root {
       self.render_error(f, area, err);
     }
 
-    self.render_cursor(f, input);
-
     Ok(())
   }
 }
@@ -586,9 +584,6 @@ impl Root {
   fn render_prompt(&self, f: &mut Frame, area: Rect) {
     f.render_widget(self.input_block(), area);
     f.render_widget(self.input_text(area.width as usize), area.inner(&Margin { horizontal: 2, vertical: 2 }));
-  }
-
-  fn render_cursor(&mut self, f: &mut Frame<'_>, area: Rect) {
     if self.mode == Mode::PickerSearchQueryEditing || self.mode == Mode::PickerFilterEditing {
       f.set_cursor((area.x + 2 + self.input.cursor() as u16).min(area.x + area.width.saturating_sub(2)), area.y + 2)
     }
