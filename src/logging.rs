@@ -8,17 +8,9 @@ pub fn initialize_logging() -> Result<()> {
   let config = config::get();
   let directory = config.data_dir.clone();
   std::fs::create_dir_all(directory.clone())?;
-  let project_name = env!("CARGO_CRATE_NAME").to_uppercase().to_string();
   let log_file = format!("{}.log", env!("CARGO_PKG_NAME"));
   let log_path = directory.join(log_file);
   let log_file = std::fs::File::create(log_path)?;
-  let log_env = format!("{}_LOGLEVEL", project_name);
-  std::env::set_var(
-    "RUST_LOG",
-    std::env::var("RUST_LOG")
-      .or_else(|_| std::env::var(log_env))
-      .unwrap_or_else(|_| format!("{}=info", env!("CARGO_CRATE_NAME"))),
-  );
   let file_subscriber = tracing_subscriber::fmt::layer()
     .with_file(true)
     .with_line_number(true)
@@ -28,7 +20,13 @@ pub fn initialize_logging() -> Result<()> {
   tracing_subscriber::registry()
     .with(file_subscriber)
     .with(ErrorLayer::default())
-    .with(tracing_subscriber::filter::EnvFilter::from_default_env().add_directive(config.log_level.into()))
+    .with(
+      tracing_subscriber::filter::EnvFilter::from_default_env()
+        .add_directive("tokio_util=off".parse().unwrap())
+        .add_directive("hyper=off".parse().unwrap())
+        .add_directive("reqwest=off".parse().unwrap())
+        .add_directive(config.log_level.into()),
+    )
     .init();
   Ok(())
 }

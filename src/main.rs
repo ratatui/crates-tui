@@ -12,9 +12,15 @@ use color_eyre::eyre::Result;
 use crate::{app::App, config::initialize_config, errors::initialize_panic_handler, logging::initialize_logging};
 
 async fn tokio_main() -> Result<()> {
-  initialize_config()?;
+  let cli = cli::get();
+  initialize_config(&cli)?;
   initialize_logging()?;
   initialize_panic_handler()?;
+
+  if cli.print_config {
+    println!("{:#?}", config::get());
+    return Ok(());
+  }
 
   let mut tui = tui::Tui::new()?.tick_rate(config::get().tick_rate).frame_rate(config::get().frame_rate);
   let mut app = App::new()?;

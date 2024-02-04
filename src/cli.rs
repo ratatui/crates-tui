@@ -32,6 +32,10 @@ pub struct Cli {
   #[arg(short, long, value_name = "FLOAT", help = "Tick rate, i.e. number of ticks per second", default_value_t = 1.0)]
   pub tick_rate: f64,
 
+  /// Print configuration
+  #[arg(long)]
+  pub print_config: bool,
+
   /// A path to a crates-tui configuration file.
   #[arg(short, long, value_name = "FILE")]
   pub config: Option<PathBuf>,
@@ -55,4 +59,8 @@ pub struct Cli {
   #[arg(long, value_name = "LEVEL", default_value = "info", alias = "log")]
   #[serde_as(as = "NoneAsEmptyString")]
   pub log_level: Option<LevelFilter>,
+}
+
+pub fn get() -> Cli {
+  Cli::parse()
 }

@@ -47,7 +47,7 @@ impl App {
 
       while let Ok(action) = action_rx.try_recv() {
         if action != Action::Tick && action != Action::Render {
-          log::debug!("{action:?}");
+          log::info!("{action:?}");
         }
         if let Some(action) = picker.update(action.clone())? {
           action_tx.send(action)?

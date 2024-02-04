@@ -1,6 +1,5 @@
 use std::{path::PathBuf, sync::OnceLock};
 
-use clap::Parser;
 use color_eyre::eyre::{eyre, Result};
 use directories::ProjectDirs;
 use figment::{
@@ -12,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 use tracing::level_filters::LevelFilter;
 
-use crate::cli;
+use crate::cli::Cli;
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
@@ -68,12 +67,34 @@ impl Default for Config {
 
 /// Returns the directory to use for storing data files.
 fn default_data_dir() -> PathBuf {
-  project_dirs().map(|dirs| dirs.data_local_dir().to_path_buf()).unwrap()
+  if let Some(dir) =
+    std::env::var(format!("{}_DATA_HOME", env!("CARGO_CRATE_NAME").to_uppercase().to_string())).ok().map(PathBuf::from)
+  {
+    dir
+  } else if let Some(dir) = project_dirs().map(|dirs| dirs.data_local_dir().to_path_buf()).ok() {
+    dir
+  } else {
+    PathBuf::from(".").join(".data")
+  }
+}
+
+/// Returns the directory to use for storing config files.
+fn default_config_dir() -> PathBuf {
+  if let Some(dir) = std::env::var(format!("{}_CONFIG_HOME", env!("CARGO_CRATE_NAME").to_uppercase().to_string()))
+    .ok()
+    .map(PathBuf::from)
+  {
+    dir
+  } else if let Some(dir) = project_dirs().map(|dirs| dirs.config_local_dir().to_path_buf()).ok() {
+    dir
+  } else {
+    PathBuf::from(".").join(".config")
+  }
 }
 
 /// Returns the path to the default configuration file.
 fn default_config_file() -> PathBuf {
-  project_dirs().map(|dirs| dirs.config_local_dir().join("config.toml")).unwrap()
+  default_config_dir().join("config.toml")
 }
 
 /// Returns the project directories.
@@ -89,8 +110,7 @@ fn project_dirs() -> Result<ProjectDirs> {
 /// - a configuration file
 /// - environment variables
 /// - command line arguments
-pub fn initialize_config() -> Result<()> {
-  let cli = cli::Cli::parse();
+pub fn initialize_config(cli: &Cli) -> Result<()> {
   let config_file = cli.config.clone().unwrap_or_else(default_config_file);
   let config = Figment::new()
     .merge(Serialized::defaults(Config::default()))
