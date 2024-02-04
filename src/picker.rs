@@ -30,13 +30,11 @@ pub struct Picker {
   last_events: Vec<KeyEvent>,
   loading_status: Arc<AtomicBool>,
   search: String,
-  search_horizontal_scroll: usize,
   filter: String,
-  filter_horizontal_scroll: usize,
   filtered_crates: Vec<crates_io_api::Crate>,
   crates: Arc<Mutex<Vec<crates_io_api::Crate>>>,
-  total_num_crates: Option<u64>,
   crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
+  total_num_crates: Option<u64>,
   state: TableState,
   scrollbar_state: ScrollbarState,
   input: tui_input::Input,
@@ -522,20 +520,14 @@ impl Picker {
       })
   }
 
-  fn input_text(&self) -> impl Widget + '_ {
-    let scroll = if self.mode == Mode::PickerSearchQueryEditing {
-      self.search_horizontal_scroll
-    } else if self.mode == Mode::PickerFilterEditing {
-      self.filter_horizontal_scroll
-    } else {
-      0
-    };
+  fn input_text(&self, width: usize) -> impl Widget + '_ {
+    let scroll = self.input.cursor().saturating_sub(width.saturating_sub(4));
     Paragraph::new(self.input.value()).scroll((0, scroll as u16))
   }
 
   fn render_input(&mut self, f: &mut Frame, area: Rect) {
     f.render_widget(self.input_block(), area);
-    f.render_widget(self.input_text(), area.inner(&Margin { horizontal: 2, vertical: 2 }));
+    f.render_widget(self.input_text(area.width as usize), area.inner(&Margin { horizontal: 2, vertical: 2 }));
   }
 
   fn render_cursor(&mut self, f: &mut Frame<'_>, area: Rect) {

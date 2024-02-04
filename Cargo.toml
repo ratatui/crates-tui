@@ -46,6 +46,7 @@ tracing-error = "0.2.0"
 tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde", "serde_json"] }
 tui-input = "0.8.0"
+unicode-width = "0.1.11"
 
 
 [build-dependencies]
