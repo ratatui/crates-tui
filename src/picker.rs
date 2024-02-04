@@ -142,12 +142,12 @@ impl Picker {
       let client =
         crates_io_api::AsyncClient::new("crates-tui (crates-tui@kdheepak.com)", std::time::Duration::from_millis(1000))
           .unwrap();
-      let mut query = crates_io_api::CratesQueryBuilder::default();
-      query = query.search(search);
-      query = query.page(page);
-      query = query.page_size(page_size);
-      query = query.sort(crates_io_api::Sort::Relevance);
-      let query = query.build();
+      let query = crates_io_api::CratesQueryBuilder::default()
+        .search(search)
+        .page(page)
+        .page_size(page_size)
+        .sort(crates_io_api::Sort::Relevance)
+        .build();
       if let Ok(page) = client.crates(query).await {
         let mut all_crates = vec![];
         for _crate in page.crates.iter() {
