@@ -386,9 +386,40 @@ impl Root {
     };
     Ok(Some(cmd))
   }
+
+  pub fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
+    f.render_widget(self.background(), area);
+
+    let [table, input] = Layout::vertical([Constraint::Fill(0), Constraint::Length(5)]).areas(area);
+
+    let [table, scrollbar] = Layout::horizontal([Constraint::Fill(0), Constraint::Length(1)]).areas(table);
+    self.render_scrollbar(f, scrollbar);
+
+    let table = if self.show_crate_info {
+      let [table, info] = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(table);
+      self.render_crate_info(f, info);
+      table
+    } else {
+      table
+    };
+
+    self.render_table(f, table);
+
+    self.render_input(f, input);
+
+    self.render_error(f, area);
+
+    self.render_cursor(f, input);
+
+    Ok(())
+  }
 }
 
 impl Root {
+  fn background(&self) -> impl Widget {
+    Block::default().bg(config::get().background_color)
+  }
+
   pub fn render_crate_info(&mut self, f: &mut Frame, area: Rect) {
     let crate_info = self.crate_info.lock().unwrap().clone();
     let crate_info = if let Some(ci) = crate_info {
@@ -501,10 +532,6 @@ impl Root {
     }
   }
 
-  fn background(&self) -> impl Widget {
-    Block::default().bg(config::get().background_color)
-  }
-
   fn render_scrollbar(&mut self, f: &mut Frame<'_>, area: Rect) {
     let mut state = self.scrollbar_state;
     f.render_stateful_widget(
@@ -578,31 +605,5 @@ impl Root {
         center,
       );
     }
-  }
-
-  pub fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
-    f.render_widget(self.background(), area);
-
-    let [table, input] = Layout::vertical([Constraint::Fill(0), Constraint::Length(5)]).areas(area);
-
-    let [table, scrollbar] = Layout::horizontal([Constraint::Fill(0), Constraint::Length(1)]).areas(table);
-    self.render_scrollbar(f, scrollbar);
-
-    let table = if self.show_crate_info {
-      let [table, info] = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(table);
-      self.render_crate_info(f, info);
-      table
-    } else {
-      table
-    };
-
-    self.render_table(f, table);
-
-    self.render_input(f, input);
-    self.render_cursor(f, input);
-
-    self.render_error(f, area);
-
-    Ok(())
   }
 }
