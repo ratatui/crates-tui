@@ -1,6 +1,7 @@
-use std::{path::PathBuf, sync::OnceLock};
+use std::{collections::HashMap, path::PathBuf, sync::OnceLock};
 
 use color_eyre::eyre::{eyre, Result};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use directories::ProjectDirs;
 use figment::{
   providers::{Env, Format, Serialized, Toml},
@@ -8,10 +9,10 @@ use figment::{
 };
 use ratatui::style::palette::tailwind::*;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
+use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString, Seq};
 use tracing::level_filters::LevelFilter;
 
-use crate::cli::Cli;
+use crate::{action::Action, cli::Cli};
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
 
@@ -42,6 +43,9 @@ pub struct Config {
   pub prompt_padding: u16,
 
   pub style: Style,
+
+  #[serde_as(as = "Seq<(_, _)>")]
+  pub key_bindings: HashMap<Vec<KeyEvent>, Action>,
 }
 
 #[serde_as]
@@ -65,6 +69,9 @@ pub struct Style {
 
 impl Default for Config {
   fn default() -> Self {
+    let mut key_bindings = HashMap::default();
+    key_bindings.insert(vec![KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)], Action::Quit);
+
     Self {
       data_home: default_data_dir(),
       config_home: default_config_dir(),
@@ -73,6 +80,7 @@ impl Default for Config {
       tick_rate: 1.0,
       frame_rate: 4.0,
       prompt_padding: 1,
+      key_bindings,
       style: Style {
         background_color: GRAY.c900,
         search_query_outline_color: GREEN.c400,
