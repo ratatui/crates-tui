@@ -29,6 +29,7 @@ pub enum Mode {
     Popup,
 }
 
+/// FIXME comments on the fields
 #[derive(Debug)]
 pub struct App {
     tx: UnboundedSender<Action>,
@@ -79,13 +80,16 @@ impl App {
         }
     }
 
+    /// FIXME: next what?
     pub fn next(&mut self) {
         if self.filtered_crates.is_empty() {
             self.table_state.select(None)
         } else {
             // wrapping behavior
+            // FIXME use map_or_default
             let i = match self.table_state.selected() {
                 Some(i) => {
+                    /// FIXME use modulo % instead of if/else
                     if i >= self.filtered_crates.len().saturating_sub(1) {
                         0
                     } else {
@@ -119,6 +123,9 @@ impl App {
         }
     }
 
+    /// FIXME: move the movement methods to a type that indicates what they are operating on (the
+    /// table results probably) Even though the app mainly is a wrapper around the table, the split
+    /// will help make the types smaller and more focused
     pub fn top(&mut self) {
         if self.filtered_crates.is_empty() {
             self.table_state.select(None)
@@ -140,6 +147,7 @@ impl App {
         }
     }
 
+    /// FIXME: can we make this infinitely scrollable instead of manually handling the page size?
     fn increment_page(&mut self) {
         if let Some(n) = self.total_num_crates {
             let max_page_size = (n / self.page_size) + 1;
@@ -158,6 +166,7 @@ impl App {
         }
     }
 
+    // FIXME overly long and complex method
     fn reload_data(&mut self) {
         self.table_state.select(None);
         *self.crate_info.lock().unwrap() = None;
@@ -216,6 +225,7 @@ impl App {
         });
     }
 
+    /// FIXME: overly long and complex, and also poorly named
     fn get_info(&mut self) {
         if self.filtered_crates.is_empty() {
             return;
@@ -255,6 +265,7 @@ impl App {
     }
 
     fn tick(&mut self) {
+        // FIXME: this is not obvious what it does what are the last_events? Why are you removing them?
         self.last_events.drain(..);
         self.update_filtered_crates();
         self.update_scrollbar_state();
@@ -288,6 +299,7 @@ impl App {
             .collect();
     }
 
+    // FIXME: Seems oddly named, non intention revaled by the name and complex
     fn cargo_add(&mut self) {
         let crate_info = self.crate_info.lock().unwrap().clone();
         let tx = self.tx.clone();
@@ -320,6 +332,7 @@ impl App {
 }
 
 impl App {
+    /// FIXME: split and simplify
     pub async fn run(&mut self, tui: &mut Tui, mut rx: UnboundedReceiver<Action>) -> Result<()> {
         let mut should_quit = false;
         let tx = self.tx.clone();
@@ -382,6 +395,8 @@ impl App {
 
     pub fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
+            // FIXME: make each variant call a small method to make it easier to see the whole.
+            // Forest full of trees problem
             Action::Tick => self.tick(),
             Action::StoreTotalNumberOfCrates(n) => self.total_num_crates = Some(n),
             Action::ScrollUp if self.mode == Mode::Popup => {
@@ -504,8 +519,10 @@ impl App {
         };
     }
 
-    pub fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
-        f.render_widget(
+    /// FIXME - render a single top level widget and then inside that widget render the other
+    /// widgets
+    pub fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) {
+        frame.render_widget(
             Block::default().bg(config::get().style.background_color),
             area,
         );
@@ -516,18 +533,20 @@ impl App {
         ])
         .areas(area);
 
+        /// FIXME every part of this method has complex logic that calls or creats other methods
+        /// That makes it hard to understand the whole method. Split it into smaller methods
         let table = match self.crate_info.lock().unwrap().clone() {
             Some(ci) if self.show_crate_info => {
                 let [table, info] =
                     Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
                         .areas(table);
-                f.render_widget(CrateInfo::new(ci), info);
+                frame.render_widget(CrateInfo::new(ci), info);
                 table
             }
             _ => table,
         };
 
-        f.render_stateful_widget(
+        frame.render_stateful_widget(
             CratesTable::new(&self.filtered_crates, self.mode == Mode::Picker),
             table,
             &mut (&mut self.table_state, &mut self.scrollbar_state),
@@ -546,20 +565,20 @@ impl App {
             self.mode,
             &self.input,
         );
-        f.render_widget(&p, prompt);
-        p.render_cursor(f, prompt);
+        frame.render_widget(&p, prompt);
+        p.render_cursor(frame, prompt);
         if loading_status {
-            p.render_spinner(f, prompt);
+            p.render_spinner(frame, prompt);
         }
 
         if let Some(err) = &self.error {
-            f.render_widget(Popup::new("Error", err, self.popup_scroll), area);
+            frame.render_widget(Popup::new("Error", err, self.popup_scroll), area);
         }
         if let Some(info) = &self.info {
-            f.render_widget(Popup::new("Info", info, self.popup_scroll), area);
+            frame.render_widget(Popup::new("Info", info, self.popup_scroll), area);
         }
 
-        f.render_widget(
+        frame.render_widget(
             Block::default()
                 .title(format!(
                     "{:?}",
@@ -570,7 +589,7 @@ impl App {
                 ))
                 .title_position(ratatui::widgets::block::Position::Bottom)
                 .title_alignment(ratatui::layout::Alignment::Right),
-            f.size(),
+            frame.size(),
         );
     }
 }

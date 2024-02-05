@@ -30,6 +30,7 @@ async fn tokio_main() -> Result<()> {
     let mut tui = tui::Tui::new()?;
 
     let (tx, rx) = mpsc::unbounded_channel();
+    // FIXME seems odd passing the tx via new and the rx via run???
     let mut app = app::App::new(tx);
     app.run(&mut tui, rx).await?;
 
