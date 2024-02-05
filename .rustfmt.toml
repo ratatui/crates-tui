@@ -1,4 +1,3 @@
-imports_granularity = "Crate"
 normalize_comments = true
 normalize_doc_attributes = true
 overflow_delimited_expr = true
