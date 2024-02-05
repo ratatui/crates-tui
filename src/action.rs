@@ -31,6 +31,4 @@ pub enum Action {
     ToggleShowHelp,
     ToggleShowCrateInfo,
     StoreTotalNumberOfCrates(u64),
-    CargoAddCrate,
-    ShowCargoAddCompletionMessage(String),
 }

@@ -30,7 +30,6 @@ prompt_padding = 1
 "h" = "DecrementPage"
 "Left" = "DecrementPage"
 "Right" = "IncrementPage"
-"a" = "CargoAddCrate"
 "r" = "ReloadData"
 "Enter" = "ToggleShowCrateInfo"
 

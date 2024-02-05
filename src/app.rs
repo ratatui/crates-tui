@@ -322,37 +322,6 @@ impl App {
             .cloned()
             .collect();
     }
-
-    // FIXME: Seems oddly named, non intention revaled by the name and complex
-    fn execute_cargo_add(&mut self) {
-        let crate_info = self.crate_info.lock().unwrap().clone();
-        let tx = self.tx.clone();
-        if let Some(ci) = crate_info {
-            tokio::spawn(async move {
-                let output = tokio::process::Command::new("cargo")
-                    .arg("add")
-                    .arg(ci.name)
-                    .output()
-                    .await;
-                match output {
-                    Ok(output) => {
-                        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
-                        if !stdout.is_empty() {
-                            tx.send(Action::Info(stdout)).unwrap_or_default();
-                        }
-                        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-                        if !stderr.is_empty() {
-                            tx.send(Action::Error(stderr)).unwrap_or_default();
-                        }
-                    }
-                    Err(err) => {
-                        let data = format!("ERROR: {:?}", err);
-                        tx.send(Action::Error(data)).unwrap_or_default();
-                    }
-                }
-            });
-        }
-    }
 }
 
 impl App {
@@ -450,7 +419,6 @@ impl App {
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
-            Action::CargoAddCrate => self.execute_cargo_add(),
             Action::EnterSearchInsertMode => self.enter_search_insert_mode(),
             Action::EnterFilterInsertMode => self.enter_filter_insert_mode(),
             Action::EnterNormal => self.enter_normal_mode(),
