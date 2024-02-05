@@ -2,11 +2,12 @@ use ratatui::{layout::Flex, prelude::*, widgets::*};
 pub struct Popup<'a> {
   title: &'a str,
   message: &'a str,
+  scroll: usize,
 }
 
 impl<'a> Popup<'a> {
-  pub fn new(title: &'a str, message: &'a str) -> Self {
-    Self { title, message }
+  pub fn new(title: &'a str, message: &'a str, scroll: usize) -> Self {
+    Self { title, message, scroll }
   }
 }
 
@@ -21,7 +22,8 @@ impl Widget for Popup<'_> {
           block::Title::from("Press `ESC` to exit").position(block::Position::Bottom).alignment(Alignment::Right),
         ),
       )
-      .wrap(Wrap { trim: true })
+      .wrap(Wrap { trim: false })
+      .scroll((self.scroll as u16, 0))
       .render(center, buf);
   }
 }

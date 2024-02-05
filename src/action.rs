@@ -24,6 +24,8 @@ pub enum Action {
   MoveSelectionTop,
   MoveSelectionNext,
   MoveSelectionPrevious,
+  ScrollPopupDown,
+  ScrollPopupUp,
   SubmitSearchQuery,
   GetInfo,
   ReloadData,

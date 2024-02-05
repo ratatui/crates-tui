@@ -46,6 +46,7 @@ pub struct App {
   info: Option<String>,
   table_state: TableState,
   scrollbar_state: ScrollbarState,
+  popup_scroll: usize,
   last_tick_key_events: Vec<KeyEvent>,
 }
 
@@ -70,6 +71,7 @@ impl App {
       show_crate_info: Default::default(),
       error: Default::default(),
       info: Default::default(),
+      popup_scroll: Default::default(),
       last_tick_key_events: Default::default(),
     }
   }
@@ -161,37 +163,43 @@ impl App {
     let page_size = self.page_size;
     tokio::spawn(async move {
       loading_status.store(true, Ordering::SeqCst);
-      let client =
-        crates_io_api::AsyncClient::new("crates-tui (crates-tui@kdheepak.com)", std::time::Duration::from_millis(1000))
-          .unwrap();
-      let query = crates_io_api::CratesQueryBuilder::default()
-        .search(&search)
-        .page(page)
-        .page_size(page_size)
-        .sort(crates_io_api::Sort::Relevance)
-        .build();
-      match client.crates(query).await {
-        Ok(page) => {
-          let mut all_crates = vec![];
-          for _crate in page.crates.iter() {
-            all_crates.push(_crate.clone())
+      match crates_io_api::AsyncClient::new(
+        "crates-tui (crates-tui@kdheepak.com)",
+        std::time::Duration::from_millis(1000),
+      ) {
+        Ok(client) => {
+          let query = crates_io_api::CratesQueryBuilder::default()
+            .search(&search)
+            .page(page)
+            .page_size(page_size)
+            .sort(crates_io_api::Sort::Relevance)
+            .build();
+          match client.crates(query).await {
+            Ok(page) => {
+              let mut all_crates = vec![];
+              for _crate in page.crates.iter() {
+                all_crates.push(_crate.clone())
+              }
+              all_crates.sort_by(|a, b| b.downloads.cmp(&a.downloads));
+              crates.lock().unwrap().drain(0..);
+              *crates.lock().unwrap() = all_crates;
+              if crates.lock().unwrap().len() > 0 {
+                tx.send(Action::StoreTotalNumberOfCrates(page.meta.total)).unwrap_or_default();
+                tx.send(Action::Tick).unwrap_or_default();
+                tx.send(Action::MoveSelectionNext).unwrap_or_default();
+              } else {
+                tx.send(Action::Error(format!("Could not find any crates with query `{}`.", search)))
+                  .unwrap_or_default();
+              }
+              loading_status.store(false, Ordering::SeqCst);
+            },
+            Err(err) => {
+              tx.send(Action::Error(format!("API Client Error: {err:#?}"))).unwrap_or_default();
+              loading_status.store(false, Ordering::SeqCst);
+            },
           }
-          all_crates.sort_by(|a, b| b.downloads.cmp(&a.downloads));
-          crates.lock().unwrap().drain(0..);
-          *crates.lock().unwrap() = all_crates;
-          if crates.lock().unwrap().len() > 0 {
-            tx.send(Action::StoreTotalNumberOfCrates(page.meta.total)).unwrap_or_default();
-            tx.send(Action::Tick).unwrap_or_default();
-            tx.send(Action::MoveSelectionNext).unwrap_or_default();
-          } else {
-            tx.send(Action::Error(format!("Could not find any crates with query `{}`.", search))).unwrap_or_default();
-          }
-          loading_status.store(false, Ordering::SeqCst);
         },
-        Err(err) => {
-          tx.send(Action::Error(format!("API Client Error: {:?}", err))).unwrap_or_default();
-          loading_status.store(false, Ordering::SeqCst);
-        },
+        Err(err) => tx.send(Action::Error(format!("Error creating client: {err:#?}"))).unwrap_or_default(),
       }
     });
   }
@@ -208,7 +216,9 @@ impl App {
 
     if !name.is_empty() {
       let crate_info = self.crate_info.clone();
+      let loading_status = self.loading_status.clone();
       tokio::spawn(async move {
+        loading_status.store(true, Ordering::SeqCst);
         match crates_io_api::AsyncClient::new(
           "crates-tui (crates-tui@kdheepak.com)",
           std::time::Duration::from_millis(1000),
@@ -216,11 +226,12 @@ impl App {
           Ok(client) => {
             match client.get_crate(&name).await {
               Ok(_crate_info) => *crate_info.lock().unwrap() = Some(_crate_info.crate_data),
-              Err(_err) => tx.send(Action::Error("Unable to get crate information".into())).unwrap_or_default(),
+              Err(err) => tx.send(Action::Error(format!("Unable to get crate information: {err}"))).unwrap_or_default(),
             }
           },
-          Err(err) => tx.send(Action::Error(format!("Error getting crate info: {:?}", err))).unwrap_or_default(),
+          Err(err) => tx.send(Action::Error(format!("Error creating client: {err:?}"))).unwrap_or_default(),
         }
+        loading_status.store(false, Ordering::SeqCst);
       });
     }
   }
@@ -346,6 +357,12 @@ impl App {
       Action::StoreTotalNumberOfCrates(n) => {
         self.total_num_crates = Some(n);
       },
+      Action::ScrollPopupUp => {
+        self.popup_scroll = self.popup_scroll.saturating_sub(1);
+      },
+      Action::ScrollPopupDown => {
+        self.popup_scroll = self.popup_scroll.saturating_add(1);
+      },
       Action::MoveSelectionNext => {
         self.next();
         return Ok(Some(Action::GetInfo));
@@ -367,6 +384,7 @@ impl App {
         self.input = self.input.clone().with_value(self.search.clone());
       },
       Action::EnterFilterInsert => {
+        self.show_crate_info = false;
         self.mode = Mode::PickerFilterEditing;
         self.input = self.input.clone().with_value(self.filter.clone());
       },
@@ -392,18 +410,26 @@ impl App {
       },
       Action::ToggleShowCrateInfo => {
         self.show_crate_info = !self.show_crate_info;
-        if self.crate_info.lock().unwrap().is_none() {
-          self.show_crate_info = false;
+        if self.show_crate_info {
+          self.get_info()
+        } else {
+          *self.crate_info.lock().unwrap() = None;
         }
       },
       Action::GetInfo => {
-        self.get_info();
+        if self.show_crate_info {
+          self.get_info();
+        } else {
+          *self.crate_info.lock().unwrap() = None;
+        }
       },
       Action::Error(err) => {
+        log::error!("Error: {err}");
         self.error = Some(err);
         self.mode = Mode::Popup;
       },
       Action::Info(info) => {
+        log::info!("Info: {info}");
         self.info = Some(info);
         self.mode = Mode::Popup;
       },
@@ -424,6 +450,8 @@ impl App {
         match key.code {
           KeyCode::Enter => Action::ClosePopup,
           KeyCode::Esc => Action::ClosePopup,
+          KeyCode::Char('j') | KeyCode::Down => Action::ScrollPopupDown,
+          KeyCode::Char('k') | KeyCode::Up => Action::ScrollPopupUp,
           _ => return Ok(None),
         }
       },
@@ -473,7 +501,7 @@ impl App {
             self.input.handle_event(&crossterm::event::Event::Key(key));
             self.filter = self.input.value().into();
             self.table_state.select(None);
-            Action::GetInfo
+            return Ok(None);
           },
         }
       },
@@ -514,12 +542,15 @@ impl App {
     let p = Prompt::new(total_num_crates, selected, loading_status, self.mode, &self.input);
     f.render_widget(&p, prompt);
     p.render_cursor(f, prompt);
+    if loading_status {
+      p.render_spinner(f, prompt);
+    }
 
     if let Some(err) = &self.error {
-      f.render_widget(Popup::new("Error", err), area);
+      f.render_widget(Popup::new("Error", err, self.popup_scroll), area);
     }
     if let Some(info) = &self.info {
-      f.render_widget(Popup::new("Info", info), area);
+      f.render_widget(Popup::new("Info", info, self.popup_scroll), area);
     }
 
     f.render_widget(
