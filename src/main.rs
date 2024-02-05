@@ -6,6 +6,7 @@ pub mod errors;
 pub mod logging;
 pub mod root;
 pub mod tui;
+pub mod widgets;
 
 use color_eyre::eyre::Result;
 
