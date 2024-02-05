@@ -38,7 +38,7 @@ pub struct Cli {
 
   /// A path to a crates-tui configuration file.
   #[arg(short, long, value_name = "FILE")]
-  pub config: Option<PathBuf>,
+  pub config_file: Option<PathBuf>,
 
   #[arg(
     short,

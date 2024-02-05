@@ -25,7 +25,6 @@ pub type IO = std::io::Stdout;
 pub fn io() -> IO {
   std::io::stdout()
 }
-pub type Frame<'a> = ratatui::Frame<'a>;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Event {
@@ -78,11 +77,13 @@ impl Tui {
     self
   }
 
+  #[allow(unused)]
   pub fn mouse(mut self, mouse: bool) -> Self {
     self.mouse = mouse;
     self
   }
 
+  #[allow(unused)]
   pub fn paste(mut self, paste: bool) -> Self {
     self.paste = paste;
     self
@@ -201,6 +202,7 @@ impl Tui {
     self.cancellation_token.cancel();
   }
 
+  #[allow(unused)]
   pub fn suspend(&mut self) -> Result<()> {
     self.exit()?;
     #[cfg(not(windows))]
@@ -208,6 +210,7 @@ impl Tui {
     Ok(())
   }
 
+  #[allow(unused)]
   pub fn resume(&mut self) -> Result<()> {
     self.enter()?;
     Ok(())

@@ -351,18 +351,14 @@ impl App {
 
   pub fn update(&mut self, action: Action) -> Result<Option<Action>> {
     match action {
-      Action::Tick => {
-        self.tick();
-      },
-      Action::StoreTotalNumberOfCrates(n) => {
-        self.total_num_crates = Some(n);
-      },
-      Action::ScrollPopupUp => {
-        self.popup_scroll = self.popup_scroll.saturating_sub(1);
-      },
-      Action::ScrollPopupDown => {
-        self.popup_scroll = self.popup_scroll.saturating_add(1);
-      },
+      Action::Tick => self.tick(),
+      Action::StoreTotalNumberOfCrates(n) => self.total_num_crates = Some(n),
+      Action::ScrollPopupUp => self.popup_scroll = self.popup_scroll.saturating_sub(1),
+      Action::ScrollPopupDown => self.popup_scroll = self.popup_scroll.saturating_add(1),
+      Action::ReloadData => self.reload_data(),
+      Action::IncrementPage => self.increment_page(),
+      Action::DecrementPage => self.decrement_page(),
+      Action::CargoAddCrate => self.cargo_add(),
       Action::MoveSelectionNext => {
         self.next();
         return Ok(Some(Action::GetInfo));
@@ -400,15 +396,6 @@ impl App {
         self.search = search;
         return Ok(Some(Action::ReloadData));
       },
-      Action::ReloadData => {
-        self.reload_data();
-      },
-      Action::IncrementPage => {
-        self.increment_page();
-      },
-      Action::DecrementPage => {
-        self.decrement_page();
-      },
       Action::ToggleShowCrateInfo => {
         self.show_crate_info = !self.show_crate_info;
         if self.show_crate_info {
@@ -439,7 +426,6 @@ impl App {
         self.info = None;
         self.mode = Mode::PickerSearchQueryEditing;
       },
-      Action::CargoAddCrate => self.cargo_add(),
       _ => {},
     }
     Ok(None)
@@ -510,7 +496,7 @@ impl App {
   }
 
   fn background(&self) -> impl Widget {
-    Block::default().bg(config::get().background_color)
+    Block::default().bg(config::get().style.background_color)
   }
 
   pub fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {

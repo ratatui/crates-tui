@@ -58,8 +58,8 @@ impl<'a> Prompt<'a> {
       .title(loading_status)
       .title_alignment(Alignment::Right)
       .border_style(match self.mode {
-        Mode::PickerSearchQueryEditing => Style::default().fg(config::get().search_query_outline_color),
-        Mode::PickerFilterEditing => Style::default().fg(config::get().filter_query_outline_color),
+        Mode::PickerSearchQueryEditing => Style::default().fg(config::get().style.search_query_outline_color),
+        Mode::PickerFilterEditing => Style::default().fg(config::get().style.filter_query_outline_color),
         _ => Style::default().add_modifier(Modifier::DIM),
       })
   }

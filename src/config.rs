@@ -27,6 +27,9 @@ pub struct Config {
   /// The directory to use for storing application configuration (colors etc.).
   pub config_home: PathBuf,
 
+  /// The directory to use for storing application configuration (colors etc.).
+  pub config_file: PathBuf,
+
   /// The log level to use. Valid values are: error, warn, info, debug, trace, off. The default is
   /// info.
   #[serde_as(as = "NoneAsEmptyString")]
@@ -38,6 +41,12 @@ pub struct Config {
 
   pub prompt_padding: u16,
 
+  pub style: Style,
+}
+
+#[serde_as]
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Style {
   #[serde_as(as = "DisplayFromStr")]
   pub background_color: ratatui::style::Color,
 
@@ -59,15 +68,18 @@ impl Default for Config {
     Self {
       data_home: default_data_dir(),
       config_home: default_config_dir(),
+      config_file: default_config_file(),
       log_level: None,
       tick_rate: 1.0,
       frame_rate: 4.0,
-      background_color: GRAY.c900,
       prompt_padding: 1,
-      search_query_outline_color: GREEN.c400,
-      filter_query_outline_color: YELLOW.c400,
-      row_background_color_1: GRAY.c900,
-      row_background_color_2: GRAY.c800,
+      style: Style {
+        background_color: GRAY.c900,
+        search_query_outline_color: GREEN.c400,
+        filter_query_outline_color: YELLOW.c400,
+        row_background_color_1: GRAY.c900,
+        row_background_color_2: GRAY.c800,
+      },
     }
   }
 }
@@ -117,7 +129,7 @@ fn project_dirs() -> Result<ProjectDirs> {
 /// - environment variables
 /// - command line arguments
 pub fn initialize_config(cli: &Cli) -> Result<()> {
-  let config_file = cli.config.clone().unwrap_or_else(default_config_file);
+  let config_file = cli.config_file.clone().unwrap_or_else(default_config_file);
   let config = Figment::new()
     .merge(Serialized::defaults(Config::default()))
     .merge(Toml::file(config_file))

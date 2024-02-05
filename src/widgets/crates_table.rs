@@ -35,7 +35,7 @@ impl<'a> StatefulWidget for CratesTable<'a> {
           .iter()
           .map(|h| Text::from(vec!["".into(), Line::from(h.bold()), "".into()])),
       )
-      .bg(config::get().background_color)
+      .bg(config::get().style.background_color)
       .height(3);
       let highlight_symbol = if self.highlight { " \u{2022} " } else { "   " };
 
@@ -53,8 +53,8 @@ impl<'a> StatefulWidget for CratesTable<'a> {
           Text::from(vec!["".into(), Line::from(item.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()), "".into()]),
         ])
         .bg(match i % 2 {
-          0 => config::get().row_background_color_1,
-          1 => config::get().row_background_color_2,
+          0 => config::get().style.row_background_color_1,
+          1 => config::get().style.row_background_color_2,
           _ => unreachable!("Cannot reach this line"),
         })
         .height(height.saturating_add(1) as u16)

@@ -1,11 +1,11 @@
-pub mod action;
-pub mod app;
-pub mod cli;
-pub mod config;
-pub mod errors;
-pub mod logging;
-pub mod tui;
-pub mod widgets;
+mod action;
+mod app;
+mod cli;
+mod config;
+mod errors;
+mod logging;
+mod tui;
+mod widgets;
 
 use color_eyre::eyre::Result;
 use tokio::sync::mpsc;
@@ -20,7 +20,7 @@ async fn tokio_main() -> Result<()> {
   initialize_panic_handler()?;
 
   if cli.print_default_config {
-    println!("{:#?}", config::get());
+    println!("{}", toml::to_string_pretty(config::get())?);
     return Ok(());
   }
 
@@ -36,7 +36,7 @@ async fn tokio_main() -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
   if let Err(e) = tokio_main().await {
-    eprintln!("{} error: Something went wrong", env!("CARGO_PKG_NAME"));
+    eprintln!("{} error: Something went wrong.", env!("CARGO_PKG_NAME"));
     Err(e)
   } else {
     Ok(())
