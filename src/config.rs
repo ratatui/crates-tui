@@ -14,7 +14,7 @@ use tracing::level_filters::LevelFilter;
 use crate::{cli::Cli, serde_helper::keybindings::KeyBindings};
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
-pub const CONFIG_DEFAULT: &str = include_str!("./config.default.toml");
+pub const CONFIG_DEFAULT: &str = include_str!("../.config/config.default.toml");
 
 /// Application configuration.
 ///
