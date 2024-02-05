@@ -5,20 +5,26 @@ use serde::Serialize;
 use serde_with::{serde_as, skip_serializing_none, NoneAsEmptyString};
 use tracing::level_filters::LevelFilter;
 
-const VERSION_MESSAGE: &str =
-  concat!(env!("CARGO_PKG_VERSION"), "-", env!("VERGEN_GIT_DESCRIBE"), " (", env!("VERGEN_BUILD_DATE"), ")");
+const VERSION_MESSAGE: &str = concat!(
+    env!("CARGO_PKG_VERSION"),
+    "-",
+    env!("VERGEN_GIT_DESCRIBE"),
+    " (",
+    env!("VERGEN_BUILD_DATE"),
+    ")"
+);
 
 pub fn version() -> String {
-  let author = clap::crate_authors!();
+    let author = clap::crate_authors!();
 
-  format!(
-    "\
+    format!(
+        "\
 {VERSION_MESSAGE}
 
 Authors: {author}
 
 "
-  )
+    )
 }
 
 /// Command line arguments.
@@ -29,38 +35,44 @@ Authors: {author}
 #[derive(Debug, Default, Parser, Serialize)]
 #[command(author, version = version(), about, long_about = None)]
 pub struct Cli {
-  #[arg(short, long, value_name = "FLOAT", help = "Tick rate, i.e. number of ticks per second", default_value_t = 1.0)]
-  pub tick_rate: f64,
+    #[arg(
+        short,
+        long,
+        value_name = "FLOAT",
+        help = "Tick rate, i.e. number of ticks per second",
+        default_value_t = 1.0
+    )]
+    pub tick_rate: f64,
 
-  /// Print default configuration
-  #[arg(long)]
-  pub print_default_config: bool,
+    /// Print default configuration
+    #[arg(long)]
+    pub print_default_config: bool,
 
-  /// A path to a crates-tui configuration file.
-  #[arg(short, long, value_name = "FILE")]
-  pub config_file: Option<PathBuf>,
+    /// A path to a crates-tui configuration file.
+    #[arg(short, long, value_name = "FILE")]
+    pub config_file: Option<PathBuf>,
 
-  #[arg(
-    short,
-    long,
-    value_name = "FLOAT",
-    help = "Frame rate, i.e. number of frames per second",
-    default_value_t = 15.0
-  )]
-  pub frame_rate: f64,
+    #[arg(
+        short,
+        long,
+        value_name = "FLOAT",
+        help = "Frame rate, i.e. number of frames per second",
+        default_value_t = 15.0
+    )]
+    pub frame_rate: f64,
 
-  /// The directory to use for storing application data.
-  #[arg(long, value_name = "DIR")]
-  pub data_dir: Option<PathBuf>,
+    /// The directory to use for storing application data.
+    #[arg(long, value_name = "DIR")]
+    pub data_dir: Option<PathBuf>,
 
-  /// The log level to use.
-  ///
-  /// Valid values are: error, warn, info, debug, trace, off. The default is info.
-  #[arg(long, value_name = "LEVEL", alias = "log")]
-  #[serde_as(as = "NoneAsEmptyString")]
-  pub log_level: Option<LevelFilter>,
+    /// The log level to use.
+    ///
+    /// Valid values are: error, warn, info, debug, trace, off. The default is info.
+    #[arg(long, value_name = "LEVEL", alias = "log")]
+    #[serde_as(as = "NoneAsEmptyString")]
+    pub log_level: Option<LevelFilter>,
 }
 
 pub fn get() -> Cli {
-  Cli::parse()
+    Cli::parse()
 }

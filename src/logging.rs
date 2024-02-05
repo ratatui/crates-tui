@@ -1,35 +1,37 @@
 use color_eyre::eyre::Result;
 use tracing::level_filters::LevelFilter;
 use tracing_error::ErrorLayer;
-use tracing_subscriber::{self, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{
+    self, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
+};
 
 use crate::config;
 
 pub fn initialize_logging() -> Result<()> {
-  let config = config::get();
-  let directory = config.data_home.clone();
-  std::fs::create_dir_all(directory.clone())?;
-  let log_file = format!("{}.log", env!("CARGO_PKG_NAME"));
-  let log_path = directory.join(log_file);
-  let log_file = std::fs::File::create(log_path)?;
-  let file_subscriber = tracing_subscriber::fmt::layer()
-    .with_file(true)
-    .with_line_number(true)
-    .with_writer(log_file)
-    .with_target(false)
-    .with_ansi(false);
-  tracing_subscriber::registry()
-    .with(file_subscriber)
-    .with(ErrorLayer::default())
-    .with(
-      tracing_subscriber::filter::EnvFilter::from_default_env()
-        .add_directive("tokio_util=off".parse().unwrap())
-        .add_directive("hyper=off".parse().unwrap())
-        .add_directive("reqwest=off".parse().unwrap())
-        .add_directive(config.log_level.unwrap_or(LevelFilter::OFF).into()),
-    )
-    .init();
-  Ok(())
+    let config = config::get();
+    let directory = config.data_home.clone();
+    std::fs::create_dir_all(directory.clone())?;
+    let log_file = format!("{}.log", env!("CARGO_PKG_NAME"));
+    let log_path = directory.join(log_file);
+    let log_file = std::fs::File::create(log_path)?;
+    let file_subscriber = tracing_subscriber::fmt::layer()
+        .with_file(true)
+        .with_line_number(true)
+        .with_writer(log_file)
+        .with_target(false)
+        .with_ansi(false);
+    tracing_subscriber::registry()
+        .with(file_subscriber)
+        .with(ErrorLayer::default())
+        .with(
+            tracing_subscriber::filter::EnvFilter::from_default_env()
+                .add_directive("tokio_util=off".parse().unwrap())
+                .add_directive("hyper=off".parse().unwrap())
+                .add_directive("reqwest=off".parse().unwrap())
+                .add_directive(config.log_level.unwrap_or(LevelFilter::OFF).into()),
+        )
+        .init();
+    Ok(())
 }
 
 /// Similar to the `std::dbg!` macro, but generates `tracing` events rather
