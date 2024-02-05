@@ -4,11 +4,11 @@ pub mod cli;
 pub mod config;
 pub mod errors;
 pub mod logging;
-pub mod root;
 pub mod tui;
 pub mod widgets;
 
 use color_eyre::eyre::Result;
+use tokio::sync::mpsc;
 
 use crate::{config::initialize_config, errors::initialize_panic_handler, logging::initialize_logging};
 
@@ -25,7 +25,10 @@ async fn tokio_main() -> Result<()> {
   }
 
   let mut tui = tui::Tui::new()?.tick_rate(config::get().tick_rate).frame_rate(config::get().frame_rate);
-  app::run(&mut tui).await?;
+
+  let (tx, rx) = mpsc::unbounded_channel();
+  let mut app = app::App::new(tx);
+  app.run(&mut tui, rx).await?;
 
   Ok(())
 }

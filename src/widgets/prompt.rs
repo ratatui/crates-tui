@@ -1,6 +1,6 @@
 use ratatui::{prelude::*, widgets::*};
 
-use crate::{config, root::Mode};
+use crate::{app::Mode, config};
 
 pub struct Prompt<'a> {
   total_num_crates: u64,
