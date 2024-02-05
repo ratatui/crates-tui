@@ -1,4 +1,5 @@
 use color_eyre::eyre::Result;
+use tracing::error;
 
 // FIXME: simplify this similar to the template add a comment about what each piece actually does (I
 // think there are 4 types of error hooks here and its not clear why)
@@ -16,7 +17,7 @@ pub fn initialize_panic_handler() -> Result<()> {
     std::panic::set_hook(Box::new(move |panic_info| {
         if let Ok(mut t) = crate::tui::Tui::new() {
             if let Err(r) = t.exit() {
-                log::error!("Unable to exit Terminal: {:?}", r);
+                error!("Unable to exit Terminal: {:?}", r);
             }
         }
 
@@ -37,7 +38,7 @@ pub fn initialize_panic_handler() -> Result<()> {
             eprintln!("{}", panic_hook.panic_report(panic_info)); // prints color-eyre stack trace to stderr
         }
         let msg = format!("{}", panic_hook.panic_report(panic_info));
-        log::error!("Error: {}", strip_ansi_escapes::strip_str(msg));
+        error!("Error: {}", strip_ansi_escapes::strip_str(msg));
 
         #[cfg(debug_assertions)]
         {

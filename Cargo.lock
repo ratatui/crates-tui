@@ -462,7 +462,6 @@ dependencies = [
  "json5",
  "lazy_static",
  "libc",
- "log",
  "num-format",
  "pretty_assertions",
  "ratatui 0.26.0",

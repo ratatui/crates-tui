@@ -9,6 +9,7 @@ use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use strum::Display;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tracing::{debug, error, info};
 use tui_input::backend::crossterm::EventHandler;
 
 use crate::{
@@ -36,7 +37,7 @@ pub struct App {
     page: u64,
     page_size: u64,
     mode: Mode,
-    last_events: Vec<KeyEvent>,
+    last_key_events: Vec<KeyEvent>,
     loading_status: Arc<AtomicBool>,
     search: String,
     filter: String,
@@ -61,7 +62,7 @@ impl App {
             page: 1,
             page_size: 25,
             mode: Mode::default(),
-            last_events: Default::default(),
+            last_key_events: Default::default(),
             loading_status: Default::default(),
             search: Default::default(),
             filter: Default::default(),
@@ -80,8 +81,7 @@ impl App {
         }
     }
 
-    // FIXME: next what?
-    pub fn next(&mut self) {
+    pub fn next_crate(&mut self) {
         if self.filtered_crates.is_empty() {
             self.table_state.select(None)
         } else {
@@ -103,7 +103,7 @@ impl App {
         }
     }
 
-    pub fn previous(&mut self) {
+    pub fn previous_crate(&mut self) {
         if self.filtered_crates.is_empty() {
             self.table_state.select(None)
         } else {
@@ -166,6 +166,77 @@ impl App {
         }
     }
 
+    fn popup_scroll_previous(&mut self) {
+        self.popup_scroll = self.popup_scroll.saturating_sub(1)
+    }
+
+    fn popup_scroll_next(&mut self) {
+        self.popup_scroll = self.popup_scroll.saturating_add(1)
+    }
+
+    fn enter_search_insert_mode(&mut self) {
+        self.mode = Mode::Search;
+        self.input = self.input.clone().with_value(self.search.clone());
+    }
+
+    fn enter_filter_insert_mode(&mut self) {
+        self.show_crate_info = false;
+        self.mode = Mode::Filter;
+        self.input = self.input.clone().with_value(self.filter.clone());
+    }
+
+    fn enter_normal_mode(&mut self) {
+        self.mode = Mode::Picker;
+        if !self.filtered_crates.is_empty() && self.table_state.selected().is_none() {
+            self.table_state.select(Some(0))
+        }
+    }
+
+    fn submit_search(&mut self) {
+        self.mode = Mode::Picker;
+        self.filter.clear();
+        self.search = self.input.value().into();
+    }
+
+    fn toggle_show_crate_info(&mut self) {
+        self.show_crate_info = !self.show_crate_info;
+        if self.show_crate_info {
+            self.load_current_selection_crate_info()
+        } else {
+            *self.crate_info.lock().unwrap() = None;
+        }
+    }
+
+    fn set_error_flag(&mut self, err: String) {
+        error!("Error: {err}");
+        self.error = Some(err);
+        self.mode = Mode::Popup;
+    }
+
+    fn set_info_flag(&mut self, info: String) {
+        info!("Info: {info}");
+        self.info = Some(info);
+        self.mode = Mode::Popup;
+    }
+
+    fn clear_error_and_info_flags(&mut self) {
+        self.error = None;
+        self.info = None;
+        self.mode = Mode::Search;
+    }
+
+    fn update_current_selection_crate_info(&mut self) {
+        if self.show_crate_info {
+            self.load_current_selection_crate_info();
+        } else {
+            *self.crate_info.lock().unwrap() = None;
+        }
+    }
+
+    fn store_total_number_of_crates(&mut self, n: u64) {
+        self.total_num_crates = Some(n)
+    }
+
     // FIXME overly long and complex method
     fn reload_data(&mut self) {
         self.table_state.select(None);
@@ -226,47 +297,45 @@ impl App {
     }
 
     // FIXME: overly long and complex, and also poorly named
-    fn get_info(&mut self) {
+    fn load_current_selection_crate_info(&mut self) {
         if self.filtered_crates.is_empty() {
             return;
         }
-
         let tx = self.tx.clone();
-
         let index = self.table_state.selected().unwrap_or_default();
         let name = self.filtered_crates[index].name.clone();
 
-        if !name.is_empty() {
-            let crate_info = self.crate_info.clone();
-            let loading_status = self.loading_status.clone();
-            tokio::spawn(async move {
-                loading_status.store(true, Ordering::SeqCst);
-                match crates_io_api::AsyncClient::new(
-                    "crates-tui (crates-tui@kdheepak.com)",
-                    std::time::Duration::from_millis(1000),
-                ) {
-                    Ok(client) => match client.get_crate(&name).await {
-                        Ok(_crate_info) => {
-                            *crate_info.lock().unwrap() = Some(_crate_info.crate_data)
-                        }
-                        Err(err) => tx
-                            .send(Action::Error(format!(
-                                "Unable to get crate information: {err}"
-                            )))
-                            .unwrap_or_default(),
-                    },
-                    Err(err) => tx
-                        .send(Action::Error(format!("Error creating client: {err:?}")))
-                        .unwrap_or_default(),
-                }
-                loading_status.store(false, Ordering::SeqCst);
-            });
+        if name.is_empty() {
+            return;
         }
+
+        let crate_info = self.crate_info.clone();
+        let loading_status = self.loading_status.clone();
+        tokio::spawn(async move {
+            loading_status.store(true, Ordering::SeqCst);
+            match crates_io_api::AsyncClient::new(
+                "crates-tui (crates-tui@kdheepak.com)",
+                std::time::Duration::from_millis(1000),
+            ) {
+                Ok(client) => match client.get_crate(&name).await {
+                    Ok(_crate_info) => *crate_info.lock().unwrap() = Some(_crate_info.crate_data),
+                    Err(err) => tx
+                        .send(Action::Error(format!(
+                            "Unable to get crate information: {err}"
+                        )))
+                        .unwrap_or_default(),
+                },
+                Err(err) => tx
+                    .send(Action::Error(format!("Error creating client: {err:?}")))
+                    .unwrap_or_default(),
+            }
+            loading_status.store(false, Ordering::SeqCst);
+        });
     }
 
     fn tick(&mut self) {
         // FIXME: this is not obvious what it does what are the last_events? Why are you removing them?
-        self.last_events.drain(..);
+        self.last_key_events.drain(..);
         self.update_filtered_crates();
         self.update_scrollbar_state();
     }
@@ -300,7 +369,7 @@ impl App {
     }
 
     // FIXME: Seems oddly named, non intention revaled by the name and complex
-    fn cargo_add(&mut self) {
+    fn execute_cargo_add(&mut self) {
         let crate_info = self.crate_info.lock().unwrap().clone();
         let tx = self.tx.clone();
         if let Some(ci) = crate_info {
@@ -348,7 +417,7 @@ impl App {
                     tui::Event::Render => tx.send(Action::Render)?,
                     tui::Event::Resize(x, y) => tx.send(Action::Resize(x, y))?,
                     tui::Event::Key(key) => {
-                        log::debug!("Received key {:?}", key);
+                        debug!("Received key {:?}", key);
                         if let Some(action) = self.handle_key_events(key)? {
                             tx.send(action)?;
                         }
@@ -362,7 +431,7 @@ impl App {
 
             while let Ok(action) = rx.try_recv() {
                 if action != Action::Tick && action != Action::Render {
-                    log::info!("{action:?}");
+                    info!("{action:?}");
                 }
                 if let Some(action) = self.update(action.clone())? {
                     tx.send(action)?
@@ -395,96 +464,37 @@ impl App {
 
     pub fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
-            // FIXME: make each variant call a small method to make it easier to see the whole.
-            // Forest full of trees problem
             Action::Tick => self.tick(),
-            Action::StoreTotalNumberOfCrates(n) => self.total_num_crates = Some(n),
-            Action::ScrollUp if self.mode == Mode::Popup => {
-                self.popup_scroll = self.popup_scroll.saturating_sub(1)
-            }
-            Action::ScrollDown if self.mode == Mode::Popup => {
-                self.popup_scroll = self.popup_scroll.saturating_add(1)
-            }
+            Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
+            Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll_previous(),
+            Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll_next(),
+            Action::ScrollUp => self.previous_crate(),
+            Action::ScrollDown => self.next_crate(),
+            Action::ScrollTop => self.top(),
+            Action::ScrollBottom => self.bottom(),
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
-            Action::CargoAddCrate => self.cargo_add(),
-            Action::ScrollUp => {
-                self.previous();
-                return Ok(Some(Action::GetInfo));
-            }
-            Action::ScrollDown => {
-                self.next();
-                return Ok(Some(Action::GetInfo));
-            }
-            Action::ScrollTop => {
-                self.top();
-                return Ok(Some(Action::GetInfo));
-            }
-            Action::ScrollBottom => {
-                self.bottom();
-                return Ok(Some(Action::GetInfo));
-            }
-            Action::EnterSearchInsertMode => {
-                self.mode = Mode::Search;
-                self.input = self.input.clone().with_value(self.search.clone());
-            }
-            Action::EnterFilterInsertMode => {
-                self.show_crate_info = false;
-                self.mode = Mode::Filter;
-                self.input = self.input.clone().with_value(self.filter.clone());
-            }
-            Action::EnterNormal => {
-                self.mode = Mode::Picker;
-                if !self.filtered_crates.is_empty() && self.table_state.selected().is_none() {
-                    self.table_state.select(Some(0))
-                }
-            }
-            Action::SubmitSearchWithQuery(search) => {
-                self.mode = Mode::Picker;
-                self.filter.clear();
-                self.search = search;
-                return Ok(Some(Action::ReloadData));
-            }
-            Action::SubmitSearch => {
-                self.mode = Mode::Picker;
-                self.filter.clear();
-                self.search = self.input.value().into();
-                return Ok(Some(Action::ReloadData));
-            }
-            Action::ToggleShowCrateInfo => {
-                self.show_crate_info = !self.show_crate_info;
-                if self.show_crate_info {
-                    self.get_info()
-                } else {
-                    *self.crate_info.lock().unwrap() = None;
-                }
-            }
-            Action::GetInfo => {
-                if self.show_crate_info {
-                    self.get_info();
-                } else {
-                    *self.crate_info.lock().unwrap() = None;
-                }
-            }
-            Action::Error(err) => {
-                log::error!("Error: {err}");
-                self.error = Some(err);
-                self.mode = Mode::Popup;
-            }
-            Action::Info(info) => {
-                log::info!("Info: {info}");
-                self.info = Some(info);
-                self.mode = Mode::Popup;
-            }
-            Action::ClosePopup => {
-                self.error = None;
-                self.info = None;
-                self.mode = Mode::Search;
-            }
+            Action::CargoAddCrate => self.execute_cargo_add(),
+            Action::EnterSearchInsertMode => self.enter_search_insert_mode(),
+            Action::EnterFilterInsertMode => self.enter_filter_insert_mode(),
+            Action::EnterNormal => self.enter_normal_mode(),
+            Action::SubmitSearch => self.submit_search(),
+            Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
+            Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
+            Action::Error(ref err) => self.set_error_flag(err.clone()),
+            Action::Info(ref info) => self.set_info_flag(info.clone()),
+            Action::ClosePopup => self.clear_error_and_info_flags(),
             _ => {}
+        };
+
+        match action {
+            Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom => {
+                Ok(Some(Action::UpdateCurrentSelectionCrateInfo))
+            }
+            Action::SubmitSearch => Ok(Some(Action::ReloadData)),
+            _ => Ok(None),
         }
-        Ok(None)
     }
 
     pub fn handle_key_events_from_config(&mut self, key: KeyEvent) -> Option<Action> {

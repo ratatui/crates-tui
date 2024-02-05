@@ -20,15 +20,9 @@ use tokio::{
     task::JoinHandle,
 };
 use tokio_util::sync::CancellationToken;
+use tracing::error;
 
 use crate::config;
-
-pub type IO = std::io::Stdout;
-
-// FIXME: just use stdout - let the user change it if they want by changing the code
-pub fn io() -> IO {
-    std::io::stdout()
-}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Event {
@@ -51,7 +45,7 @@ pub enum Event {
 // cancellation token, and a channel all in one. It's also a bit of a kitchen sink in terms of
 // configuration options. (CoPilot completed that, but it's a good point.)
 pub struct Tui {
-    pub terminal: ratatui::Terminal<Backend<IO>>,
+    pub terminal: ratatui::Terminal<Backend<std::io::Stdout>>,
     pub task: JoinHandle<()>,
     pub cancellation_token: CancellationToken,
     pub event_rx: UnboundedReceiver<Event>,
@@ -70,7 +64,7 @@ impl Tui {
         let key_refresh_rate = config::get().key_refresh_rate;
         let mouse = config::get().enable_mouse;
         let paste = config::get().enable_paste;
-        let terminal = ratatui::Terminal::new(Backend::new(io()))?;
+        let terminal = ratatui::Terminal::new(Backend::new(std::io::stdout()))?;
         let (event_tx, event_rx) = mpsc::unbounded_channel();
         let cancellation_token = CancellationToken::new();
         let task = tokio::spawn(async {});
@@ -191,17 +185,17 @@ impl Tui {
         self.cancel();
         // FIXME: use intention revealing names - retry_count or something
         // add a comment explaining why we're doing this
-        let mut counter = 0;
+        let mut retry_count = 0;
 
         while !self.task.is_finished() {
             std::thread::sleep(Duration::from_millis(1));
-            counter += 1;
+            retry_count += 1;
             // FIXME: are we really calling this 50 times? That seems like a lot.
-            if counter > 50 {
+            if retry_count > 50 {
                 self.task.abort();
             }
-            if counter > 100 {
-                log::error!("Failed to abort task in 100 milliseconds for unknown reason");
+            if retry_count > 100 {
+                error!("Failed to abort task in 100 milliseconds for unknown reason");
                 break;
             }
         }
@@ -212,12 +206,12 @@ impl Tui {
     /// init() or init_terminal is a better name
     pub fn enter(&mut self) -> Result<()> {
         crossterm::terminal::enable_raw_mode()?;
-        crossterm::execute!(io(), EnterAlternateScreen, cursor::Hide)?;
+        crossterm::execute!(std::io::stdout(), EnterAlternateScreen, cursor::Hide)?;
         if self.mouse {
-            crossterm::execute!(io(), EnableMouseCapture)?;
+            crossterm::execute!(std::io::stdout(), EnableMouseCapture)?;
         }
         if self.paste {
-            crossterm::execute!(io(), EnableBracketedPaste)?;
+            crossterm::execute!(std::io::stdout(), EnableBracketedPaste)?;
         }
         self.start();
         Ok(())
@@ -228,12 +222,12 @@ impl Tui {
         if crossterm::terminal::is_raw_mode_enabled()? {
             self.flush()?;
             if self.paste {
-                crossterm::execute!(io(), DisableBracketedPaste)?;
+                crossterm::execute!(std::io::stdout(), DisableBracketedPaste)?;
             }
             if self.mouse {
-                crossterm::execute!(io(), DisableMouseCapture)?;
+                crossterm::execute!(std::io::stdout(), DisableMouseCapture)?;
             }
-            crossterm::execute!(io(), LeaveAlternateScreen, cursor::Show)?;
+            crossterm::execute!(std::io::stdout(), LeaveAlternateScreen, cursor::Show)?;
             crossterm::terminal::disable_raw_mode()?;
         }
         Ok(())
@@ -264,7 +258,7 @@ impl Tui {
 }
 
 impl Deref for Tui {
-    type Target = ratatui::Terminal<Backend<IO>>;
+    type Target = ratatui::Terminal<Backend<std::io::Stdout>>;
 
     fn deref(&self) -> &Self::Target {
         &self.terminal

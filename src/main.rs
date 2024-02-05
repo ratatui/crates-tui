@@ -15,7 +15,8 @@ use crate::{
     config::initialize_config, errors::initialize_panic_handler, logging::initialize_logging,
 };
 
-async fn tokio_main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let cli = cli::parse();
     initialize_config(&cli)?;
 
@@ -35,15 +36,4 @@ async fn tokio_main() -> Result<()> {
     app.run(&mut tui, rx).await?;
 
     Ok(())
-}
-
-#[tokio::main]
-async fn main() -> Result<()> {
-    // FIXME: Let the error handlers handle the error.
-    if let Err(e) = tokio_main().await {
-        eprintln!("{} error: Something went wrong.", env!("CARGO_PKG_NAME"));
-        Err(e)
-    } else {
-        Ok(())
-    }
 }
