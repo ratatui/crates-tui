@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, time::Duration};
 
 use clap::Parser;
 use serde::Serialize;
@@ -35,13 +35,8 @@ Authors: {author}
 #[derive(Debug, Default, Parser, Serialize)]
 #[command(author, version = version(), about, long_about = None)]
 pub struct Cli {
-    #[arg(
-        short,
-        long,
-        value_name = "FLOAT",
-        help = "Tick rate, i.e. number of ticks per second",
-        default_value_t = 1.0
-    )]
+    /// Tick rate, i.e. number of ticks per second
+    #[arg(short, long, value_name = "FLOAT", default_value_t = 1.0)]
     pub tick_rate: f64,
 
     /// Print default configuration
@@ -52,13 +47,8 @@ pub struct Cli {
     #[arg(short, long, value_name = "FILE")]
     pub config_file: Option<PathBuf>,
 
-    #[arg(
-        short,
-        long,
-        value_name = "FLOAT",
-        help = "Frame rate, i.e. number of frames per second",
-        default_value_t = 15.0
-    )]
+    /// Frame rate, i.e. number of frames per second
+    #[arg(short, long, value_name = "FLOAT", default_value_t = 15.0)]
     pub frame_rate: f64,
 
     /// The directory to use for storing application data.
@@ -73,6 +63,9 @@ pub struct Cli {
     pub log_level: Option<LevelFilter>,
 }
 
+// FIXME: seeing Cli::parse is pretty common and evokes that this is a clap parser, but cli::get
+// slaps that expectation in the face, just enough to be annoying. Just let the caller call the
+// function parse, it's not that big of a deal.
 pub fn get() -> Cli {
     Cli::parse()
 }

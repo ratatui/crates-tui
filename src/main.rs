@@ -30,6 +30,7 @@ async fn tokio_main() -> Result<()> {
     let mut tui = tui::Tui::new()?;
 
     let (tx, rx) = mpsc::unbounded_channel();
+    // FIXME seems odd passing the tx via new and the rx via run???
     let mut app = app::App::new(tx);
     app.run(&mut tui, rx).await?;
 
@@ -38,6 +39,7 @@ async fn tokio_main() -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // FIXME: Let the error handlers handle the error.
     if let Err(e) = tokio_main().await {
         eprintln!("{} error: Something went wrong.", env!("CARGO_PKG_NAME"));
         Err(e)

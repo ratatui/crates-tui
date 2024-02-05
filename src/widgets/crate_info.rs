@@ -1,6 +1,7 @@
 use ratatui::{prelude::*, widgets::*};
 
 pub struct CrateInfo {
+    // FIXME don't abbreviate this
     ci: crates_io_api::Crate,
 }
 
@@ -14,6 +15,17 @@ impl Widget for CrateInfo {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let ci = self.ci.clone();
 
+        // FIXME: stick the data in an array and map to cells
+        // let data = vec![
+        //     vec!["Name", name],
+        //     vec!["Created At", ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string()],
+        //     vec!["Updated At", ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string()],
+        //     vec!["Max Version", ci.max_version],
+        // ];
+        // let rows = data.iter().map(|row| {
+        //     let cells = row.iter().map(|cell| Cell::from(cell));
+        //     Row::new(cells)
+        // });
         let mut rows = vec![
             Row::new(vec![Cell::from("Name"), Cell::from(ci.name.clone())]),
             Row::new(vec![

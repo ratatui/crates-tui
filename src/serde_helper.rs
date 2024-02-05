@@ -103,6 +103,7 @@ pub mod keybindings {
         (current, modifiers)
     }
 
+    /// FIXME - seems excessively verbose. Use strum to simplify?
     fn parse_key_code_with_modifiers(
         raw: &str,
         mut modifiers: KeyModifiers,
