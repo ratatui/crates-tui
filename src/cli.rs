@@ -1,4 +1,4 @@
-use std::{path::PathBuf, time::Duration};
+use std::path::PathBuf;
 
 use clap::Parser;
 use serde::Serialize;
@@ -66,6 +66,6 @@ pub struct Cli {
 // FIXME: seeing Cli::parse is pretty common and evokes that this is a clap parser, but cli::get
 // slaps that expectation in the face, just enough to be annoying. Just let the caller call the
 // function parse, it's not that big of a deal.
-pub fn get() -> Cli {
+pub fn parse() -> Cli {
     Cli::parse()
 }

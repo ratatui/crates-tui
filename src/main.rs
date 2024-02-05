@@ -16,7 +16,7 @@ use crate::{
 };
 
 async fn tokio_main() -> Result<()> {
-    let cli = cli::get();
+    let cli = cli::parse();
     initialize_config(&cli)?;
 
     initialize_logging()?;

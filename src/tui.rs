@@ -25,7 +25,7 @@ use crate::config;
 
 pub type IO = std::io::Stdout;
 
-/// FIXME: just use stdout - let the user change it if they want by changing the code
+// FIXME: just use stdout - let the user change it if they want by changing the code
 pub fn io() -> IO {
     std::io::stdout()
 }
@@ -47,9 +47,9 @@ pub enum Event {
     Resize(u16, u16),
 }
 
-/// FIXME: this struct seems like it's doing a lot of different things. It's a terminal, a task, a
-/// cancellation token, and a channel all in one. It's also a bit of a kitchen sink in terms of
-/// configuration options. (CoPilot completed that, but it's a good point.)
+// FIXME: this struct seems like it's doing a lot of different things. It's a terminal, a task, a
+// cancellation token, and a channel all in one. It's also a bit of a kitchen sink in terms of
+// configuration options. (CoPilot completed that, but it's a good point.)
 pub struct Tui {
     pub terminal: ratatui::Terminal<Backend<IO>>,
     pub task: JoinHandle<()>,
@@ -135,7 +135,7 @@ impl Tui {
                 let key_refresh_delay = key_refresh_interval.tick();
                 let render_delay = render_interval.tick();
                 let crossterm_event = reader.next().fuse();
-                /// FIXME: use small composable tasks rather than large select blocks like this to make this easier to read
+                // FIXME: use small composable tasks rather than large select blocks like this to make this easier to read
                 tokio::select! {
                   _ = _cancellation_token.cancelled() => {
                     break;
@@ -196,7 +196,7 @@ impl Tui {
         while !self.task.is_finished() {
             std::thread::sleep(Duration::from_millis(1));
             counter += 1;
-            /// FIXME: are we really calling this 50 times? That seems like a lot.
+            // FIXME: are we really calling this 50 times? That seems like a lot.
             if counter > 50 {
                 self.task.abort();
             }

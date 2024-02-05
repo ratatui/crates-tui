@@ -29,7 +29,7 @@ pub enum Mode {
     Popup,
 }
 
-/// FIXME comments on the fields
+// FIXME comments on the fields
 #[derive(Debug)]
 pub struct App {
     tx: UnboundedSender<Action>,
@@ -80,7 +80,7 @@ impl App {
         }
     }
 
-    /// FIXME: next what?
+    // FIXME: next what?
     pub fn next(&mut self) {
         if self.filtered_crates.is_empty() {
             self.table_state.select(None)
@@ -89,7 +89,7 @@ impl App {
             // FIXME use map_or_default
             let i = match self.table_state.selected() {
                 Some(i) => {
-                    /// FIXME use modulo % instead of if/else
+                    // FIXME use modulo % instead of if/else
                     if i >= self.filtered_crates.len().saturating_sub(1) {
                         0
                     } else {
@@ -123,9 +123,9 @@ impl App {
         }
     }
 
-    /// FIXME: move the movement methods to a type that indicates what they are operating on (the
-    /// table results probably) Even though the app mainly is a wrapper around the table, the split
-    /// will help make the types smaller and more focused
+    // FIXME: move the movement methods to a type that indicates what they are operating on (the
+    // table results probably) Even though the app mainly is a wrapper around the table, the split
+    // will help make the types smaller and more focused
     pub fn top(&mut self) {
         if self.filtered_crates.is_empty() {
             self.table_state.select(None)
@@ -147,7 +147,7 @@ impl App {
         }
     }
 
-    /// FIXME: can we make this infinitely scrollable instead of manually handling the page size?
+    // FIXME: can we make this infinitely scrollable instead of manually handling the page size?
     fn increment_page(&mut self) {
         if let Some(n) = self.total_num_crates {
             let max_page_size = (n / self.page_size) + 1;
@@ -225,7 +225,7 @@ impl App {
         });
     }
 
-    /// FIXME: overly long and complex, and also poorly named
+    // FIXME: overly long and complex, and also poorly named
     fn get_info(&mut self) {
         if self.filtered_crates.is_empty() {
             return;
@@ -332,7 +332,7 @@ impl App {
 }
 
 impl App {
-    /// FIXME: split and simplify
+    // FIXME: split and simplify
     pub async fn run(&mut self, tui: &mut Tui, mut rx: UnboundedReceiver<Action>) -> Result<()> {
         let mut should_quit = false;
         let tx = self.tx.clone();
@@ -519,8 +519,8 @@ impl App {
         };
     }
 
-    /// FIXME - render a single top level widget and then inside that widget render the other
-    /// widgets
+    // FIXME - render a single top level widget and then inside that widget render the other
+    // widgets
     pub fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) {
         frame.render_widget(
             Block::default().bg(config::get().style.background_color),
@@ -533,8 +533,8 @@ impl App {
         ])
         .areas(area);
 
-        /// FIXME every part of this method has complex logic that calls or creats other methods
-        /// That makes it hard to understand the whole method. Split it into smaller methods
+        // FIXME every part of this method has complex logic that calls or creats other methods
+        // That makes it hard to understand the whole method. Split it into smaller methods
         let table = match self.crate_info.lock().unwrap().clone() {
             Some(ci) if self.show_crate_info => {
                 let [table, info] =
