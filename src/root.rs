@@ -22,8 +22,7 @@ pub enum Mode {
   PickerSearchQueryEditing,
   PickerFilterEditing,
   Picker,
-  Info,
-  Error,
+  Popup,
 }
 
 #[derive(Debug)]
@@ -43,6 +42,7 @@ pub struct Root {
   input: tui_input::Input,
   show_crate_info: bool,
   error: Option<String>,
+  info: Option<String>,
   table_state: TableState,
   scrollbar_state: ScrollbarState,
 }
@@ -67,6 +67,7 @@ impl Root {
       input: Default::default(),
       show_crate_info: Default::default(),
       error: Default::default(),
+      info: Default::default(),
     }
   }
 
@@ -258,8 +259,14 @@ impl Root {
         let output = tokio::process::Command::new("cargo").arg("add").arg(ci.name).output().await;
         match output {
           Ok(output) => {
-            let data = String::from_utf8_lossy(&output.stdout).to_string();
-            tx.send(Action::Error(data)).unwrap_or_default();
+            let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+            if !stdout.is_empty() {
+              tx.send(Action::Info(stdout)).unwrap_or_default();
+            }
+            let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+            if !stderr.is_empty() {
+              tx.send(Action::Error(stderr)).unwrap_or_default();
+            }
           },
           Err(err) => {
             let data = format!("ERROR: {:?}", err);
@@ -335,18 +342,15 @@ impl Root {
       },
       Action::Error(err) => {
         self.error = Some(err);
-        self.mode = Mode::Error;
+        self.mode = Mode::Popup;
       },
-      Action::CloseError => {
+      Action::Info(info) => {
+        self.info = Some(info);
+        self.mode = Mode::Popup;
+      },
+      Action::ClosePopup => {
         self.error = None;
-        self.mode = Mode::PickerSearchQueryEditing;
-      },
-      Action::Info(err) => {
-        self.error = Some(err);
-        self.mode = Mode::Info;
-      },
-      Action::CloseInfo => {
-        self.error = None;
+        self.info = None;
         self.mode = Mode::PickerSearchQueryEditing;
       },
       Action::CargoAddCrate => self.cargo_add(),
@@ -357,10 +361,10 @@ impl Root {
 
   pub fn handle_key_events(&mut self, key: KeyEvent, last_key_events: &[KeyEvent]) -> Result<Option<Action>> {
     let cmd = match self.mode {
-      Mode::Error => {
+      Mode::Popup => {
         match key.code {
-          KeyCode::Enter => Action::CloseError,
-          KeyCode::Esc => Action::CloseError,
+          KeyCode::Enter => Action::ClosePopup,
+          KeyCode::Esc => Action::ClosePopup,
           _ => return Ok(None),
         }
       },
@@ -414,7 +418,6 @@ impl Root {
           },
         }
       },
-      _ => return Ok(None),
     };
     Ok(Some(cmd))
   }
@@ -455,6 +458,9 @@ impl Root {
 
     if let Some(err) = &self.error {
       f.render_widget(Popup::new("Error", err), area);
+    }
+    if let Some(info) = &self.info {
+      f.render_widget(Popup::new("Info", info), area);
     }
 
     Ok(())
