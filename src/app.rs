@@ -314,11 +314,8 @@ impl App {
             if let Some(action) = self.handle_key_events(key)? {
               tx.send(action)?;
             }
-            self.last_tick_key_events.push(key);
-            let config = config::get();
-            if let Some(action) = config.key_bindings.event_to_action(&self.mode, &self.last_tick_key_events) {
+            if let Some(action) = self.handle_key_events_from_config(key) {
               tx.send(action)?;
-              self.last_tick_key_events.drain(..);
             }
           },
           _ => {},
@@ -444,6 +441,16 @@ impl App {
       _ => {},
     }
     Ok(None)
+  }
+
+  pub fn handle_key_events_from_config(&mut self, key: KeyEvent) -> Option<Action> {
+    self.last_tick_key_events.push(key);
+    let config = config::get();
+    let action = config.key_bindings.event_to_action(&self.mode, &self.last_tick_key_events);
+    if action.is_some() {
+      self.last_tick_key_events.drain(..);
+    }
+    action
   }
 
   pub fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
