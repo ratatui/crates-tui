@@ -1,3 +1,10 @@
+tick_rate = 1.0
+frame_rate = 15.0
+key_refresh_rate = 0.5
+enable_mouse = false
+enable_paste = false
+prompt_padding = 1
+
 [key_bindings.popup]
 "j" = "ScrollDown"
 "k" = "ScrollUp"
