@@ -38,6 +38,7 @@ async fn tokio_main() -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // FIXME: Let the error handlers handle the error.
     if let Err(e) = tokio_main().await {
         eprintln!("{} error: Something went wrong.", env!("CARGO_PKG_NAME"));
         Err(e)

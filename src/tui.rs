@@ -24,6 +24,8 @@ use tokio_util::sync::CancellationToken;
 use crate::config;
 
 pub type IO = std::io::Stdout;
+
+/// FIXME: just use stdout - let the user change it if they want by changing the code
 pub fn io() -> IO {
     std::io::stdout()
 }
@@ -45,6 +47,9 @@ pub enum Event {
     Resize(u16, u16),
 }
 
+/// FIXME: this struct seems like it's doing a lot of different things. It's a terminal, a task, a
+/// cancellation token, and a channel all in one. It's also a bit of a kitchen sink in terms of
+/// configuration options. (CoPilot completed that, but it's a good point.)
 pub struct Tui {
     pub terminal: ratatui::Terminal<Backend<IO>>,
     pub task: JoinHandle<()>,
@@ -83,6 +88,8 @@ impl Tui {
         })
     }
 
+    // FIXME: a lot of unused methods here. I think we should remove them and then add them back as
+    // we need them.
     #[allow(unused)]
     pub fn tick_rate(mut self, tick_rate: f64) -> Self {
         self.tick_rate = tick_rate;
@@ -107,6 +114,8 @@ impl Tui {
         self
     }
 
+    // FIXME: the nesting in this method is a bit hard to follow. It's also doing a lot of different
+    // things. Looking at this you have to understand the whole thing to understand any part of it.
     pub fn start(&mut self) {
         let tick_delay = std::time::Duration::from_secs_f64(1.0 / self.tick_rate);
         let key_refresh_delay = std::time::Duration::from_secs_f64(1.0 / self.key_refresh_rate);
@@ -126,6 +135,7 @@ impl Tui {
                 let key_refresh_delay = key_refresh_interval.tick();
                 let render_delay = render_interval.tick();
                 let crossterm_event = reader.next().fuse();
+                /// FIXME: use small composable tasks rather than large select blocks like this to make this easier to read
                 tokio::select! {
                   _ = _cancellation_token.cancelled() => {
                     break;
@@ -134,6 +144,7 @@ impl Tui {
                     match maybe_event {
                       Some(Ok(evt)) => {
                         match evt {
+                            // FIXME: convert and then send
                           CrosstermEvent::Key(key) => {
                             if key.kind == KeyEventKind::Press {
                               _event_tx.send(Event::Key(key)).unwrap();
@@ -178,10 +189,14 @@ impl Tui {
 
     pub fn stop(&self) -> Result<()> {
         self.cancel();
+        // FIXME: use intention revealing names - retry_count or something
+        // add a comment explaining why we're doing this
         let mut counter = 0;
+
         while !self.task.is_finished() {
             std::thread::sleep(Duration::from_millis(1));
             counter += 1;
+            /// FIXME: are we really calling this 50 times? That seems like a lot.
             if counter > 50 {
                 self.task.abort();
             }
@@ -193,6 +208,8 @@ impl Tui {
         Ok(())
     }
 
+    /// the crossterm:: stuff makes this harder to read
+    /// init() or init_terminal is a better name
     pub fn enter(&mut self) -> Result<()> {
         crossterm::terminal::enable_raw_mode()?;
         crossterm::execute!(io(), EnterAlternateScreen, cursor::Hide)?;
@@ -226,6 +243,7 @@ impl Tui {
         self.cancellation_token.cancel();
     }
 
+    // FIXME: comment this
     #[allow(unused)]
     pub fn suspend(&mut self) -> Result<()> {
         self.exit()?;
