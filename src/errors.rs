@@ -1,5 +1,7 @@
 use color_eyre::eyre::Result;
 
+// FIXME: simplify this similar to the template add a comment about what each piece actually does (I
+// think there are 4 types of error hooks here and its not clear why)
 pub fn initialize_panic_handler() -> Result<()> {
     let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default()
         .panic_section(format!(
@@ -46,7 +48,7 @@ pub fn initialize_panic_handler() -> Result<()> {
                 .verbosity(better_panic::Verbosity::Full)
                 .create_panic_handler()(panic_info);
         }
-
+        // FIXME: do we need to import an entire library for the constant value 1?
         std::process::exit(libc::EXIT_FAILURE);
     }));
     Ok(())
