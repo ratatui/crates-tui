@@ -91,7 +91,7 @@ impl App {
                     } else {
                         i + 1
                     }
-                },
+                }
                 None => 0,
             };
             self.table_state.select(Some(i));
@@ -111,7 +111,7 @@ impl App {
                     } else {
                         i.saturating_sub(1)
                     }
-                },
+                }
                 None => 0,
             };
             self.table_state.select(Some(i));
@@ -201,14 +201,14 @@ impl App {
                                 .unwrap_or_default();
                             }
                             loading_status.store(false, Ordering::SeqCst);
-                        },
+                        }
                         Err(err) => {
                             tx.send(Action::Error(format!("API Client Error: {err:#?}")))
                                 .unwrap_or_default();
                             loading_status.store(false, Ordering::SeqCst);
-                        },
+                        }
                     }
-                },
+                }
                 Err(err) => tx
                     .send(Action::Error(format!("Error creating client: {err:#?}")))
                     .unwrap_or_default(),
@@ -238,7 +238,7 @@ impl App {
                     Ok(client) => match client.get_crate(&name).await {
                         Ok(_crate_info) => {
                             *crate_info.lock().unwrap() = Some(_crate_info.crate_data)
-                        },
+                        }
                         Err(err) => tx
                             .send(Action::Error(format!(
                                 "Unable to get crate information: {err}"
@@ -308,11 +308,11 @@ impl App {
                         if !stderr.is_empty() {
                             tx.send(Action::Error(stderr)).unwrap_or_default();
                         }
-                    },
+                    }
                     Err(err) => {
                         let data = format!("ERROR: {:?}", err);
                         tx.send(Action::Error(data)).unwrap_or_default();
-                    },
+                    }
                 }
             });
         }
@@ -342,8 +342,8 @@ impl App {
                         if let Some(action) = self.handle_key_events_from_config(key) {
                             tx.send(action)?;
                         }
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
             }
 
@@ -357,18 +357,18 @@ impl App {
                 match action {
                     Action::KeyRefresh => {
                         self.last_tick_key_events.drain(..);
-                    },
+                    }
                     Action::Quit => should_quit = true,
                     Action::Resize(w, h) => {
                         tui.resize(Rect::new(0, 0, w, h))?;
                         tx.send(Action::Render)?;
-                    },
+                    }
                     Action::Render => {
                         tui.draw(|f| {
                             self.draw(f, f.size());
                         })?;
-                    },
-                    _ => {},
+                    }
+                    _ => {}
                 }
             }
             if should_quit {
@@ -386,10 +386,10 @@ impl App {
             Action::StoreTotalNumberOfCrates(n) => self.total_num_crates = Some(n),
             Action::ScrollUp if self.mode == Mode::Popup => {
                 self.popup_scroll = self.popup_scroll.saturating_sub(1)
-            },
+            }
             Action::ScrollDown if self.mode == Mode::Popup => {
                 self.popup_scroll = self.popup_scroll.saturating_add(1)
-            },
+            }
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
@@ -397,46 +397,46 @@ impl App {
             Action::ScrollUp => {
                 self.previous();
                 return Ok(Some(Action::GetInfo));
-            },
+            }
             Action::ScrollDown => {
                 self.next();
                 return Ok(Some(Action::GetInfo));
-            },
+            }
             Action::ScrollTop => {
                 self.top();
                 return Ok(Some(Action::GetInfo));
-            },
+            }
             Action::ScrollBottom => {
                 self.bottom();
                 return Ok(Some(Action::GetInfo));
-            },
+            }
             Action::EnterSearchInsertMode => {
                 self.mode = Mode::Search;
                 self.input = self.input.clone().with_value(self.search.clone());
-            },
+            }
             Action::EnterFilterInsertMode => {
                 self.show_crate_info = false;
                 self.mode = Mode::Filter;
                 self.input = self.input.clone().with_value(self.filter.clone());
-            },
+            }
             Action::EnterNormal => {
                 self.mode = Mode::Picker;
                 if !self.filtered_crates.is_empty() && self.table_state.selected().is_none() {
                     self.table_state.select(Some(0))
                 }
-            },
+            }
             Action::SubmitSearchWithQuery(search) => {
                 self.mode = Mode::Picker;
                 self.filter.clear();
                 self.search = search;
                 return Ok(Some(Action::ReloadData));
-            },
+            }
             Action::SubmitSearch => {
                 self.mode = Mode::Picker;
                 self.filter.clear();
                 self.search = self.input.value().into();
                 return Ok(Some(Action::ReloadData));
-            },
+            }
             Action::ToggleShowCrateInfo => {
                 self.show_crate_info = !self.show_crate_info;
                 if self.show_crate_info {
@@ -444,30 +444,30 @@ impl App {
                 } else {
                     *self.crate_info.lock().unwrap() = None;
                 }
-            },
+            }
             Action::GetInfo => {
                 if self.show_crate_info {
                     self.get_info();
                 } else {
                     *self.crate_info.lock().unwrap() = None;
                 }
-            },
+            }
             Action::Error(err) => {
                 log::error!("Error: {err}");
                 self.error = Some(err);
                 self.mode = Mode::Popup;
-            },
+            }
             Action::Info(info) => {
                 log::info!("Info: {info}");
                 self.info = Some(info);
                 self.mode = Mode::Popup;
-            },
+            }
             Action::ClosePopup => {
                 self.error = None;
                 self.info = None;
                 self.mode = Mode::Search;
-            },
-            _ => {},
+            }
+            _ => {}
         }
         Ok(None)
     }
@@ -490,7 +490,7 @@ impl App {
                 _ => {
                     self.input.handle_event(&crossterm::event::Event::Key(key));
                     return Ok(None);
-                },
+                }
             },
             Mode::Filter => match key.code {
                 _ => {
@@ -498,7 +498,7 @@ impl App {
                     self.filter = self.input.value().into();
                     self.table_state.select(None);
                     return Ok(None);
-                },
+                }
             },
             _ => return Ok(None),
         };
@@ -523,7 +523,7 @@ impl App {
                         .areas(table);
                 f.render_widget(CrateInfo::new(ci), info);
                 table
-            },
+            }
             _ => table,
         };
 

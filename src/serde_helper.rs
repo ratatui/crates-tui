@@ -87,15 +87,15 @@ pub mod keybindings {
                 rest if rest.starts_with("ctrl-") => {
                     modifiers.insert(KeyModifiers::CONTROL);
                     current = &rest[5..];
-                },
+                }
                 rest if rest.starts_with("alt-") => {
                     modifiers.insert(KeyModifiers::ALT);
                     current = &rest[4..];
-                },
+                }
                 rest if rest.starts_with("shift-") => {
                     modifiers.insert(KeyModifiers::SHIFT);
                     current = &rest[6..];
-                },
+                }
                 _ => break, // break out of the loop if no known prefix is detected
             };
         }
@@ -121,7 +121,7 @@ pub mod keybindings {
             "backtab" => {
                 modifiers.insert(KeyModifiers::SHIFT);
                 KeyCode::BackTab
-            },
+            }
             "backspace" => KeyCode::Backspace,
             "delete" => KeyCode::Delete,
             "insert" => KeyCode::Insert,
@@ -147,7 +147,7 @@ pub mod keybindings {
                     c = c.to_ascii_uppercase();
                 }
                 KeyCode::Char(c)
-            },
+            }
             _ => return Err(format!("Unable to parse {raw}")),
         };
         Ok(KeyEvent::new(c, modifiers))
@@ -173,12 +173,12 @@ pub mod keybindings {
             KeyCode::F(c) => {
                 char = format!("f({c})");
                 &char
-            },
+            }
             KeyCode::Char(c) if c == ' ' => "space",
             KeyCode::Char(c) => {
                 char = c.to_string();
                 &char
-            },
+            }
             KeyCode::Esc => "esc",
             KeyCode::Null => "",
             KeyCode::CapsLock => "",
