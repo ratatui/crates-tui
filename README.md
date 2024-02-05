@@ -66,18 +66,55 @@ https://github.com/ratatui-org/crates-tui/assets/1813121/9609a0f1-4da7-426d-8ce8
 ```plain
 $ crates-tui --print-default-config
 
-Config {
-    data_home: "",
-    config_home: "",
-    log_level: Some(
-        LevelFilter::DEBUG,
-    ),
-    tick_rate: 1.0,
-    frame_rate: 15.0,
-    background_color: Reset,
-    search_query_outline_color: Reset,
-    filter_query_outline_color: Reset,
-    row_background_color_1: Reset,
-    row_background_color_2: Reset,
-}
+data_home = "~/Library/Application Support/com.kdheepak.crates-tui"
+config_home = "~/Library/Application Support/com.kdheepak.crates-tui"
+config_file = "~/Library/Application Support/com.kdheepak.crates-tui/config.toml"
+log_level = ""
+tick_rate = 1.0
+frame_rate = 15.0
+prompt_padding = 1
+
+[style]
+background_color = "#111827"
+search_query_outline_color = "#4ADE80"
+filter_query_outline_color = "#FACC15"
+row_background_color_1 = "#111827"
+row_background_color_2 = "#1F2937"
+
+[key_bindings.picker_filter_editing]
+"<esc>" = "EnterNormal"
+"<enter>" = "EnterNormal"
+
+[key_bindings.picker_search_query_editing]
+"<enter>" = "SubmitSearch"
+"<esc>" = "EnterNormal"
+
+[key_bindings.popup]
+"<down>" = "ScrollDown"
+"<k>" = "ScrollUp"
+"<j>" = "ScrollDown"
+"<up>" = "ScrollUp"
+"<enter>" = "ClosePopup"
+"<esc>" = "ClosePopup"
+
+[key_bindings.picker]
+"<l>" = "IncrementPage"
+"<?>" = "EnterSearchQueryInsert"
+"<h>" = "DecrementPage"
+"<j>" = "ScrollDown"
+"<r>" = "ReloadData"
+"<esc>" = "Quit"
+"<end>" = "ScrollBottom"
+"<g>" = "ScrollBottom"
+"<k>" = "ScrollUp"
+"<q>" = "Quit"
+"<down>" = "ScrollDown"
+"<home>" = "ScrollTop"
+"<left>" = "DecrementPage"
+"<g><g>" = "ScrollTop"
+"</>" = "EnterFilterInsert"
+"<right>" = "IncrementPage"
+"<up>" = "ScrollUp"
+"<a>" = "CargoAddCrate"
+"<enter>" = "ToggleShowCrateInfo"
 ```

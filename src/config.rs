@@ -40,6 +40,12 @@ pub struct Config {
 
   pub frame_rate: f64,
 
+  pub key_refresh_rate: f64,
+
+  pub enable_mouse: bool,
+
+  pub enable_paste: bool,
+
   pub prompt_padding: u16,
 
   pub style: Style,
@@ -76,7 +82,10 @@ impl Default for Config {
       config_file: default_config_file(),
       log_level: None,
       tick_rate: 1.0,
-      frame_rate: 4.0,
+      frame_rate: 15.0,
+      key_refresh_rate: 0.5,
+      enable_mouse: false,
+      enable_paste: false,
       prompt_padding: 1,
       key_bindings,
       style: Style {

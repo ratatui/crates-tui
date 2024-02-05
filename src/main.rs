@@ -25,7 +25,7 @@ async fn tokio_main() -> Result<()> {
     return Ok(());
   }
 
-  let mut tui = tui::Tui::new()?.tick_rate(config::get().tick_rate).frame_rate(config::get().frame_rate);
+  let mut tui = tui::Tui::new()?;
 
   let (tx, rx) = mpsc::unbounded_channel();
   let mut app = app::App::new(tx);

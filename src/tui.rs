@@ -21,6 +21,8 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
+use crate::config;
+
 pub type IO = std::io::Stdout;
 pub fn io() -> IO {
   std::io::stdout()
@@ -58,15 +60,15 @@ pub struct Tui {
 
 impl Tui {
   pub fn new() -> Result<Self> {
-    let tick_rate = 1.0;
-    let frame_rate = 15.0;
-    let key_refresh_rate = 0.5;
+    let tick_rate = config::get().tick_rate;
+    let frame_rate = config::get().frame_rate;
+    let key_refresh_rate = config::get().key_refresh_rate;
+    let mouse = config::get().enable_mouse;
+    let paste = config::get().enable_paste;
     let terminal = ratatui::Terminal::new(Backend::new(io()))?;
     let (event_tx, event_rx) = mpsc::unbounded_channel();
     let cancellation_token = CancellationToken::new();
     let task = tokio::spawn(async {});
-    let mouse = false;
-    let paste = false;
     Ok(Self {
       terminal,
       task,
@@ -81,11 +83,13 @@ impl Tui {
     })
   }
 
+  #[allow(unused)]
   pub fn tick_rate(mut self, tick_rate: f64) -> Self {
     self.tick_rate = tick_rate;
     self
   }
 
+  #[allow(unused)]
   pub fn frame_rate(mut self, frame_rate: f64) -> Self {
     self.frame_rate = frame_rate;
     self
