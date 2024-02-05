@@ -17,7 +17,12 @@ use crate::{
     config,
     serde_helper::keybindings::key_event_to_string,
     tui::{self, Tui},
-    widgets::{crate_info::CrateInfo, crates_table::CratesTable, popup::Popup, prompt::Prompt},
+    widgets::{
+        crate_info::CrateInfo,
+        crates_table::{CrateTableState, CratesTable},
+        popup::Popup,
+        prompt::Prompt,
+    },
 };
 
 #[derive(Default, Debug, Display, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -46,11 +51,10 @@ pub struct App {
     crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
     total_num_crates: Option<u64>,
     input: tui_input::Input,
+    crate_table_state: CrateTableState,
     show_crate_info: bool,
     error: Option<String>,
     info: Option<String>,
-    table_state: TableState,
-    scrollbar_state: ScrollbarState,
     popup_scroll: usize,
     last_tick_key_events: Vec<KeyEvent>,
 }
@@ -70,80 +74,13 @@ impl App {
             crates: Default::default(),
             crate_info: Default::default(),
             total_num_crates: Default::default(),
-            table_state: Default::default(),
-            scrollbar_state: Default::default(),
             input: Default::default(),
+            crate_table_state: Default::default(),
             show_crate_info: Default::default(),
             error: Default::default(),
             info: Default::default(),
             popup_scroll: Default::default(),
             last_tick_key_events: Default::default(),
-        }
-    }
-
-    pub fn next_crate(&mut self) {
-        if self.filtered_crates.is_empty() {
-            self.table_state.select(None)
-        } else {
-            // wrapping behavior
-            // FIXME use map_or_default
-            let i = match self.table_state.selected() {
-                Some(i) => {
-                    // FIXME use modulo % instead of if/else
-                    if i >= self.filtered_crates.len().saturating_sub(1) {
-                        0
-                    } else {
-                        i + 1
-                    }
-                }
-                None => 0,
-            };
-            self.table_state.select(Some(i));
-            self.scrollbar_state = self.scrollbar_state.position(i);
-        }
-    }
-
-    pub fn previous_crate(&mut self) {
-        if self.filtered_crates.is_empty() {
-            self.table_state.select(None)
-        } else {
-            // wrapping behavior
-            let i = match self.table_state.selected() {
-                Some(i) => {
-                    if i == 0 {
-                        self.filtered_crates.len().saturating_sub(1)
-                    } else {
-                        i.saturating_sub(1)
-                    }
-                }
-                None => 0,
-            };
-            self.table_state.select(Some(i));
-            self.scrollbar_state = self.scrollbar_state.position(i);
-        }
-    }
-
-    // FIXME: move the movement methods to a type that indicates what they are operating on (the
-    // table results probably) Even though the app mainly is a wrapper around the table, the split
-    // will help make the types smaller and more focused
-    pub fn top(&mut self) {
-        if self.filtered_crates.is_empty() {
-            self.table_state.select(None)
-        } else {
-            self.table_state.select(Some(0));
-            self.scrollbar_state = self.scrollbar_state.position(0);
-        }
-    }
-
-    pub fn bottom(&mut self) {
-        if self.filtered_crates.is_empty() {
-            self.table_state.select(None)
-        } else {
-            self.table_state
-                .select(Some(self.filtered_crates.len() - 1));
-            self.scrollbar_state = self
-                .scrollbar_state
-                .position(self.filtered_crates.len() - 1);
         }
     }
 
@@ -187,8 +124,8 @@ impl App {
 
     fn enter_normal_mode(&mut self) {
         self.mode = Mode::Picker;
-        if !self.filtered_crates.is_empty() && self.table_state.selected().is_none() {
-            self.table_state.select(Some(0))
+        if !self.filtered_crates.is_empty() && self.crate_table_state.selected().is_none() {
+            self.crate_table_state.select(Some(0))
         }
     }
 
@@ -239,7 +176,7 @@ impl App {
 
     // FIXME overly long and complex method
     fn reload_data(&mut self) {
-        self.table_state.select(None);
+        self.crate_table_state.select(None);
         *self.crate_info.lock().unwrap() = None;
         let crates = self.crates.clone();
         let search = self.search.clone();
@@ -302,7 +239,7 @@ impl App {
             return;
         }
         let tx = self.tx.clone();
-        let index = self.table_state.selected().unwrap_or_default();
+        let index = self.crate_table_state.selected().unwrap_or_default();
         let name = self.filtered_crates[index].name.clone();
 
         if name.is_empty() {
@@ -337,12 +274,11 @@ impl App {
         // FIXME: this is not obvious what it does what are the last_events? Why are you removing them?
         self.last_key_events.drain(..);
         self.update_filtered_crates();
-        self.update_scrollbar_state();
+        self.update_crate_table_state();
     }
 
-    fn update_scrollbar_state(&mut self) {
-        self.scrollbar_state = self
-            .scrollbar_state
+    fn update_crate_table_state(&mut self) {
+        self.crate_table_state
             .content_length(self.filtered_crates.len());
     }
 
@@ -468,10 +404,10 @@ impl App {
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
             Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll_previous(),
             Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll_next(),
-            Action::ScrollUp => self.previous_crate(),
-            Action::ScrollDown => self.next_crate(),
-            Action::ScrollTop => self.top(),
-            Action::ScrollBottom => self.bottom(),
+            Action::ScrollUp => self.crate_table_state.previous_crate(&self.filtered_crates),
+            Action::ScrollDown => self.crate_table_state.next_crate(&self.filtered_crates),
+            Action::ScrollTop => self.crate_table_state.top(&self.filtered_crates),
+            Action::ScrollBottom => self.crate_table_state.bottom(&self.filtered_crates),
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
@@ -521,7 +457,7 @@ impl App {
                 _ => {
                     self.input.handle_event(&crossterm::event::Event::Key(key));
                     self.filter = self.input.value().into();
-                    self.table_state.select(None);
+                    self.crate_table_state.select(None);
                     return Ok(None);
                 }
             },
@@ -559,11 +495,11 @@ impl App {
         frame.render_stateful_widget(
             CratesTable::new(&self.filtered_crates, self.mode == Mode::Picker),
             table,
-            &mut (&mut self.table_state, &mut self.scrollbar_state),
+            &mut self.crate_table_state,
         );
 
         let loading_status = self.loading_status.load(Ordering::SeqCst);
-        let selected = self.table_state.selected().map_or(0, |n| {
+        let selected = self.crate_table_state.selected().map_or(0, |n| {
             (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1
         });
         let total_num_crates = self.total_num_crates.unwrap_or_default();

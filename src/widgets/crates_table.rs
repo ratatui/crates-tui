@@ -4,6 +4,78 @@ use ratatui::{prelude::*, widgets::*};
 
 use crate::config;
 
+#[derive(Debug, Default)]
+pub struct CrateTableState {
+    table_state: TableState,
+    scrollbar_state: ScrollbarState,
+}
+
+impl CrateTableState {
+    pub fn content_length(&mut self, content_length: usize) {
+        self.scrollbar_state = self.scrollbar_state.content_length(content_length)
+    }
+
+    pub fn select(&mut self, index: Option<usize>) {
+        self.table_state.select(index)
+    }
+
+    pub fn selected(&mut self) -> Option<usize> {
+        self.table_state.selected()
+    }
+
+    pub fn next_crate(&mut self, crates: &[crates_io_api::Crate]) {
+        if crates.is_empty() {
+            self.table_state.select(None)
+        } else {
+            // wrapping behavior
+            let i = self
+                .table_state
+                .selected()
+                .map_or(0, |i| (i + 1) % crates.len());
+            self.table_state.select(Some(i));
+            self.scrollbar_state = self.scrollbar_state.position(i);
+        }
+    }
+
+    pub fn previous_crate(&mut self, crates: &[crates_io_api::Crate]) {
+        if crates.is_empty() {
+            self.table_state.select(None)
+        } else {
+            // wrapping behavior
+            let i = self
+                .table_state
+                .selected()
+                .map_or(crates.len().saturating_sub(1), |i| {
+                    if i == 0 {
+                        crates.len().saturating_sub(1)
+                    } else {
+                        i.saturating_sub(1)
+                    }
+                });
+            self.table_state.select(Some(i));
+            self.scrollbar_state = self.scrollbar_state.position(i);
+        }
+    }
+
+    pub fn top(&mut self, crates: &[crates_io_api::Crate]) {
+        if crates.is_empty() {
+            self.table_state.select(None)
+        } else {
+            self.table_state.select(Some(0));
+            self.scrollbar_state = self.scrollbar_state.position(0);
+        }
+    }
+
+    pub fn bottom(&mut self, crates: &[crates_io_api::Crate]) {
+        if crates.is_empty() {
+            self.table_state.select(None)
+        } else {
+            self.table_state.select(Some(crates.len() - 1));
+            self.scrollbar_state = self.scrollbar_state.position(crates.len() - 1);
+        }
+    }
+}
+
 pub struct CratesTable<'a> {
     crates: &'a [crates_io_api::Crate],
     highlight: bool,
@@ -16,14 +88,14 @@ impl<'a> CratesTable<'a> {
 }
 
 impl<'a> StatefulWidget for CratesTable<'a> {
-    type State = (&'a mut TableState, &'a mut ScrollbarState);
+    type State = CrateTableState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         Scrollbar::default()
             .track_symbol(Some(" "))
             .begin_symbol(None)
             .end_symbol(None)
-            .render(area, buf, state.1);
+            .render(area, buf, &mut state.scrollbar_state);
 
         let widths = [
             Constraint::Length(1),
@@ -103,7 +175,7 @@ impl<'a> StatefulWidget for CratesTable<'a> {
                 .highlight_spacing(HighlightSpacing::Always)
         };
 
-        StatefulWidget::render(table_widget, area, buf, state.0);
+        StatefulWidget::render(table_widget, area, buf, &mut state.table_state);
 
         // only render margins when there's items in the table
         if !self.crates.is_empty() {
