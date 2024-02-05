@@ -191,8 +191,11 @@ impl App {
                 tx.send(Action::Tick).unwrap_or_default();
                 tx.send(Action::ScrollDown).unwrap_or_default();
               } else {
-                tx.send(Action::Error(format!("Could not find any crates with query `{}`.", search)))
-                  .unwrap_or_default();
+                tx.send(Action::Error(format!(
+                  "Could not find any crates with query `{}`.",
+                  search
+                )))
+                .unwrap_or_default();
               }
               loading_status.store(false, Ordering::SeqCst);
             },
@@ -202,7 +205,9 @@ impl App {
             },
           }
         },
-        Err(err) => tx.send(Action::Error(format!("Error creating client: {err:#?}"))).unwrap_or_default(),
+        Err(err) => {
+          tx.send(Action::Error(format!("Error creating client: {err:#?}"))).unwrap_or_default()
+        },
       }
     });
   }
@@ -229,10 +234,15 @@ impl App {
           Ok(client) => {
             match client.get_crate(&name).await {
               Ok(_crate_info) => *crate_info.lock().unwrap() = Some(_crate_info.crate_data),
-              Err(err) => tx.send(Action::Error(format!("Unable to get crate information: {err}"))).unwrap_or_default(),
+              Err(err) => {
+                tx.send(Action::Error(format!("Unable to get crate information: {err}")))
+                  .unwrap_or_default()
+              },
             }
           },
-          Err(err) => tx.send(Action::Error(format!("Error creating client: {err:?}"))).unwrap_or_default(),
+          Err(err) => {
+            tx.send(Action::Error(format!("Error creating client: {err:?}"))).unwrap_or_default()
+          },
         }
         loading_status.store(false, Ordering::SeqCst);
       });
@@ -359,8 +369,12 @@ impl App {
     match action {
       Action::Tick => self.tick(),
       Action::StoreTotalNumberOfCrates(n) => self.total_num_crates = Some(n),
-      Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll = self.popup_scroll.saturating_sub(1),
-      Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll = self.popup_scroll.saturating_add(1),
+      Action::ScrollUp if self.mode == Mode::Popup => {
+        self.popup_scroll = self.popup_scroll.saturating_sub(1)
+      },
+      Action::ScrollDown if self.mode == Mode::Popup => {
+        self.popup_scroll = self.popup_scroll.saturating_add(1)
+      },
       Action::ReloadData => self.reload_data(),
       Action::IncrementPage => self.increment_page(),
       Action::DecrementPage => self.decrement_page(),
@@ -480,12 +494,16 @@ impl App {
   pub fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
     f.render_widget(Block::default().bg(config::get().style.background_color), area);
 
-    let [table, prompt] =
-      Layout::vertical([Constraint::Fill(0), Constraint::Length(3 + config::get().prompt_padding * 2)]).areas(area);
+    let [table, prompt] = Layout::vertical([
+      Constraint::Fill(0),
+      Constraint::Length(3 + config::get().prompt_padding * 2),
+    ])
+    .areas(area);
 
     let table = match self.crate_info.lock().unwrap().clone() {
       Some(ci) if self.show_crate_info => {
-        let [table, info] = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(table);
+        let [table, info] =
+          Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(table);
         f.render_widget(CrateInfo::new(ci), info);
         table
       },
@@ -499,8 +517,10 @@ impl App {
     );
 
     let loading_status = self.loading_status.load(Ordering::SeqCst);
-    let selected =
-      self.table_state.selected().map_or(0, |n| (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1);
+    let selected = self
+      .table_state
+      .selected()
+      .map_or(0, |n| (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1);
     let total_num_crates = self.total_num_crates.unwrap_or_default();
 
     let p = Prompt::new(total_num_crates, selected, loading_status, self.mode, &self.input);
@@ -519,7 +539,10 @@ impl App {
 
     f.render_widget(
       Block::default()
-        .title(format!("{:?}", self.last_tick_key_events.iter().map(key_event_to_string).collect::<Vec<_>>()))
+        .title(format!(
+          "{:?}",
+          self.last_tick_key_events.iter().map(key_event_to_string).collect::<Vec<_>>()
+        ))
         .title_position(ratatui::widgets::block::Position::Bottom)
         .title_alignment(ratatui::layout::Alignment::Right),
       f.size(),

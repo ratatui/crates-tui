@@ -11,7 +11,9 @@ mod widgets;
 use color_eyre::eyre::Result;
 use tokio::sync::mpsc;
 
-use crate::{config::initialize_config, errors::initialize_panic_handler, logging::initialize_logging};
+use crate::{
+  config::initialize_config, errors::initialize_panic_handler, logging::initialize_logging,
+};
 
 async fn tokio_main() -> Result<()> {
   let cli = cli::get();

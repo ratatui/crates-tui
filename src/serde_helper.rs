@@ -33,8 +33,10 @@ pub mod keybindings {
       let keybindings = parsed_map
         .into_iter()
         .map(|(mode, inner_map)| {
-          let converted_inner_map =
-            inner_map.into_iter().map(|(key_str, cmd)| (parse_key_sequence(&key_str).unwrap(), cmd)).collect();
+          let converted_inner_map = inner_map
+            .into_iter()
+            .map(|(key_str, cmd)| (parse_key_sequence(&key_str).unwrap(), cmd))
+            .collect();
           (mode, converted_inner_map)
         })
         .collect();
@@ -101,7 +103,10 @@ pub mod keybindings {
     (current, modifiers)
   }
 
-  fn parse_key_code_with_modifiers(raw: &str, mut modifiers: KeyModifiers) -> Result<KeyEvent, String> {
+  fn parse_key_code_with_modifiers(
+    raw: &str,
+    mut modifiers: KeyModifiers,
+  ) -> Result<KeyEvent, String> {
     let c = match raw {
       "esc" => KeyCode::Esc,
       "enter" => KeyCode::Enter,

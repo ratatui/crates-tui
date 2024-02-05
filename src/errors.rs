@@ -2,7 +2,10 @@ use color_eyre::eyre::Result;
 
 pub fn initialize_panic_handler() -> Result<()> {
   let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default()
-    .panic_section(format!("This is a bug. Consider reporting it at {}", env!("CARGO_PKG_REPOSITORY")))
+    .panic_section(format!(
+      "This is a bug. Consider reporting it at {}",
+      env!("CARGO_PKG_REPOSITORY")
+    ))
     .capture_span_trace_by_default(false)
     .display_location_section(false)
     .display_env_section(false)

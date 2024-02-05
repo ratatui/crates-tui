@@ -1,7 +1,9 @@
 use color_eyre::eyre::Result;
 use tracing::level_filters::LevelFilter;
 use tracing_error::ErrorLayer;
-use tracing_subscriber::{self, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt};
+use tracing_subscriber::{
+  self, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
+};
 
 use crate::config;
 

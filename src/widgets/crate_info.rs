@@ -16,8 +16,14 @@ impl Widget for CrateInfo {
 
     let mut rows = vec![
       Row::new(vec![Cell::from("Name"), Cell::from(ci.name.clone())]),
-      Row::new(vec![Cell::from("Created At"), Cell::from(self.ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string())]),
-      Row::new(vec![Cell::from("Updated At"), Cell::from(self.ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string())]),
+      Row::new(vec![
+        Cell::from("Created At"),
+        Cell::from(self.ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+      ]),
+      Row::new(vec![
+        Cell::from("Updated At"),
+        Cell::from(self.ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
+      ]),
       Row::new(vec![Cell::from("Max Version"), Cell::from(self.ci.max_version)]),
     ];
 
@@ -31,7 +37,10 @@ impl Widget for CrateInfo {
       rows.push(Row::new(vec![Cell::from("Repository"), Cell::from(repository)]));
     }
     if let Some(recent_downloads) = self.ci.recent_downloads {
-      rows.push(Row::new(vec![Cell::from("Recent Downloads"), Cell::from(recent_downloads.to_string())]));
+      rows.push(Row::new(vec![
+        Cell::from("Recent Downloads"),
+        Cell::from(recent_downloads.to_string()),
+      ]));
     }
     if let Some(max_stable_version) = self.ci.max_stable_version {
       rows.push(Row::new(vec![Cell::from("Max Stable Version"), Cell::from(max_stable_version)]));

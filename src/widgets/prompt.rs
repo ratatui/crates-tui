@@ -13,7 +13,13 @@ pub struct Prompt<'a> {
 }
 
 impl<'a> Prompt<'a> {
-  pub fn new(total_num_crates: u64, selected: u64, loading: bool, mode: Mode, input: &'a tui_input::Input) -> Self {
+  pub fn new(
+    total_num_crates: u64,
+    selected: u64,
+    loading: bool,
+    mode: Mode,
+    input: &'a tui_input::Input,
+  ) -> Self {
     let vertical_margin = 1 + config::get().prompt_padding;
     let horizontal_margin = 1 + config::get().prompt_padding;
     Self { total_num_crates, loading, selected, mode, input, vertical_margin, horizontal_margin }
@@ -24,13 +30,19 @@ impl<'a> Prompt<'a> {
     let index = f.count() % spinner.len();
     let symbol = spinner[index];
 
-    f.buffer_mut().set_string(area.x + area.width.saturating_sub(1), area.y, symbol, Style::default());
+    f.buffer_mut().set_string(
+      area.x + area.width.saturating_sub(1),
+      area.y,
+      symbol,
+      Style::default(),
+    );
   }
 
   pub fn render_cursor(&self, f: &mut Frame, area: Rect) {
     if self.mode == Mode::Search || self.mode == Mode::Filter {
       f.set_cursor(
-        (area.x + self.horizontal_margin + self.input.cursor() as u16).min(area.x + area.width.saturating_sub(2)),
+        (area.x + self.horizontal_margin + self.input.cursor() as u16)
+          .min(area.x + area.width.saturating_sub(2)),
         area.y + self.vertical_margin,
       );
     }
@@ -38,8 +50,11 @@ impl<'a> Prompt<'a> {
 
   fn input_block(&self) -> impl Widget {
     let ncrates = self.total_num_crates;
-    let loading_status =
-      if self.loading { format!("Loaded {ncrates} ...") } else { format!("{}/{}", self.selected, ncrates) };
+    let loading_status = if self.loading {
+      format!("Loaded {ncrates} ...")
+    } else {
+      format!("{}/{}", self.selected, ncrates)
+    };
     Block::default()
       .borders(Borders::ALL)
       .title(
@@ -73,8 +88,9 @@ impl<'a> Prompt<'a> {
 impl Widget for &Prompt<'_> {
   fn render(self, area: Rect, buf: &mut Buffer) {
     self.input_block().render(area, buf);
-    self
-      .input_text(area.width as usize)
-      .render(area.inner(&Margin { horizontal: self.horizontal_margin, vertical: self.vertical_margin }), buf);
+    self.input_text(area.width as usize).render(
+      area.inner(&Margin { horizontal: self.horizontal_margin, vertical: self.vertical_margin }),
+      buf,
+    );
   }
 }

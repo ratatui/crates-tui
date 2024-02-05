@@ -101,8 +101,9 @@ impl Default for Config {
 
 /// Returns the directory to use for storing data files.
 fn default_data_dir() -> PathBuf {
-  if let Some(dir) =
-    std::env::var(format!("{}_DATA_HOME", env!("CARGO_CRATE_NAME").to_uppercase())).ok().map(PathBuf::from)
+  if let Some(dir) = std::env::var(format!("{}_DATA_HOME", env!("CARGO_CRATE_NAME").to_uppercase()))
+    .ok()
+    .map(PathBuf::from)
   {
     dir
   } else if let Ok(dir) = project_dirs().map(|dirs| dirs.data_local_dir().to_path_buf()) {
@@ -115,7 +116,9 @@ fn default_data_dir() -> PathBuf {
 /// Returns the directory to use for storing config files.
 fn default_config_dir() -> PathBuf {
   if let Some(dir) =
-    std::env::var(format!("{}_CONFIG_HOME", env!("CARGO_CRATE_NAME").to_uppercase())).ok().map(PathBuf::from)
+    std::env::var(format!("{}_CONFIG_HOME", env!("CARGO_CRATE_NAME").to_uppercase()))
+      .ok()
+      .map(PathBuf::from)
   {
     dir
   } else if let Ok(dir) = project_dirs().map(|dirs| dirs.config_local_dir().to_path_buf()) {
@@ -132,7 +135,8 @@ fn default_config_file() -> PathBuf {
 
 /// Returns the project directories.
 fn project_dirs() -> Result<ProjectDirs> {
-  ProjectDirs::from("com", "kdheepak", env!("CARGO_PKG_NAME")).ok_or_else(|| eyre!("user home directory not found"))
+  ProjectDirs::from("com", "kdheepak", env!("CARGO_PKG_NAME"))
+    .ok_or_else(|| eyre!("user home directory not found"))
 }
 
 /// Initialize the application configuration.
