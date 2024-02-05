@@ -1,4 +1,3 @@
-empty_item_single_line = false
 force_multiline_blocks = true
 format_code_in_doc_comments = true
 match_block_trailing_comma = true
