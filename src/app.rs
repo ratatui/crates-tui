@@ -5,10 +5,7 @@ use std::sync::{
 
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::{
-  prelude::{Rect, *},
-  widgets::{Block, *},
-};
+use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tui_input::backend::crossterm::EventHandler;
