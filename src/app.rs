@@ -209,10 +209,9 @@ impl App {
                         },
                     }
                 },
-                Err(err) => {
-                    tx.send(Action::Error(format!("Error creating client: {err:#?}")))
-                        .unwrap_or_default()
-                },
+                Err(err) => tx
+                    .send(Action::Error(format!("Error creating client: {err:#?}")))
+                    .unwrap_or_default(),
             }
         });
     }
@@ -236,23 +235,19 @@ impl App {
                     "crates-tui (crates-tui@kdheepak.com)",
                     std::time::Duration::from_millis(1000),
                 ) {
-                    Ok(client) => {
-                        match client.get_crate(&name).await {
-                            Ok(_crate_info) => {
-                                *crate_info.lock().unwrap() = Some(_crate_info.crate_data)
-                            },
-                            Err(err) => {
-                                tx.send(Action::Error(format!(
-                                    "Unable to get crate information: {err}"
-                                )))
-                                .unwrap_or_default()
-                            },
-                        }
+                    Ok(client) => match client.get_crate(&name).await {
+                        Ok(_crate_info) => {
+                            *crate_info.lock().unwrap() = Some(_crate_info.crate_data)
+                        },
+                        Err(err) => tx
+                            .send(Action::Error(format!(
+                                "Unable to get crate information: {err}"
+                            )))
+                            .unwrap_or_default(),
                     },
-                    Err(err) => {
-                        tx.send(Action::Error(format!("Error creating client: {err:?}")))
-                            .unwrap_or_default()
-                    },
+                    Err(err) => tx
+                        .send(Action::Error(format!("Error creating client: {err:?}")))
+                        .unwrap_or_default(),
                 }
                 loading_status.store(false, Ordering::SeqCst);
             });
@@ -491,23 +486,19 @@ impl App {
 
     pub fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         match self.mode {
-            Mode::Search => {
-                match key.code {
-                    _ => {
-                        self.input.handle_event(&crossterm::event::Event::Key(key));
-                        return Ok(None);
-                    },
-                }
+            Mode::Search => match key.code {
+                _ => {
+                    self.input.handle_event(&crossterm::event::Event::Key(key));
+                    return Ok(None);
+                },
             },
-            Mode::Filter => {
-                match key.code {
-                    _ => {
-                        self.input.handle_event(&crossterm::event::Event::Key(key));
-                        self.filter = self.input.value().into();
-                        self.table_state.select(None);
-                        return Ok(None);
-                    },
-                }
+            Mode::Filter => match key.code {
+                _ => {
+                    self.input.handle_event(&crossterm::event::Event::Key(key));
+                    self.filter = self.input.value().into();
+                    self.table_state.select(None);
+                    return Ok(None);
+                },
             },
             _ => return Ok(None),
         };
