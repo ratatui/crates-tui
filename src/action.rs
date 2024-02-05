@@ -12,6 +12,8 @@ pub enum Action {
   Refresh,
   Error(String),
   CloseError,
+  Info(String),
+  CloseInfo,
   Help,
   GetCrates,
   EnterSearchQueryInsert,

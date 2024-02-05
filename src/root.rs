@@ -5,7 +5,7 @@ use std::sync::{
 
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
-use ratatui::{layout::Flex, prelude::*, widgets::*};
+use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::UnboundedSender;
 use tui_input::backend::crossterm::EventHandler;
@@ -13,15 +13,15 @@ use tui_input::backend::crossterm::EventHandler;
 use crate::{
   action::Action,
   config,
-  widgets::{crate_info::CrateInfo, crates_table::CratesTable},
+  widgets::{crate_info::CrateInfo, crates_table::CratesTable, popup::Popup, prompt::Prompt},
 };
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Mode {
-  Picker,
   #[default]
   PickerSearchQueryEditing,
   PickerFilterEditing,
+  Picker,
   Info,
   Error,
 }
@@ -341,6 +341,14 @@ impl Root {
         self.error = None;
         self.mode = Mode::PickerSearchQueryEditing;
       },
+      Action::Info(err) => {
+        self.error = Some(err);
+        self.mode = Mode::Info;
+      },
+      Action::CloseInfo => {
+        self.error = None;
+        self.mode = Mode::PickerSearchQueryEditing;
+      },
       Action::CargoAddCrate => self.cargo_add(),
       _ => {},
     }
@@ -411,21 +419,23 @@ impl Root {
     Ok(Some(cmd))
   }
 
+  fn background(&self) -> impl Widget {
+    Block::default().bg(config::get().background_color)
+  }
+
   pub fn draw(&mut self, f: &mut Frame<'_>, area: Rect) -> Result<()> {
     f.render_widget(self.background(), area);
 
-    let [table, input] =
+    let [table, prompt] =
       Layout::vertical([Constraint::Fill(0), Constraint::Length(3 + config::get().prompt_padding * 2)]).areas(area);
 
-    let table = if self.show_crate_info {
-      let [table, info] = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(table);
-
-      if let Some(ci) = self.crate_info.lock().unwrap().clone() {
+    let table = match self.crate_info.lock().unwrap().clone() {
+      Some(ci) if self.show_crate_info => {
+        let [table, info] = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(table);
         f.render_widget(CrateInfo::new(ci), info);
-      }
-      table
-    } else {
-      table
+        table
+      },
+      _ => table,
     };
 
     f.render_stateful_widget(
@@ -434,88 +444,19 @@ impl Root {
       &mut (&mut self.table_state, &mut self.scrollbar_state),
     );
 
-    self.render_prompt(f, input);
+    let loading_status = self.loading_status.load(Ordering::SeqCst);
+    let selected =
+      self.table_state.selected().map_or(0, |n| (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1);
+    let total_num_crates = self.total_num_crates.unwrap_or_default();
+
+    let p = Prompt::new(total_num_crates, selected, loading_status, self.mode, &self.input);
+    f.render_widget(&p, prompt);
+    p.render_cursor(f, prompt);
 
     if let Some(err) = &self.error {
-      self.render_error(f, area, err);
+      f.render_widget(Popup::new("Error", err), area);
     }
 
     Ok(())
-  }
-}
-
-impl Root {
-  fn background(&self) -> impl Widget {
-    Block::default().bg(config::get().background_color)
-  }
-
-  fn input_block(&self) -> impl Widget {
-    let ncrates = self.total_num_crates.unwrap_or_default();
-    let loading_status = if self.loading_status.load(Ordering::SeqCst) {
-      format!("Loaded {} ...", ncrates)
-    } else {
-      format!(
-        "{}/{}",
-        self.table_state.selected().map_or(0, |n| (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1),
-        ncrates
-      )
-    };
-    Block::default()
-      .borders(Borders::ALL)
-      .title(
-        block::Title::from(Line::from(vec![
-          "Query ".into(),
-          "(Press ".into(),
-          "?".bold(),
-          " to search, ".into(),
-          "/".bold(),
-          " to filter, ".into(),
-          "Enter".bold(),
-          " to submit)".into(),
-        ]))
-        .alignment(Alignment::Left),
-      )
-      .title(loading_status)
-      .title_alignment(Alignment::Right)
-      .border_style(match self.mode {
-        Mode::PickerSearchQueryEditing => Style::default().fg(config::get().search_query_outline_color),
-        Mode::PickerFilterEditing => Style::default().fg(config::get().filter_query_outline_color),
-        _ => Style::default().add_modifier(Modifier::DIM),
-      })
-  }
-
-  fn input_text(&self, width: usize) -> impl Widget + '_ {
-    let scroll = self.input.cursor().saturating_sub(width.saturating_sub(4));
-    Paragraph::new(self.input.value()).scroll((0, scroll as u16))
-  }
-
-  fn render_prompt(&self, f: &mut Frame, area: Rect) {
-    let vertical_margin = 1 + config::get().prompt_padding;
-    let horizontal_margin = 1 + config::get().prompt_padding;
-    f.render_widget(self.input_block(), area);
-    f.render_widget(
-      self.input_text(area.width as usize),
-      area.inner(&Margin { horizontal: horizontal_margin, vertical: vertical_margin }),
-    );
-    if self.mode == Mode::PickerSearchQueryEditing || self.mode == Mode::PickerFilterEditing {
-      f.set_cursor(
-        (area.x + horizontal_margin + self.input.cursor() as u16).min(area.x + area.width.saturating_sub(2)),
-        area.y + vertical_margin,
-      )
-    }
-  }
-
-  fn render_error(&self, f: &mut Frame<'_>, area: Rect, err: &str) {
-    let [center] = Layout::vertical([Constraint::Percentage(50)]).flex(Flex::Center).areas(area);
-    let [center] = Layout::horizontal([Constraint::Percentage(50)]).flex(Flex::Center).areas(center);
-    f.render_widget(Clear, center);
-    f.render_widget(
-      Paragraph::new(err)
-        .block(Block::bordered().title(block::Title::from("Error")).title(
-          block::Title::from("Press `ESC` to exit").position(block::Position::Bottom).alignment(Alignment::Right),
-        ))
-        .wrap(Wrap { trim: true }),
-      center,
-    );
   }
 }

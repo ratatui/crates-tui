@@ -1,4 +1,5 @@
 use ratatui::{prelude::*, widgets::*};
+
 pub struct CrateInfo {
   ci: crates_io_api::Crate,
 }
