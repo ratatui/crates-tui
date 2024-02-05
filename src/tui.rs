@@ -260,22 +260,13 @@ pub fn key_event_to_string(key_event: &KeyEvent) -> String {
       char = format!("f({c})");
       &char
     },
-    KeyCode::Char(c) if c == ' ' => "space",
+    KeyCode::Char(' ') => "space",
     KeyCode::Char(c) => {
       char = c.to_string();
       &char
     },
     KeyCode::Esc => "esc",
-    KeyCode::Null => "",
-    KeyCode::CapsLock => "",
-    KeyCode::Menu => "",
-    KeyCode::ScrollLock => "",
-    KeyCode::Media(_) => "",
-    KeyCode::NumLock => "",
-    KeyCode::PrintScreen => "",
-    KeyCode::Pause => "",
-    KeyCode::KeypadBegin => "",
-    KeyCode::Modifier(_) => "",
+    _ => "",
   };
 
   let mut modifiers = Vec::with_capacity(3);

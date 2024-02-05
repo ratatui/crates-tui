@@ -24,14 +24,14 @@ impl<'a> Prompt<'a> {
       f.set_cursor(
         (area.x + self.horizontal_margin + self.input.cursor() as u16).min(area.x + area.width.saturating_sub(2)),
         area.y + self.vertical_margin,
-      )
+      );
     }
   }
 
   fn input_block(&self) -> impl Widget {
     let ncrates = self.total_num_crates;
     let loading_status =
-      if self.status { format!("Loaded {} ...", ncrates) } else { format!("{}/{}", self.selected, ncrates) };
+      if self.status { format!("Loaded {ncrates} ...") } else { format!("{}/{}", self.selected, ncrates) };
     Block::default()
       .borders(Borders::ALL)
       .title(

@@ -19,12 +19,12 @@ impl<'a> StatefulWidget for CratesTable<'a> {
   type State = (&'a mut TableState, &'a mut ScrollbarState);
 
   fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-    Scrollbar::default().track_symbol(Some(" ")).begin_symbol(None).end_symbol(None).render(area, buf, &mut state.1);
+    Scrollbar::default().track_symbol(Some(" ")).begin_symbol(None).end_symbol(None).render(area, buf, state.1);
 
     let widths =
       [Constraint::Length(1), Constraint::Max(20), Constraint::Min(0), Constraint::Max(10), Constraint::Max(20)];
     let (areas, spacers) =
-      Layout::horizontal(&widths).spacing(1).split_with_spacers(area.inner(&Margin { horizontal: 1, vertical: 0 }));
+      Layout::horizontal(widths).spacing(1).split_with_spacers(area.inner(&Margin { horizontal: 1, vertical: 0 }));
     let description_area = areas[2];
     let text_wrap_width = description_area.width as usize;
 
@@ -69,12 +69,12 @@ impl<'a> StatefulWidget for CratesTable<'a> {
         .highlight_spacing(HighlightSpacing::Always)
     };
 
-    StatefulWidget::render(table_widget, area, buf, &mut state.0);
+    StatefulWidget::render(table_widget, area, buf, state.0);
 
     // only render margins when there's items in the table
     if !self.crates.is_empty() {
       // don't render margin for the first column
-      for space in spacers.iter().skip(2).cloned() {
+      for space in spacers.iter().skip(2).copied() {
         Text::from(
           std::iter::once(" ")
             .chain(std::iter::once(" "))

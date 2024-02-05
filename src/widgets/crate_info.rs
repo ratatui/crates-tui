@@ -14,18 +14,13 @@ impl Widget for CrateInfo {
   fn render(self, area: Rect, buf: &mut Buffer) {
     let ci = self.ci.clone();
 
-    let mut rows = vec![];
+    let mut rows = vec![
+      Row::new(vec![Cell::from("Name"), Cell::from(ci.name.clone())]),
+      Row::new(vec![Cell::from("Created At"), Cell::from(self.ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string())]),
+      Row::new(vec![Cell::from("Updated At"), Cell::from(self.ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string())]),
+      Row::new(vec![Cell::from("Max Version"), Cell::from(self.ci.max_version)]),
+    ];
 
-    rows.push(Row::new(vec![Cell::from("Name"), Cell::from(ci.name.clone())]));
-    rows.push(Row::new(vec![
-      Cell::from("Created At"),
-      Cell::from(self.ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-    ]));
-    rows.push(Row::new(vec![
-      Cell::from("Updated At"),
-      Cell::from(self.ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-    ]));
-    rows.push(Row::new(vec![Cell::from("Max Version"), Cell::from(self.ci.max_version)]));
     if let Some(description) = self.ci.description {
       rows.push(Row::new(vec![Cell::from("Description"), Cell::from(description)]));
     }

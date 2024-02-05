@@ -75,7 +75,7 @@ impl App {
   }
 
   pub fn next(&mut self) {
-    if self.filtered_crates.len() == 0 {
+    if self.filtered_crates.is_empty() {
       self.table_state.select(None)
     } else {
       // wrapping behavior
@@ -95,7 +95,7 @@ impl App {
   }
 
   pub fn previous(&mut self) {
-    if self.filtered_crates.len() == 0 {
+    if self.filtered_crates.is_empty() {
       self.table_state.select(None)
     } else {
       // wrapping behavior
@@ -115,7 +115,7 @@ impl App {
   }
 
   pub fn top(&mut self) {
-    if self.filtered_crates.len() == 0 {
+    if self.filtered_crates.is_empty() {
       self.table_state.select(None)
     } else {
       self.table_state.select(Some(0));
@@ -124,7 +124,7 @@ impl App {
   }
 
   pub fn bottom(&mut self) {
-    if self.filtered_crates.len() == 0 {
+    if self.filtered_crates.is_empty() {
       self.table_state.select(None)
     } else {
       self.table_state.select(Some(self.filtered_crates.len() - 1));
@@ -198,12 +198,12 @@ impl App {
 
   fn get_info(&mut self) {
     let name = if let Some(index) = self.table_state.selected() {
-      if self.filtered_crates.len() > 0 {
+      if !self.filtered_crates.is_empty() {
         self.filtered_crates[index].name.clone()
       } else {
         return;
       }
-    } else if self.filtered_crates.len() > 0 {
+    } else if !self.filtered_crates.is_empty() {
       self.table_state.select(Some(0));
       self.filtered_crates[0].name.clone()
     } else {
@@ -250,7 +250,7 @@ impl App {
             || c.description.clone().unwrap_or_default().to_lowercase().contains(word)
         })
       })
-      .map(|c| c.clone())
+      .cloned()
       .collect();
   }
 
@@ -373,7 +373,7 @@ impl App {
       },
       Action::EnterNormal => {
         self.mode = Mode::Picker;
-        if self.filtered_crates.len() > 0 && self.table_state.selected().is_none() {
+        if !self.filtered_crates.is_empty() && self.table_state.selected().is_none() {
           self.table_state.select(Some(0))
         }
       },
@@ -525,7 +525,7 @@ impl App {
 
     f.render_widget(
       Block::default()
-        .title(format!("{:?}", self.last_tick_key_events.iter().map(|k| key_event_to_string(k)).collect::<Vec<_>>()))
+        .title(format!("{:?}", self.last_tick_key_events.iter().map(key_event_to_string).collect::<Vec<_>>()))
         .title_position(ratatui::widgets::block::Position::Bottom)
         .title_alignment(ratatui::layout::Alignment::Right),
       f.size(),

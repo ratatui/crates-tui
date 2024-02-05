@@ -26,7 +26,7 @@ pub fn initialize_logging() -> Result<()> {
         .add_directive("tokio_util=off".parse().unwrap())
         .add_directive("hyper=off".parse().unwrap())
         .add_directive("reqwest=off".parse().unwrap())
-        .add_directive(LevelFilter::from(config.log_level.unwrap_or(LevelFilter::OFF)).into()),
+        .add_directive(config.log_level.unwrap_or(LevelFilter::OFF).into()),
     )
     .init();
   Ok(())
