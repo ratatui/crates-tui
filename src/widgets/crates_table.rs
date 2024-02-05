@@ -32,9 +32,13 @@ impl<'a> StatefulWidget for CratesTable<'a> {
             Constraint::Max(10),
             Constraint::Max(20),
         ];
-        let (areas, spacers) = Layout::horizontal(widths)
-            .spacing(1)
-            .split_with_spacers(area.inner(&Margin { horizontal: 1, vertical: 0 }));
+        let (areas, spacers) =
+            Layout::horizontal(widths)
+                .spacing(1)
+                .split_with_spacers(area.inner(&Margin {
+                    horizontal: 1,
+                    vertical: 0,
+                }));
         let description_area = areas[2];
         let text_wrap_width = description_area.width as usize;
 
@@ -50,11 +54,13 @@ impl<'a> StatefulWidget for CratesTable<'a> {
             let highlight_symbol = if self.highlight { " \u{2022} " } else { "   " };
 
             let rows = self.crates.iter().enumerate().map(|(i, item)| {
-                let mut desc =
-                    textwrap::wrap(&item.description.clone().unwrap_or_default(), text_wrap_width)
-                        .iter()
-                        .map(|s| Line::from(s.to_string()))
-                        .collect_vec();
+                let mut desc = textwrap::wrap(
+                    &item.description.clone().unwrap_or_default(),
+                    text_wrap_width,
+                )
+                .iter()
+                .map(|s| Line::from(s.to_string()))
+                .collect_vec();
                 desc.insert(0, "".into());
                 let height = desc.len();
                 Row::new([
@@ -79,13 +85,21 @@ impl<'a> StatefulWidget for CratesTable<'a> {
                 .height(height.saturating_add(1) as u16)
             });
 
-            let widths =
-                [Constraint::Max(20), Constraint::Min(0), Constraint::Max(10), Constraint::Max(20)];
+            let widths = [
+                Constraint::Max(20),
+                Constraint::Min(0),
+                Constraint::Max(10),
+                Constraint::Max(20),
+            ];
             Table::new(rows, widths)
                 .header(header)
                 .column_spacing(1)
                 .highlight_style(selected_style)
-                .highlight_symbol(Text::from(vec!["".into(), highlight_symbol.into(), "".into()]))
+                .highlight_symbol(Text::from(vec![
+                    "".into(),
+                    highlight_symbol.into(),
+                    "".into(),
+                ]))
                 .highlight_spacing(HighlightSpacing::Always)
         };
 

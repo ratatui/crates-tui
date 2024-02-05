@@ -101,10 +101,12 @@ impl Default for Config {
 
 /// Returns the directory to use for storing data files.
 fn default_data_dir() -> PathBuf {
-    if let Some(dir) =
-        std::env::var(format!("{}_DATA_HOME", env!("CARGO_CRATE_NAME").to_uppercase()))
-            .ok()
-            .map(PathBuf::from)
+    if let Some(dir) = std::env::var(format!(
+        "{}_DATA_HOME",
+        env!("CARGO_CRATE_NAME").to_uppercase()
+    ))
+    .ok()
+    .map(PathBuf::from)
     {
         dir
     } else if let Ok(dir) = project_dirs().map(|dirs| dirs.data_local_dir().to_path_buf()) {
@@ -116,10 +118,12 @@ fn default_data_dir() -> PathBuf {
 
 /// Returns the directory to use for storing config files.
 fn default_config_dir() -> PathBuf {
-    if let Some(dir) =
-        std::env::var(format!("{}_CONFIG_HOME", env!("CARGO_CRATE_NAME").to_uppercase()))
-            .ok()
-            .map(PathBuf::from)
+    if let Some(dir) = std::env::var(format!(
+        "{}_CONFIG_HOME",
+        env!("CARGO_CRATE_NAME").to_uppercase()
+    ))
+    .ok()
+    .map(PathBuf::from)
     {
         dir
     } else if let Ok(dir) = project_dirs().map(|dirs| dirs.config_local_dir().to_path_buf()) {
@@ -157,7 +161,9 @@ pub fn initialize_config(cli: &Cli) -> Result<()> {
         .merge(Env::prefixed(concat!(env!("CARGO_CRATE_NAME"), "_")))
         .merge(Serialized::defaults(cli))
         .extract::<Config>()?;
-    CONFIG.set(config).map_err(|config| eyre!("failed to set config {config:?}"))
+    CONFIG
+        .set(config)
+        .map_err(|config| eyre!("failed to set config {config:?}"))
 }
 
 /// Get the application configuration.

@@ -132,8 +132,11 @@ impl App {
         if self.filtered_crates.is_empty() {
             self.table_state.select(None)
         } else {
-            self.table_state.select(Some(self.filtered_crates.len() - 1));
-            self.scrollbar_state = self.scrollbar_state.position(self.filtered_crates.len() - 1);
+            self.table_state
+                .select(Some(self.filtered_crates.len() - 1));
+            self.scrollbar_state = self
+                .scrollbar_state
+                .position(self.filtered_crates.len() - 1);
         }
     }
 
@@ -263,7 +266,9 @@ impl App {
     }
 
     fn update_scrollbar_state(&mut self) {
-        self.scrollbar_state = self.scrollbar_state.content_length(self.filtered_crates.len());
+        self.scrollbar_state = self
+            .scrollbar_state
+            .content_length(self.filtered_crates.len());
     }
 
     fn update_filtered_crates(&mut self) {
@@ -277,7 +282,11 @@ impl App {
             .filter(|c| {
                 filter_words.iter().all(|word| {
                     c.name.to_lowercase().contains(word)
-                        || c.description.clone().unwrap_or_default().to_lowercase().contains(word)
+                        || c.description
+                            .clone()
+                            .unwrap_or_default()
+                            .to_lowercase()
+                            .contains(word)
                 })
             })
             .cloned()
@@ -289,8 +298,11 @@ impl App {
         let tx = self.tx.clone();
         if let Some(ci) = crate_info {
             tokio::spawn(async move {
-                let output =
-                    tokio::process::Command::new("cargo").arg("add").arg(ci.name).output().await;
+                let output = tokio::process::Command::new("cargo")
+                    .arg("add")
+                    .arg(ci.name)
+                    .output()
+                    .await;
                 match output {
                     Ok(output) => {
                         let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -468,7 +480,9 @@ impl App {
     pub fn handle_key_events_from_config(&mut self, key: KeyEvent) -> Option<Action> {
         self.last_tick_key_events.push(key);
         let config = config::get();
-        let action = config.key_bindings.event_to_action(&self.mode, &self.last_tick_key_events);
+        let action = config
+            .key_bindings
+            .event_to_action(&self.mode, &self.last_tick_key_events);
         if action.is_some() {
             self.last_tick_key_events.drain(..);
         }
@@ -500,7 +514,10 @@ impl App {
     }
 
     pub fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
-        f.render_widget(Block::default().bg(config::get().style.background_color), area);
+        f.render_widget(
+            Block::default().bg(config::get().style.background_color),
+            area,
+        );
 
         let [table, prompt] = Layout::vertical([
             Constraint::Fill(0),
@@ -526,13 +543,18 @@ impl App {
         );
 
         let loading_status = self.loading_status.load(Ordering::SeqCst);
-        let selected = self
-            .table_state
-            .selected()
-            .map_or(0, |n| (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1);
+        let selected = self.table_state.selected().map_or(0, |n| {
+            (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1
+        });
         let total_num_crates = self.total_num_crates.unwrap_or_default();
 
-        let p = Prompt::new(total_num_crates, selected, loading_status, self.mode, &self.input);
+        let p = Prompt::new(
+            total_num_crates,
+            selected,
+            loading_status,
+            self.mode,
+            &self.input,
+        );
         f.render_widget(&p, prompt);
         p.render_cursor(f, prompt);
         if loading_status {
@@ -550,7 +572,10 @@ impl App {
             Block::default()
                 .title(format!(
                     "{:?}",
-                    self.last_tick_key_events.iter().map(key_event_to_string).collect::<Vec<_>>()
+                    self.last_tick_key_events
+                        .iter()
+                        .map(key_event_to_string)
+                        .collect::<Vec<_>>()
                 ))
                 .title_position(ratatui::widgets::block::Position::Bottom)
                 .title_alignment(ratatui::layout::Alignment::Right),

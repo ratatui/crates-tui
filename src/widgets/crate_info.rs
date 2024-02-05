@@ -24,17 +24,26 @@ impl Widget for CrateInfo {
                 Cell::from("Updated At"),
                 Cell::from(self.ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
             ]),
-            Row::new(vec![Cell::from("Max Version"), Cell::from(self.ci.max_version)]),
+            Row::new(vec![
+                Cell::from("Max Version"),
+                Cell::from(self.ci.max_version),
+            ]),
         ];
 
         if let Some(description) = self.ci.description {
-            rows.push(Row::new(vec![Cell::from("Description"), Cell::from(description)]));
+            rows.push(Row::new(vec![
+                Cell::from("Description"),
+                Cell::from(description),
+            ]));
         }
         if let Some(homepage) = self.ci.homepage {
             rows.push(Row::new(vec![Cell::from("Homepage"), Cell::from(homepage)]));
         }
         if let Some(repository) = self.ci.repository {
-            rows.push(Row::new(vec![Cell::from("Repository"), Cell::from(repository)]));
+            rows.push(Row::new(vec![
+                Cell::from("Repository"),
+                Cell::from(repository),
+            ]));
         }
         if let Some(recent_downloads) = self.ci.recent_downloads {
             rows.push(Row::new(vec![
