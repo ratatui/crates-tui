@@ -306,6 +306,7 @@ impl App {
         match e {
           tui::Event::Quit => tx.send(Action::Quit)?,
           tui::Event::Tick => tx.send(Action::Tick)?,
+          tui::Event::KeyRefresh => tx.send(Action::KeyRefresh)?,
           tui::Event::Render => tx.send(Action::Render)?,
           tui::Event::Resize(x, y) => tx.send(Action::Resize(x, y))?,
           tui::Event::Key(key) => {
@@ -314,6 +315,11 @@ impl App {
               tx.send(action)?;
             }
             self.last_tick_key_events.push(key);
+            let config = config::get();
+            if let Some(action) = config.key_bindings.event_to_action(&self.mode, &self.last_tick_key_events) {
+              tx.send(action)?;
+              self.last_tick_key_events.drain(..);
+            }
           },
           _ => {},
         }
@@ -327,7 +333,7 @@ impl App {
           tx.send(action)?
         };
         match action {
-          Action::Tick => {
+          Action::KeyRefresh => {
             self.last_tick_key_events.drain(..);
           },
           Action::Quit => should_quit = true,
@@ -363,11 +369,11 @@ impl App {
       Action::DecrementPage => self.decrement_page(),
       Action::CargoAddCrate => self.cargo_add(),
       Action::ScrollUp => {
-        self.next();
+        self.previous();
         return Ok(Some(Action::GetInfo));
       },
       Action::ScrollDown => {
-        self.previous();
+        self.next();
         return Ok(Some(Action::GetInfo));
       },
       Action::ScrollTop => {
@@ -393,10 +399,16 @@ impl App {
           self.table_state.select(Some(0))
         }
       },
-      Action::SubmitSearchQuery(search) => {
+      Action::SubmitSearchWithQuery(search) => {
         self.mode = Mode::Picker;
         self.filter.clear();
         self.search = search;
+        return Ok(Some(Action::ReloadData));
+      },
+      Action::SubmitSearch => {
+        self.mode = Mode::Picker;
+        self.filter.clear();
+        self.search = self.input.value().into();
         return Ok(Some(Action::ReloadData));
       },
       Action::ToggleShowCrateInfo => {
@@ -435,47 +447,9 @@ impl App {
   }
 
   pub fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-    let cmd = match self.mode {
-      Mode::Popup => {
-        match key.code {
-          KeyCode::Enter => Action::ClosePopup,
-          KeyCode::Esc => Action::ClosePopup,
-          KeyCode::Char('j') | KeyCode::Down => Action::ScrollDown,
-          KeyCode::Char('k') | KeyCode::Up => Action::ScrollUp,
-          _ => return Ok(None),
-        }
-      },
-      Mode::Picker => {
-        match key.code {
-          KeyCode::Char('q') => Action::Quit,
-          KeyCode::Char('?') => Action::EnterSearchQueryInsert,
-          KeyCode::Char('/') => Action::EnterFilterInsert,
-          KeyCode::Char('j') | KeyCode::Down => Action::ScrollDown,
-          KeyCode::Char('k') | KeyCode::Up => Action::ScrollUp,
-          KeyCode::Char('l') | KeyCode::Right => Action::IncrementPage,
-          KeyCode::Char('h') | KeyCode::Left => Action::DecrementPage,
-          KeyCode::Char('a') => Action::CargoAddCrate,
-          KeyCode::Char('g') => {
-            if let Some(KeyEvent { code: KeyCode::Char('g'), .. }) = self.last_tick_key_events.last() {
-              Action::ScrollTop
-            } else {
-              return Ok(None);
-            }
-          },
-          KeyCode::PageUp => Action::ScrollTop,
-          KeyCode::Char('G') | KeyCode::PageDown => Action::ScrollBottom,
-          KeyCode::Char('r') => Action::ReloadData,
-          KeyCode::Home => Action::ScrollTop,
-          KeyCode::End => Action::ScrollBottom,
-          KeyCode::Esc => Action::Quit,
-          KeyCode::Enter => Action::ToggleShowCrateInfo,
-          _ => return Ok(None),
-        }
-      },
+    match self.mode {
       Mode::PickerSearchQueryEditing => {
         match key.code {
-          KeyCode::Esc => Action::EnterNormal,
-          KeyCode::Enter => Action::SubmitSearchQuery(self.input.value().into()),
           _ => {
             self.input.handle_event(&crossterm::event::Event::Key(key));
             return Ok(None);
@@ -484,8 +458,6 @@ impl App {
       },
       Mode::PickerFilterEditing => {
         match key.code {
-          KeyCode::Esc => Action::EnterNormal,
-          KeyCode::Enter => Action::EnterNormal,
           _ => {
             self.input.handle_event(&crossterm::event::Event::Key(key));
             self.filter = self.input.value().into();
@@ -494,8 +466,8 @@ impl App {
           },
         }
       },
+      _ => return Ok(None),
     };
-    Ok(Some(cmd))
   }
 
   fn background(&self) -> impl Widget {

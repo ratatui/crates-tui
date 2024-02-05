@@ -33,6 +33,7 @@ pub enum Event {
   Error,
   Closed,
   Tick,
+  KeyRefresh,
   Render,
   FocusGained,
   FocusLost,
@@ -50,6 +51,7 @@ pub struct Tui {
   pub event_tx: UnboundedSender<Event>,
   pub frame_rate: f64,
   pub tick_rate: f64,
+  pub key_refresh_rate: f64,
   pub mouse: bool,
   pub paste: bool,
 }
@@ -58,13 +60,25 @@ impl Tui {
   pub fn new() -> Result<Self> {
     let tick_rate = 1.0;
     let frame_rate = 15.0;
+    let key_refresh_rate = 0.5;
     let terminal = ratatui::Terminal::new(Backend::new(io()))?;
     let (event_tx, event_rx) = mpsc::unbounded_channel();
     let cancellation_token = CancellationToken::new();
     let task = tokio::spawn(async {});
     let mouse = false;
     let paste = false;
-    Ok(Self { terminal, task, cancellation_token, event_rx, event_tx, frame_rate, tick_rate, mouse, paste })
+    Ok(Self {
+      terminal,
+      task,
+      cancellation_token,
+      event_rx,
+      event_tx,
+      frame_rate,
+      tick_rate,
+      key_refresh_rate,
+      mouse,
+      paste,
+    })
   }
 
   pub fn tick_rate(mut self, tick_rate: f64) -> Self {
@@ -91,6 +105,7 @@ impl Tui {
 
   pub fn start(&mut self) {
     let tick_delay = std::time::Duration::from_secs_f64(1.0 / self.tick_rate);
+    let key_refresh_delay = std::time::Duration::from_secs_f64(1.0 / self.key_refresh_rate);
     let render_delay = std::time::Duration::from_secs_f64(1.0 / self.frame_rate);
     self.cancel();
     self.cancellation_token = CancellationToken::new();
@@ -99,10 +114,12 @@ impl Tui {
     self.task = tokio::spawn(async move {
       let mut reader = crossterm::event::EventStream::new();
       let mut tick_interval = tokio::time::interval(tick_delay);
+      let mut key_refresh_interval = tokio::time::interval(key_refresh_delay);
       let mut render_interval = tokio::time::interval(render_delay);
       _event_tx.send(Event::Init).unwrap();
       loop {
         let tick_delay = tick_interval.tick();
+        let key_refresh_delay = key_refresh_interval.tick();
         let render_delay = render_interval.tick();
         let crossterm_event = reader.next().fuse();
         tokio::select! {
@@ -143,6 +160,9 @@ impl Tui {
           },
           _ = tick_delay => {
               _event_tx.send(Event::Tick).unwrap();
+          },
+          _ = key_refresh_delay => {
+              _event_tx.send(Event::KeyRefresh).unwrap();
           },
           _ = render_delay => {
               _event_tx.send(Event::Render).unwrap();

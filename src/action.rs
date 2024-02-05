@@ -5,6 +5,7 @@ use strum::Display;
 pub enum Action {
   Tick,
   Render,
+  KeyRefresh,
   Resize(u16, u16),
   Suspend,
   Resume,
@@ -24,7 +25,8 @@ pub enum Action {
   ScrollTop,
   ScrollDown,
   ScrollUp,
-  SubmitSearchQuery(String),
+  SubmitSearchWithQuery(String),
+  SubmitSearch,
   GetInfo,
   ReloadData,
   ToggleShowHelp,

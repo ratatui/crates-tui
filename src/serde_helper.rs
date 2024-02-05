@@ -11,6 +11,18 @@ pub mod keybindings {
   #[derive(Clone, Debug, Default, Deref, DerefMut)]
   pub struct KeyBindings(pub HashMap<Mode, HashMap<Vec<KeyEvent>, Action>>);
 
+  impl KeyBindings {
+    pub fn event_to_action(&self, mode: &Mode, key_events: &[KeyEvent]) -> Option<Action> {
+      if key_events.is_empty() {
+        None
+      } else if let Some(Some(action)) = self.0.get(mode).map(|kb| kb.get(key_events)) {
+        Some(action.clone())
+      } else {
+        self.event_to_action(mode, &key_events[1..])
+      }
+    }
+  }
+
   impl<'de> Deserialize<'de> for KeyBindings {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

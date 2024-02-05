@@ -1,5 +1,36 @@
+[key_bindings.popup]
+"j" = "ScrollDown"
+"k" = "ScrollUp"
+"Down" = "ScrollDown"
+"Up" = "ScrollUp"
+"Enter" = "ClosePopup"
+"ESC" = "ClosePopup"
 
 [key_bindings.picker]
-"<q>" = "Quit"
+"q" = "Quit"
+"ESC" = "Quit"
 "<g><g>" = "ScrollTop"
+"G" = "ScrollBottom"
+"Home" = "ScrollTop"
+"End" = "ScrollBottom"
+"?" = "EnterSearchQueryInsert"
+"/" = "EnterFilterInsert"
+"j" = "ScrollDown"
+"k" = "ScrollUp"
+"Down" = "ScrollDown"
+"Up" = "ScrollUp"
+"l" = "IncrementPage"
+"h" = "DecrementPage"
+"Left" = "DecrementPage"
+"Right" = "IncrementPage"
+"a" = "CargoAddCrate"
+"r" = "ReloadData"
+"Enter" = "ToggleShowCrateInfo"
 
+[key_bindings.picker_search_query_editing]
+"ESC" = "EnterNormal"
+"Enter" = "SubmitSearch"
+
+[key_bindings.picker_filter_editing]
+"ESC" = "EnterNormal"
+"Enter" = "EnterNormal"
