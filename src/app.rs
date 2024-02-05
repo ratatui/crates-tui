@@ -394,9 +394,10 @@ impl App {
           self.table_state.select(Some(0))
         }
       },
-      Action::SubmitSearchQuery => {
+      Action::SubmitSearchQuery(search) => {
         self.mode = Mode::Picker;
         self.filter.clear();
+        self.search = search;
         return Ok(Some(Action::ReloadData));
       },
       Action::ReloadData => {
@@ -485,10 +486,9 @@ impl App {
       Mode::PickerSearchQueryEditing => {
         match key.code {
           KeyCode::Esc => Action::EnterNormal,
-          KeyCode::Enter => Action::SubmitSearchQuery,
+          KeyCode::Enter => Action::SubmitSearchQuery(self.input.value().into()),
           _ => {
             self.input.handle_event(&crossterm::event::Event::Key(key));
-            self.search = self.input.value().into();
             return Ok(None);
           },
         }
