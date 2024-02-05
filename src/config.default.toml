@@ -13,8 +13,8 @@
 "G" = "ScrollBottom"
 "Home" = "ScrollTop"
 "End" = "ScrollBottom"
-"?" = "EnterSearchQueryInsert"
-"/" = "EnterFilterInsert"
+"?" = "EnterSearchInsertMode"
+"/" = "EnterFilterInsertMode"
 "j" = "ScrollDown"
 "k" = "ScrollUp"
 "Down" = "ScrollDown"
@@ -27,10 +27,10 @@
 "r" = "ReloadData"
 "Enter" = "ToggleShowCrateInfo"
 
-[key_bindings.picker_search_query_editing]
+[key_bindings.search]
 "ESC" = "EnterNormal"
 "Enter" = "SubmitSearch"
 
-[key_bindings.picker_filter_editing]
+[key_bindings.filter]
 "ESC" = "EnterNormal"
 "Enter" = "EnterNormal"

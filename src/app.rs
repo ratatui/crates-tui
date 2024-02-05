@@ -23,8 +23,8 @@ use crate::{
 #[serde(rename_all = "snake_case")]
 pub enum Mode {
   #[default]
-  PickerSearchQueryEditing,
-  PickerFilterEditing,
+  Search,
+  Filter,
   Picker,
   Popup,
 }
@@ -384,13 +384,13 @@ impl App {
         self.bottom();
         return Ok(Some(Action::GetInfo));
       },
-      Action::EnterSearchQueryInsert => {
-        self.mode = Mode::PickerSearchQueryEditing;
+      Action::EnterSearchInsertMode => {
+        self.mode = Mode::Search;
         self.input = self.input.clone().with_value(self.search.clone());
       },
-      Action::EnterFilterInsert => {
+      Action::EnterFilterInsertMode => {
         self.show_crate_info = false;
-        self.mode = Mode::PickerFilterEditing;
+        self.mode = Mode::Filter;
         self.input = self.input.clone().with_value(self.filter.clone());
       },
       Action::EnterNormal => {
@@ -439,7 +439,7 @@ impl App {
       Action::ClosePopup => {
         self.error = None;
         self.info = None;
-        self.mode = Mode::PickerSearchQueryEditing;
+        self.mode = Mode::Search;
       },
       _ => {},
     }
@@ -448,7 +448,7 @@ impl App {
 
   pub fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
     match self.mode {
-      Mode::PickerSearchQueryEditing => {
+      Mode::Search => {
         match key.code {
           _ => {
             self.input.handle_event(&crossterm::event::Event::Key(key));
@@ -456,7 +456,7 @@ impl App {
           },
         }
       },
-      Mode::PickerFilterEditing => {
+      Mode::Filter => {
         match key.code {
           _ => {
             self.input.handle_event(&crossterm::event::Event::Key(key));

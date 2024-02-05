@@ -28,7 +28,7 @@ impl<'a> Prompt<'a> {
   }
 
   pub fn render_cursor(&self, f: &mut Frame, area: Rect) {
-    if self.mode == Mode::PickerSearchQueryEditing || self.mode == Mode::PickerFilterEditing {
+    if self.mode == Mode::Search || self.mode == Mode::Filter {
       f.set_cursor(
         (area.x + self.horizontal_margin + self.input.cursor() as u16).min(area.x + area.width.saturating_sub(2)),
         area.y + self.vertical_margin,
@@ -58,8 +58,8 @@ impl<'a> Prompt<'a> {
       .title(loading_status)
       .title_alignment(Alignment::Right)
       .border_style(match self.mode {
-        Mode::PickerSearchQueryEditing => Style::default().fg(config::get().style.search_query_outline_color),
-        Mode::PickerFilterEditing => Style::default().fg(config::get().style.filter_query_outline_color),
+        Mode::Search => Style::default().fg(config::get().style.search_query_outline_color),
+        Mode::Filter => Style::default().fg(config::get().style.filter_query_outline_color),
         _ => Style::default().add_modifier(Modifier::DIM),
       })
   }
