@@ -12,36 +12,36 @@ use color_eyre::eyre::Result;
 use tokio::sync::mpsc;
 
 use crate::{
-  config::initialize_config, errors::initialize_panic_handler, logging::initialize_logging,
+    config::initialize_config, errors::initialize_panic_handler, logging::initialize_logging,
 };
 
 async fn tokio_main() -> Result<()> {
-  let cli = cli::get();
-  initialize_config(&cli)?;
+    let cli = cli::get();
+    initialize_config(&cli)?;
 
-  initialize_logging()?;
-  initialize_panic_handler()?;
+    initialize_logging()?;
+    initialize_panic_handler()?;
 
-  if cli.print_default_config {
-    println!("{}", toml::to_string_pretty(config::get())?);
-    return Ok(());
-  }
+    if cli.print_default_config {
+        println!("{}", toml::to_string_pretty(config::get())?);
+        return Ok(());
+    }
 
-  let mut tui = tui::Tui::new()?;
+    let mut tui = tui::Tui::new()?;
 
-  let (tx, rx) = mpsc::unbounded_channel();
-  let mut app = app::App::new(tx);
-  app.run(&mut tui, rx).await?;
+    let (tx, rx) = mpsc::unbounded_channel();
+    let mut app = app::App::new(tx);
+    app.run(&mut tui, rx).await?;
 
-  Ok(())
+    Ok(())
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  if let Err(e) = tokio_main().await {
-    eprintln!("{} error: Something went wrong.", env!("CARGO_PKG_NAME"));
-    Err(e)
-  } else {
-    Ok(())
-  }
+    if let Err(e) = tokio_main().await {
+        eprintln!("{} error: Something went wrong.", env!("CARGO_PKG_NAME"));
+        Err(e)
+    } else {
+        Ok(())
+    }
 }
