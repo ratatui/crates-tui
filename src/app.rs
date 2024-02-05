@@ -337,7 +337,58 @@ impl App {
 }
 
 impl App {
-    // FIXME: split and simplify
+    async fn handle_tui_event(
+        &mut self,
+        e: tui::Event,
+        tx: &UnboundedSender<Action>,
+    ) -> Result<()> {
+        match e {
+            tui::Event::Quit => tx.send(Action::Quit)?,
+            tui::Event::Tick => tx.send(Action::Tick)?,
+            tui::Event::KeyRefresh => tx.send(Action::KeyRefresh)?,
+            tui::Event::Render => tx.send(Action::Render)?,
+            tui::Event::Resize(x, y) => tx.send(Action::Resize(x, y))?,
+            tui::Event::Key(key) => {
+                debug!("Received key {:?}", key);
+                if let Some(action) = self.handle_key_events(key)? {
+                    tx.send(action)?;
+                }
+                if let Some(action) = self.handle_key_events_from_config(key) {
+                    tx.send(action)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    async fn handle_action(
+        &mut self,
+        action: Action,
+        tui: &mut Tui,
+        tx: &UnboundedSender<Action>,
+    ) -> Result<()> {
+        if action != Action::Tick && action != Action::Render {
+            info!("{action:?}");
+        }
+        match action {
+            Action::KeyRefresh => {
+                self.last_tick_key_events.drain(..);
+            }
+            Action::Resize(w, h) => {
+                tui.resize(Rect::new(0, 0, w, h))?;
+                tx.send(Action::Render)?;
+            }
+            Action::Render => {
+                tui.draw(|f| self.draw(f, f.size()))?;
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    // The main 'run' function now delegates to the two functions above,
+    // to handle TUI events and App actions respectively.
     pub async fn run(&mut self, tui: &mut Tui, mut rx: UnboundedReceiver<Action>) -> Result<()> {
         let mut should_quit = false;
         let tx = self.tx.clone();
@@ -346,47 +397,16 @@ impl App {
 
         loop {
             if let Some(e) = tui.next().await {
-                match e {
-                    tui::Event::Quit => tx.send(Action::Quit)?,
-                    tui::Event::Tick => tx.send(Action::Tick)?,
-                    tui::Event::KeyRefresh => tx.send(Action::KeyRefresh)?,
-                    tui::Event::Render => tx.send(Action::Render)?,
-                    tui::Event::Resize(x, y) => tx.send(Action::Resize(x, y))?,
-                    tui::Event::Key(key) => {
-                        debug!("Received key {:?}", key);
-                        if let Some(action) = self.handle_key_events(key)? {
-                            tx.send(action)?;
-                        }
-                        if let Some(action) = self.handle_key_events_from_config(key) {
-                            tx.send(action)?;
-                        }
-                    }
-                    _ => {}
-                }
+                self.handle_tui_event(e, &tx).await?;
             }
-
             while let Ok(action) = rx.try_recv() {
-                if action != Action::Tick && action != Action::Render {
-                    info!("{action:?}");
-                }
-                if let Some(action) = self.update(action.clone())? {
-                    tx.send(action)?
+                if let Some(inner_action) = self.update(action.clone())? {
+                    tx.send(inner_action)?
                 };
-                match action {
-                    Action::KeyRefresh => {
-                        self.last_tick_key_events.drain(..);
-                    }
-                    Action::Quit => should_quit = true,
-                    Action::Resize(w, h) => {
-                        tui.resize(Rect::new(0, 0, w, h))?;
-                        tx.send(Action::Render)?;
-                    }
-                    Action::Render => {
-                        tui.draw(|f| {
-                            self.draw(f, f.size());
-                        })?;
-                    }
-                    _ => {}
+                self.handle_action(action.clone(), tui, &tx).await?;
+                if action == Action::Quit {
+                    should_quit = true;
+                    break;
                 }
             }
             if should_quit {
