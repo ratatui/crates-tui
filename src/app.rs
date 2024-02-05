@@ -197,30 +197,29 @@ impl App {
   }
 
   fn get_info(&mut self) {
-    let name = if let Some(index) = self.table_state.selected() {
-      if !self.filtered_crates.is_empty() {
-        self.filtered_crates[index].name.clone()
-      } else {
-        return;
-      }
-    } else if !self.filtered_crates.is_empty() {
-      self.table_state.select(Some(0));
-      self.filtered_crates[0].name.clone()
-    } else {
+    if self.filtered_crates.is_empty() {
       return;
-    };
+    }
+
     let tx = self.tx.clone();
+
+    let index = self.table_state.selected().unwrap_or_default();
+    let name = self.filtered_crates[index].name.clone();
+
     if !name.is_empty() {
       let crate_info = self.crate_info.clone();
       tokio::spawn(async move {
-        let client = crates_io_api::AsyncClient::new(
+        match crates_io_api::AsyncClient::new(
           "crates-tui (crates-tui@kdheepak.com)",
           std::time::Duration::from_millis(1000),
-        )
-        .unwrap();
-        match client.get_crate(&name).await {
-          Ok(_crate_info) => *crate_info.lock().unwrap() = Some(_crate_info.crate_data),
-          Err(_err) => tx.send(Action::Error("Unable to get crate information".into())).unwrap_or_default(),
+        ) {
+          Ok(client) => {
+            match client.get_crate(&name).await {
+              Ok(_crate_info) => *crate_info.lock().unwrap() = Some(_crate_info.crate_data),
+              Err(_err) => tx.send(Action::Error("Unable to get crate information".into())).unwrap_or_default(),
+            }
+          },
+          Err(err) => tx.send(Action::Error(format!("Error getting crate info: {:?}", err))).unwrap_or_default(),
         }
       });
     }
