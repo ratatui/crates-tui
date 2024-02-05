@@ -10,7 +10,11 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc::UnboundedSender;
 use tui_input::backend::crossterm::EventHandler;
 
-use crate::{action::Action, config, widgets::crates_table::CratesTable};
+use crate::{
+  action::Action,
+  config,
+  widgets::{crate_info::CrateInfo, crates_table::CratesTable},
+};
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Mode {
@@ -415,7 +419,10 @@ impl Root {
 
     let table = if self.show_crate_info {
       let [table, info] = Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)]).areas(table);
-      self.render_crate_info(f, info);
+
+      if let Some(ci) = self.crate_info.lock().unwrap().clone() {
+        f.render_widget(CrateInfo::new(ci), info);
+      }
       table
     } else {
       table
@@ -440,49 +447,6 @@ impl Root {
 impl Root {
   fn background(&self) -> impl Widget {
     Block::default().bg(config::get().background_color)
-  }
-
-  pub fn render_crate_info(&self, f: &mut Frame, area: Rect) {
-    let crate_info = self.crate_info.lock().unwrap().clone();
-    let crate_info = if let Some(ci) = crate_info {
-      ci
-    } else {
-      f.render_widget(Block::default().borders(Borders::ALL).title("crates.io info"), area);
-      return;
-    };
-    let name = crate_info.name.clone();
-
-    let mut rows = vec![];
-
-    rows.push(Row::new(vec![Cell::from("Name"), Cell::from(name.clone())]));
-    rows.push(Row::new(vec![
-      Cell::from("Created At"),
-      Cell::from(crate_info.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-    ]));
-    rows.push(Row::new(vec![
-      Cell::from("Updated At"),
-      Cell::from(crate_info.created_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-    ]));
-    rows.push(Row::new(vec![Cell::from("Max Version"), Cell::from(crate_info.max_version)]));
-    if let Some(description) = crate_info.description {
-      rows.push(Row::new(vec![Cell::from("Description"), Cell::from(description)]));
-    }
-    if let Some(homepage) = crate_info.homepage {
-      rows.push(Row::new(vec![Cell::from("Homepage"), Cell::from(homepage)]));
-    }
-    if let Some(repository) = crate_info.repository {
-      rows.push(Row::new(vec![Cell::from("Repository"), Cell::from(repository)]));
-    }
-    if let Some(recent_downloads) = crate_info.recent_downloads {
-      rows.push(Row::new(vec![Cell::from("Recent Downloads"), Cell::from(recent_downloads.to_string())]));
-    }
-    if let Some(max_stable_version) = crate_info.max_stable_version {
-      rows.push(Row::new(vec![Cell::from("Max Stable Version"), Cell::from(max_stable_version)]));
-    }
-
-    let widths = [Constraint::Fill(1), Constraint::Fill(4)];
-    let table_widget = Table::new(rows, widths).block(Block::default().borders(Borders::ALL));
-    f.render_widget(table_widget, area);
   }
 
   fn input_block(&self) -> impl Widget {
