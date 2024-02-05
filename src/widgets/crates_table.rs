@@ -19,7 +19,7 @@ impl CrateTableState {
         self.table_state.select(index)
     }
 
-    pub fn selected(&mut self) -> Option<usize> {
+    pub fn selected(&self) -> Option<usize> {
         self.table_state.selected()
     }
 

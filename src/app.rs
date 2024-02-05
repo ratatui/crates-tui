@@ -138,7 +138,7 @@ impl App {
     fn toggle_show_crate_info(&mut self) {
         self.show_crate_info = !self.show_crate_info;
         if self.show_crate_info {
-            self.load_current_selection_crate_info()
+            self.fetch_crate_details()
         } else {
             *self.crate_info.lock().unwrap() = None;
         }
@@ -164,7 +164,7 @@ impl App {
 
     fn update_current_selection_crate_info(&mut self) {
         if self.show_crate_info {
-            self.load_current_selection_crate_info();
+            self.fetch_crate_details();
         } else {
             *self.crate_info.lock().unwrap() = None;
         }
@@ -200,8 +200,8 @@ impl App {
                     match client.crates(query).await {
                         Ok(page) => {
                             let mut all_crates = vec![];
-                            for _crate in page.crates.iter() {
-                                all_crates.push(_crate.clone())
+                            for crate_ in page.crates.iter() {
+                                all_crates.push(crate_.clone())
                             }
                             all_crates.sort_by(|a, b| b.downloads.cmp(&a.downloads));
                             crates.lock().unwrap().drain(0..);
@@ -233,41 +233,60 @@ impl App {
         });
     }
 
-    // FIXME: overly long and complex, and also poorly named
-    fn load_current_selection_crate_info(&mut self) {
+    // Extracts the selected crate name, if possible.
+    fn selected_crate_name(&self) -> Option<String> {
+        self.crate_table_state
+            .selected()
+            .and_then(|index| self.filtered_crates.get(index))
+            .filter(|crate_| !crate_.name.is_empty())
+            .map(|crate_| crate_.name.clone())
+    }
+
+    fn fetch_crate_details(&mut self) {
         if self.filtered_crates.is_empty() {
             return;
         }
-        let tx = self.tx.clone();
-        let index = self.crate_table_state.selected().unwrap_or_default();
-        let name = self.filtered_crates[index].name.clone();
+        if let Some(crate_name) = self.selected_crate_name() {
+            let tx = self.tx.clone();
+            let crate_info = self.crate_info.clone();
+            let loading_status = self.loading_status.clone();
 
-        if name.is_empty() {
-            return;
+            // Spawn the async work to fetch crate details.
+            tokio::spawn(async move {
+                loading_status.store(true, Ordering::SeqCst);
+                App::async_fetch_crate_details(crate_name, tx, crate_info).await;
+                loading_status.store(false, Ordering::SeqCst);
+            });
         }
+    }
 
-        let crate_info = self.crate_info.clone();
-        let loading_status = self.loading_status.clone();
-        tokio::spawn(async move {
-            loading_status.store(true, Ordering::SeqCst);
-            match crates_io_api::AsyncClient::new(
-                "crates-tui (crates-tui@kdheepak.com)",
-                std::time::Duration::from_millis(1000),
-            ) {
-                Ok(client) => match client.get_crate(&name).await {
-                    Ok(_crate_info) => *crate_info.lock().unwrap() = Some(_crate_info.crate_data),
-                    Err(err) => tx
-                        .send(Action::Error(format!(
-                            "Unable to get crate information: {err}"
-                        )))
-                        .unwrap_or_default(),
-                },
-                Err(err) => tx
-                    .send(Action::Error(format!("Error creating client: {err:?}")))
-                    .unwrap_or_default(),
+    // Performs the async fetch of crate details.
+    async fn async_fetch_crate_details(
+        crate_name: String,
+        tx: UnboundedSender<Action>,
+        crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
+    ) {
+        let client = match crates_io_api::AsyncClient::new(
+            "crates-tui (crates-tui@kdheepak.com)",
+            std::time::Duration::from_millis(1000),
+        ) {
+            Ok(client) => client,
+            Err(error_message) => {
+                return tx
+                    .send(Action::Error(format!("{}", error_message)))
+                    .unwrap_or_default();
             }
-            loading_status.store(false, Ordering::SeqCst);
-        });
+        };
+
+        let result = client.get_crate(&crate_name).await;
+
+        match result {
+            Ok(crate_data) => *crate_info.lock().unwrap() = Some(crate_data.crate_data),
+            Err(err) => {
+                let error_message = format!("Error fetching crate details: {err}");
+                tx.send(Action::Error(error_message)).unwrap_or_default();
+            }
+        }
     }
 
     fn tick(&mut self) {
