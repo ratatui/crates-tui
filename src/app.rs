@@ -470,12 +470,8 @@ impl App {
     };
   }
 
-  fn background(&self) -> impl Widget {
-    Block::default().bg(config::get().style.background_color)
-  }
-
   pub fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
-    f.render_widget(self.background(), area);
+    f.render_widget(Block::default().bg(config::get().style.background_color), area);
 
     let [table, prompt] =
       Layout::vertical([Constraint::Fill(0), Constraint::Length(3 + config::get().prompt_padding * 2)]).areas(area);
