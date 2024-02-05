@@ -7,17 +7,20 @@ use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent};
 use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
+use strum::Display;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tui_input::backend::crossterm::EventHandler;
 
 use crate::{
   action::Action,
   config,
-  tui::{self, key_event_to_string, Tui},
+  serde_helper::keybindings::key_event_to_string,
+  tui::{self, Tui},
   widgets::{crate_info::CrateInfo, crates_table::CratesTable, popup::Popup, prompt::Prompt},
 };
 
-#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Default, Debug, Display, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Mode {
   #[default]
   PickerSearchQueryEditing,
@@ -186,7 +189,7 @@ impl App {
               if crates.lock().unwrap().len() > 0 {
                 tx.send(Action::StoreTotalNumberOfCrates(page.meta.total)).unwrap_or_default();
                 tx.send(Action::Tick).unwrap_or_default();
-                tx.send(Action::MoveSelectionNext).unwrap_or_default();
+                tx.send(Action::ScrollDown).unwrap_or_default();
               } else {
                 tx.send(Action::Error(format!("Could not find any crates with query `{}`.", search)))
                   .unwrap_or_default();
@@ -353,25 +356,25 @@ impl App {
     match action {
       Action::Tick => self.tick(),
       Action::StoreTotalNumberOfCrates(n) => self.total_num_crates = Some(n),
-      Action::ScrollPopupUp => self.popup_scroll = self.popup_scroll.saturating_sub(1),
-      Action::ScrollPopupDown => self.popup_scroll = self.popup_scroll.saturating_add(1),
+      Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll = self.popup_scroll.saturating_sub(1),
+      Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll = self.popup_scroll.saturating_add(1),
       Action::ReloadData => self.reload_data(),
       Action::IncrementPage => self.increment_page(),
       Action::DecrementPage => self.decrement_page(),
       Action::CargoAddCrate => self.cargo_add(),
-      Action::MoveSelectionNext => {
+      Action::ScrollUp => {
         self.next();
         return Ok(Some(Action::GetInfo));
       },
-      Action::MoveSelectionPrevious => {
+      Action::ScrollDown => {
         self.previous();
         return Ok(Some(Action::GetInfo));
       },
-      Action::MoveSelectionTop => {
+      Action::ScrollTop => {
         self.top();
         return Ok(Some(Action::GetInfo));
       },
-      Action::MoveSelectionBottom => {
+      Action::ScrollBottom => {
         self.bottom();
         return Ok(Some(Action::GetInfo));
       },
@@ -437,8 +440,8 @@ impl App {
         match key.code {
           KeyCode::Enter => Action::ClosePopup,
           KeyCode::Esc => Action::ClosePopup,
-          KeyCode::Char('j') | KeyCode::Down => Action::ScrollPopupDown,
-          KeyCode::Char('k') | KeyCode::Up => Action::ScrollPopupUp,
+          KeyCode::Char('j') | KeyCode::Down => Action::ScrollDown,
+          KeyCode::Char('k') | KeyCode::Up => Action::ScrollUp,
           _ => return Ok(None),
         }
       },
@@ -447,23 +450,23 @@ impl App {
           KeyCode::Char('q') => Action::Quit,
           KeyCode::Char('?') => Action::EnterSearchQueryInsert,
           KeyCode::Char('/') => Action::EnterFilterInsert,
-          KeyCode::Char('j') | KeyCode::Down => Action::MoveSelectionNext,
-          KeyCode::Char('k') | KeyCode::Up => Action::MoveSelectionPrevious,
+          KeyCode::Char('j') | KeyCode::Down => Action::ScrollDown,
+          KeyCode::Char('k') | KeyCode::Up => Action::ScrollUp,
           KeyCode::Char('l') | KeyCode::Right => Action::IncrementPage,
           KeyCode::Char('h') | KeyCode::Left => Action::DecrementPage,
           KeyCode::Char('a') => Action::CargoAddCrate,
           KeyCode::Char('g') => {
             if let Some(KeyEvent { code: KeyCode::Char('g'), .. }) = self.last_tick_key_events.last() {
-              Action::MoveSelectionTop
+              Action::ScrollTop
             } else {
               return Ok(None);
             }
           },
-          KeyCode::PageUp => Action::MoveSelectionTop,
-          KeyCode::Char('G') | KeyCode::PageDown => Action::MoveSelectionBottom,
+          KeyCode::PageUp => Action::ScrollTop,
+          KeyCode::Char('G') | KeyCode::PageDown => Action::ScrollBottom,
           KeyCode::Char('r') => Action::ReloadData,
-          KeyCode::Home => Action::MoveSelectionTop,
-          KeyCode::End => Action::MoveSelectionBottom,
+          KeyCode::Home => Action::ScrollTop,
+          KeyCode::End => Action::ScrollBottom,
           KeyCode::Esc => Action::Quit,
           KeyCode::Enter => Action::ToggleShowCrateInfo,
           _ => return Ok(None),

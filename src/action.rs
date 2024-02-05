@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Display, Deserialize)]
+#[derive(Debug, Display, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Action {
   Tick,
   Render,
@@ -20,12 +20,10 @@ pub enum Action {
   IncrementPage,
   DecrementPage,
   EnterNormal,
-  MoveSelectionBottom,
-  MoveSelectionTop,
-  MoveSelectionNext,
-  MoveSelectionPrevious,
-  ScrollPopupDown,
-  ScrollPopupUp,
+  ScrollBottom,
+  ScrollTop,
+  ScrollDown,
+  ScrollUp,
   SubmitSearchQuery(String),
   GetInfo,
   ReloadData,

@@ -1,7 +1,6 @@
-use std::{collections::HashMap, path::PathBuf, sync::OnceLock};
+use std::{path::PathBuf, sync::OnceLock};
 
 use color_eyre::eyre::{eyre, Result};
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use directories::ProjectDirs;
 use figment::{
   providers::{Env, Format, Serialized, Toml},
@@ -9,12 +8,13 @@ use figment::{
 };
 use ratatui::style::palette::tailwind::*;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString, Seq};
+use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
 use tracing::level_filters::LevelFilter;
 
-use crate::{action::Action, cli::Cli};
+use crate::{cli::Cli, serde_helper::keybindings::KeyBindings};
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
+pub const CONFIG_DEFAULT: &str = include_str!("./config.default.toml");
 
 /// Application configuration.
 ///
@@ -44,8 +44,7 @@ pub struct Config {
 
   pub style: Style,
 
-  #[serde_as(as = "Seq<(_, _)>")]
-  pub key_bindings: HashMap<Vec<KeyEvent>, Action>,
+  pub key_bindings: KeyBindings,
 }
 
 #[serde_as]
@@ -69,8 +68,7 @@ pub struct Style {
 
 impl Default for Config {
   fn default() -> Self {
-    let mut key_bindings = HashMap::default();
-    key_bindings.insert(vec![KeyEvent::new(KeyCode::Char('q'), KeyModifiers::NONE)], Action::Quit);
+    let key_bindings: KeyBindings = Default::default();
 
     Self {
       data_home: default_data_dir(),
@@ -140,6 +138,7 @@ pub fn initialize_config(cli: &Cli) -> Result<()> {
   let config_file = cli.config_file.clone().unwrap_or_else(default_config_file);
   let config = Figment::new()
     .merge(Serialized::defaults(Config::default()))
+    .merge(Toml::string(CONFIG_DEFAULT))
     .merge(Toml::file(config_file))
     .merge(Env::prefixed(concat!(env!("CARGO_CRATE_NAME"), "_")))
     .merge(Serialized::defaults(cli))

@@ -8,7 +8,7 @@ use crossterm::{
   cursor,
   event::{
     DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture, Event as CrosstermEvent,
-    KeyEvent, KeyEventKind, KeyModifiers, MouseEvent,
+    KeyEvent, KeyEventKind, MouseEvent,
   },
   terminal::{EnterAlternateScreen, LeaveAlternateScreen},
 };
@@ -239,59 +239,4 @@ impl Drop for Tui {
   fn drop(&mut self) {
     self.exit().unwrap();
   }
-}
-
-pub fn key_event_to_string(key_event: &KeyEvent) -> String {
-  use crossterm::event::KeyCode;
-  let char;
-  let key_code = match key_event.code {
-    KeyCode::Backspace => "backspace",
-    KeyCode::Enter => "enter",
-    KeyCode::Left => "left",
-    KeyCode::Right => "right",
-    KeyCode::Up => "up",
-    KeyCode::Down => "down",
-    KeyCode::Home => "home",
-    KeyCode::End => "end",
-    KeyCode::PageUp => "pageup",
-    KeyCode::PageDown => "pagedown",
-    KeyCode::Tab => "tab",
-    KeyCode::BackTab => "backtab",
-    KeyCode::Delete => "delete",
-    KeyCode::Insert => "insert",
-    KeyCode::F(c) => {
-      char = format!("f({c})");
-      &char
-    },
-    KeyCode::Char(' ') => "space",
-    KeyCode::Char(c) => {
-      char = c.to_string();
-      &char
-    },
-    KeyCode::Esc => "esc",
-    _ => "",
-  };
-
-  let mut modifiers = Vec::with_capacity(3);
-
-  if key_event.modifiers.intersects(KeyModifiers::CONTROL) {
-    modifiers.push("ctrl");
-  }
-
-  if key_event.modifiers.intersects(KeyModifiers::SHIFT) {
-    modifiers.push("shift");
-  }
-
-  if key_event.modifiers.intersects(KeyModifiers::ALT) {
-    modifiers.push("alt");
-  }
-
-  let mut key = modifiers.join("-");
-
-  if !key.is_empty() {
-    key.push('-');
-  }
-  key.push_str(key_code);
-
-  key
 }
