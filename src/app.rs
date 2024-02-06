@@ -323,6 +323,37 @@ impl App {
 }
 
 impl App {
+    // The main 'run' function now delegates to the two functions above,
+    // to handle TUI events and App actions respectively.
+    pub async fn run(&mut self, tui: &mut Tui, mut rx: UnboundedReceiver<Action>) -> Result<()> {
+        let mut should_quit = false;
+        let tx = self.tx.clone();
+
+        tui.enter()?;
+
+        loop {
+            if let Some(e) = tui.next().await {
+                self.handle_tui_event(e, &tx).await?;
+            }
+            while let Ok(action) = rx.try_recv() {
+                if let Some(inner_action) = self.update(action.clone())? {
+                    tx.send(inner_action)?
+                };
+                self.handle_action(action.clone(), tui, &tx).await?;
+                if action == Action::Quit {
+                    should_quit = true;
+                    break;
+                }
+            }
+            if should_quit {
+                tui.stop()?;
+                break;
+            }
+        }
+        tui.exit()?;
+        Ok(())
+    }
+
     async fn handle_tui_event(
         &mut self,
         e: tui::Event,
@@ -370,37 +401,6 @@ impl App {
             }
             _ => {}
         }
-        Ok(())
-    }
-
-    // The main 'run' function now delegates to the two functions above,
-    // to handle TUI events and App actions respectively.
-    pub async fn run(&mut self, tui: &mut Tui, mut rx: UnboundedReceiver<Action>) -> Result<()> {
-        let mut should_quit = false;
-        let tx = self.tx.clone();
-
-        tui.enter()?;
-
-        loop {
-            if let Some(e) = tui.next().await {
-                self.handle_tui_event(e, &tx).await?;
-            }
-            while let Ok(action) = rx.try_recv() {
-                if let Some(inner_action) = self.update(action.clone())? {
-                    tx.send(inner_action)?
-                };
-                self.handle_action(action.clone(), tui, &tx).await?;
-                if action == Action::Quit {
-                    should_quit = true;
-                    break;
-                }
-            }
-            if should_quit {
-                tui.stop()?;
-                break;
-            }
-        }
-        tui.exit()?;
         Ok(())
     }
 
