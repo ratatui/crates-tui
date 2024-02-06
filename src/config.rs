@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::OnceLock};
+use std::{env, path::PathBuf, sync::OnceLock};
 
 use color_eyre::eyre::{eyre, Result};
 use directories::ProjectDirs;
@@ -101,51 +101,6 @@ impl Default for Config {
     }
 }
 
-/// Returns the directory to use for storing data files.
-fn default_data_dir() -> PathBuf {
-    if let Some(dir) = std::env::var(format!(
-        "{}_DATA_HOME",
-        env!("CARGO_CRATE_NAME").to_uppercase()
-    ))
-    .ok()
-    .map(PathBuf::from)
-    {
-        dir
-    } else if let Ok(dir) = project_dirs().map(|dirs| dirs.data_local_dir().to_path_buf()) {
-        dir
-    } else {
-        PathBuf::from(".").join(".data")
-    }
-}
-
-/// Returns the directory to use for storing config files.
-fn default_config_dir() -> PathBuf {
-    if let Some(dir) = std::env::var(format!(
-        "{}_CONFIG_HOME",
-        env!("CARGO_CRATE_NAME").to_uppercase()
-    ))
-    .ok()
-    .map(PathBuf::from)
-    {
-        dir
-    } else if let Ok(dir) = project_dirs().map(|dirs| dirs.config_local_dir().to_path_buf()) {
-        dir
-    } else {
-        PathBuf::from(".").join(".config")
-    }
-}
-
-/// Returns the path to the default configuration file.
-fn default_config_file() -> PathBuf {
-    default_config_dir().join("config.toml")
-}
-
-/// Returns the project directories.
-fn project_dirs() -> Result<ProjectDirs> {
-    ProjectDirs::from("com", "kdheepak", env!("CARGO_PKG_NAME"))
-        .ok_or_else(|| eyre!("user home directory not found"))
-}
-
 /// Initialize the application configuration.
 ///
 /// This function should be called before any other function in the application.
@@ -160,7 +115,7 @@ pub fn init(cli: &Cli) -> Result<()> {
         .merge(Serialized::defaults(Config::default()))
         .merge(Toml::string(CONFIG_DEFAULT))
         .merge(Toml::file(config_file))
-        .merge(Env::prefixed(concat!(env!("CARGO_CRATE_NAME"), "_")))
+        .merge(Env::prefixed("CRATES_TUI_"))
         .merge(Serialized::defaults(cli))
         .extract::<Config>()?;
     CONFIG
@@ -177,4 +132,31 @@ pub fn init(cli: &Cli) -> Result<()> {
 /// This function will panic if [`init()`] has not been called.
 pub fn get() -> &'static Config {
     CONFIG.get().expect("config not initialized")
+}
+
+/// Returns the path to the default configuration file.
+fn default_config_file() -> PathBuf {
+    default_config_dir().join("config.toml")
+}
+
+/// Returns the directory to use for storing config files.
+fn default_config_dir() -> PathBuf {
+    env::var("CRATES_TUI_CONFIG_HOME")
+        .map(PathBuf::from)
+        .or_else(|_| project_dirs().map(|dirs| dirs.config_local_dir().to_path_buf()))
+        .unwrap_or(PathBuf::from(".").join(".config"))
+}
+
+/// Returns the directory to use for storing data files.
+fn default_data_dir() -> PathBuf {
+    env::var("CRATES_TUI_DATA_HOME")
+        .map(PathBuf::from)
+        .or_else(|_| project_dirs().map(|dirs| dirs.data_local_dir().to_path_buf()))
+        .unwrap_or(PathBuf::from(".").join(".data"))
+}
+
+/// Returns the project directories.
+fn project_dirs() -> Result<ProjectDirs> {
+    ProjectDirs::from("rs", "ratatui", "crates-tui")
+        .ok_or_else(|| eyre!("user home directory not found"))
 }
