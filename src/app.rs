@@ -19,7 +19,7 @@ use crate::{
     tui::{self, Tui},
     widgets::{
         crate_info::CrateInfo,
-        crates_table::{CrateTableState, CratesTable},
+        crates_table::{CratesTable, CratesTableState},
         popup::Popup,
         prompt::{Prompt, PromptState},
     },
@@ -49,7 +49,7 @@ pub struct App {
     crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
     total_num_crates: Option<u64>,
     input: tui_input::Input,
-    crate_table_state: CrateTableState,
+    crate_table_state: CratesTableState,
     show_crate_info: bool,
     error: Option<String>,
     info: Option<String>,
