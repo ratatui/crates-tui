@@ -186,6 +186,60 @@ impl App {
             frame.set_cursor(cursor_position.x, cursor_position.y)
         }
     }
+
+    pub fn update(&mut self, action: Action) -> Result<Option<Action>> {
+        match action {
+            Action::Tick => self.tick(),
+            Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
+            Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll_previous(),
+            Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll_next(),
+            Action::ScrollUp => self.crate_table_state.previous_crate(),
+            Action::ScrollDown => self.crate_table_state.next_crate(),
+            Action::ScrollTop => self.crate_table_state.top(),
+            Action::ScrollBottom => self.crate_table_state.bottom(),
+            Action::ReloadData => self.reload_data(),
+            Action::IncrementPage => self.increment_page(),
+            Action::DecrementPage => self.decrement_page(),
+            Action::EnterSearchInsertMode => self.enter_search_insert_mode(),
+            Action::EnterFilterInsertMode => self.enter_filter_insert_mode(),
+            Action::EnterNormal => self.enter_normal_mode(),
+            Action::SubmitSearch => self.submit_search(),
+            Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
+            Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
+            Action::Error(ref err) => self.set_error_flag(err.clone()),
+            Action::Info(ref info) => self.set_info_flag(info.clone()),
+            Action::ClosePopup => self.clear_error_and_info_flags(),
+            _ => {}
+        };
+
+        match action {
+            Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom => {
+                Ok(Some(Action::UpdateCurrentSelectionCrateInfo))
+            }
+            Action::SubmitSearch => Ok(Some(Action::ReloadData)),
+            _ => Ok(None),
+        }
+    }
+
+    pub fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        match self.mode {
+            Mode::Search => match key.code {
+                _ => {
+                    self.input.handle_event(&crossterm::event::Event::Key(key));
+                    return Ok(None);
+                }
+            },
+            Mode::Filter => match key.code {
+                _ => {
+                    self.input.handle_event(&crossterm::event::Event::Key(key));
+                    self.filter = self.input.value().into();
+                    self.crate_table_state.select(None);
+                    return Ok(None);
+                }
+            },
+            _ => return Ok(None),
+        };
+    }
 }
 
 impl App {
@@ -426,62 +480,6 @@ impl App {
             })
             .cloned()
             .collect();
-    }
-}
-
-impl App {
-    pub fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        match action {
-            Action::Tick => self.tick(),
-            Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
-            Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll_previous(),
-            Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll_next(),
-            Action::ScrollUp => self.crate_table_state.previous_crate(),
-            Action::ScrollDown => self.crate_table_state.next_crate(),
-            Action::ScrollTop => self.crate_table_state.top(),
-            Action::ScrollBottom => self.crate_table_state.bottom(),
-            Action::ReloadData => self.reload_data(),
-            Action::IncrementPage => self.increment_page(),
-            Action::DecrementPage => self.decrement_page(),
-            Action::EnterSearchInsertMode => self.enter_search_insert_mode(),
-            Action::EnterFilterInsertMode => self.enter_filter_insert_mode(),
-            Action::EnterNormal => self.enter_normal_mode(),
-            Action::SubmitSearch => self.submit_search(),
-            Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
-            Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
-            Action::Error(ref err) => self.set_error_flag(err.clone()),
-            Action::Info(ref info) => self.set_info_flag(info.clone()),
-            Action::ClosePopup => self.clear_error_and_info_flags(),
-            _ => {}
-        };
-
-        match action {
-            Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom => {
-                Ok(Some(Action::UpdateCurrentSelectionCrateInfo))
-            }
-            Action::SubmitSearch => Ok(Some(Action::ReloadData)),
-            _ => Ok(None),
-        }
-    }
-
-    pub fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        match self.mode {
-            Mode::Search => match key.code {
-                _ => {
-                    self.input.handle_event(&crossterm::event::Event::Key(key));
-                    return Ok(None);
-                }
-            },
-            Mode::Filter => match key.code {
-                _ => {
-                    self.input.handle_event(&crossterm::event::Event::Key(key));
-                    self.filter = self.input.value().into();
-                    self.crate_table_state.select(None);
-                    return Ok(None);
-                }
-            },
-            _ => return Ok(None),
-        };
     }
 }
 
