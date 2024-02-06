@@ -4,7 +4,6 @@ mod cli;
 mod config;
 mod errors;
 mod logging;
-mod root;
 mod serde_helper;
 mod tui;
 mod widgets;

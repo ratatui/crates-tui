@@ -6,7 +6,7 @@ pub mod keybindings {
     use derive_deref::{Deref, DerefMut};
     use serde::{de::Deserializer, Deserialize, Serialize, Serializer};
 
-    use crate::{action::Action, root::Mode};
+    use crate::{action::Action, app::Mode};
 
     #[derive(Clone, Debug, Default, Deref, DerefMut)]
     pub struct KeyBindings(pub HashMap<Mode, HashMap<Vec<KeyEvent>, Action>>);

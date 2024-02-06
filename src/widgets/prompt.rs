@@ -1,6 +1,6 @@
 use ratatui::{layout::Position, prelude::*, widgets::*};
 
-use crate::{config, root::Mode};
+use crate::{app::Mode, config};
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct PromptState {
