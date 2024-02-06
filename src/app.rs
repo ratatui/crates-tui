@@ -285,8 +285,7 @@ impl App {
             Action::ShowErrorPopup(ref err) => self.set_error_flag(err.clone()),
             Action::ShowInfoPopup(ref info) => self.set_info_flag(info.clone()),
             Action::ClosePopup => self.clear_error_and_info_flags(),
-            Action::ToggleSortByAndReload => self.toggle_sort_by_and_reload()?,
-            Action::ToggleSortBy => self.toggle_sort_by()?,
+            Action::ToggleSortBy { reload } => self.toggle_sort_by(reload)?,
             Action::ClearTaskDetailsHandle(ref id) => {
                 self.clear_task_details_handle(uuid::Uuid::parse_str(&id)?)?
             }
@@ -434,7 +433,7 @@ impl App {
         }
     }
 
-    fn toggle_sort_by(&mut self) -> Result<()> {
+    fn toggle_sort_by(&mut self, reload: bool) -> Result<()> {
         use crates_io_api::Sort as S;
         self.sort = match self.sort {
             S::Alphabetical => S::Relevance,
@@ -444,12 +443,9 @@ impl App {
             S::RecentUpdates => S::NewlyAdded,
             S::NewlyAdded => S::Alphabetical,
         };
-        Ok(())
-    }
-
-    fn toggle_sort_by_and_reload(&mut self) -> Result<()> {
-        self.toggle_sort_by()?;
-        self.tx.send(Action::ReloadData)?;
+        if reload {
+            self.tx.send(Action::ReloadData)?;
+        }
         Ok(())
     }
 

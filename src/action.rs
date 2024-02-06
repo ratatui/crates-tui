@@ -21,9 +21,7 @@ pub enum Action {
     HandleFilterPromptChange,
     IncrementPage,
     DecrementPage,
-    // TODO: merge ToggleSortByAndReload and ToggleSortBy
-    ToggleSortBy,
-    ToggleSortByAndReload,
+    ToggleSortBy { reload: bool },
     EnterNormal,
     ScrollBottom,
     ScrollTop,

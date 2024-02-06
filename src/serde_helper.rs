@@ -12,6 +12,19 @@ pub mod keybindings {
     pub struct KeyBindings(pub HashMap<Mode, HashMap<Vec<KeyEvent>, Action>>);
 
     impl KeyBindings {
+        #[allow(dead_code)]
+        pub fn insert(&mut self, mode: &Mode, key_events: &[KeyEvent], action: Action) {
+            // Convert the slice of `KeyEvent`(s) to a `Vec`.
+            let key_events_vec = key_events.to_vec();
+
+            // Retrieve or create the inner `HashMap` corresponding to the mode.
+            let bindings_for_mode = self.0.entry(mode.clone()).or_insert_with(HashMap::new);
+
+            // Insert the `Action` into the inner `HashMap` using the key events `Vec` as
+            // the key.
+            bindings_for_mode.insert(key_events_vec, action);
+        }
+
         pub fn event_to_action(&self, mode: &Mode, key_events: &[KeyEvent]) -> Option<Action> {
             if key_events.is_empty() {
                 None

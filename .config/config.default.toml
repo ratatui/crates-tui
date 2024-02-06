@@ -24,7 +24,7 @@ prompt_padding = 1
 "/" = "EnterFilterInsertMode"
 "j" = "ScrollDown"
 "k" = "ScrollUp"
-"TAB" = "ToggleSortByAndReload"
+"TAB" = { ToggleSortBy = { reload = true } }
 "Down" = "ScrollDown"
 "Up" = "ScrollUp"
 "l" = "IncrementPage"
@@ -35,10 +35,11 @@ prompt_padding = 1
 "Enter" = "ToggleShowCrateInfo"
 
 [key_bindings.search]
-"TAB" = "ToggleSortBy"
+"TAB" = { ToggleSortBy = { reload = false } }
 "ESC" = "EnterNormal"
 "Enter" = "SubmitSearch"
 
 [key_bindings.filter]
 "ESC" = "EnterNormal"
 "Enter" = "EnterNormal"
+
