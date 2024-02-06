@@ -33,4 +33,5 @@ pub enum Action {
     ToggleShowHelp,
     ToggleShowCrateInfo,
     StoreTotalNumberOfCrates(u64),
+    ClearTaskDetailsHandle(String),
 }

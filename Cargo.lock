@@ -482,6 +482,7 @@ dependencies = [
  "tracing-subscriber",
  "tui-input",
  "unicode-width",
+ "uuid",
  "vergen",
 ]
 

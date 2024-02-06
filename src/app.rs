@@ -1,6 +1,9 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+use std::{
+    collections::HashMap,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
 };
 
 use color_eyre::eyre::Result;
@@ -9,7 +12,10 @@ use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use strum::Display;
-use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
+use tokio::{
+    sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
+    task::JoinHandle,
+};
 use tracing::{debug, error, info};
 use tui_input::backend::crossterm::EventHandler;
 
@@ -73,7 +79,9 @@ pub struct App {
     /// A thread-safe shared container holding the detailed information about
     /// the currently selected crate; this can be `None` if no crate is
     /// selected.
-    crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
+    crate_info: Arc<Mutex<Option<crates_io_api::FullCrate>>>,
+
+    last_task_details_handle: HashMap<uuid::Uuid, JoinHandle<()>>,
 
     /// The total number of crates fetchable from crates.io, which may not be
     /// known initially and can be used for UI elements like pagination.
@@ -140,6 +148,7 @@ impl App {
             crates: Default::default(),
             versions: Default::default(),
             crate_info: Default::default(),
+            last_task_details_handle: Default::default(),
             total_num_crates: Default::default(),
             input: Default::default(),
             search_results: Default::default(),
@@ -271,6 +280,9 @@ impl App {
             Action::ShowInfoPopup(ref info) => self.set_info_flag(info.clone()),
             Action::ClosePopup => self.clear_error_and_info_flags(),
             Action::ToggleSortBy => self.toggle_sort_by()?,
+            Action::ClearTaskDetailsHandle(ref id) => {
+                self.clear_task_details_handle(uuid::Uuid::parse_str(&id)?)?
+            }
             _ => {}
         }
         let maybe_action = match action {
@@ -281,6 +293,21 @@ impl App {
             _ => None,
         };
         Ok(maybe_action)
+    }
+
+    fn clear_task_details_handle(&mut self, id: uuid::Uuid) -> Result<()> {
+        if let Some((_, handle)) = self.last_task_details_handle.remove_entry(&id) {
+            handle.abort()
+        }
+        Ok(())
+    }
+
+    fn clear_all_task_details_handles(&mut self) {
+        *self.crate_info.lock().unwrap() = None;
+        for (_, v) in self.last_task_details_handle.iter() {
+            v.abort()
+        }
+        self.last_task_details_handle.clear()
     }
 }
 
@@ -394,7 +421,7 @@ impl App {
         if self.show_crate_info {
             self.request_crate_details()
         } else {
-            *self.crate_info.lock().unwrap() = None;
+            self.clear_all_task_details_handles();
         }
     }
 
@@ -432,9 +459,10 @@ impl App {
 
     fn update_current_selection_crate_info(&mut self) {
         if self.show_crate_info {
+            self.clear_all_task_details_handles();
             self.request_crate_details();
         } else {
-            *self.crate_info.lock().unwrap() = None;
+            self.clear_all_task_details_handles();
         }
     }
 
@@ -498,15 +526,21 @@ impl App {
             let loading_status = self.loading_status.clone();
 
             // Spawn the async work to fetch crate details.
-            tokio::spawn(async move {
+            let uuid = uuid::Uuid::new_v4();
+            let last_task_details_handle = tokio::spawn(async move {
+                info!("Requesting details for {crate_name}: {uuid}");
                 loading_status.store(true, Ordering::SeqCst);
                 if let Err(error_message) =
-                    crates_io_api_helper::request_crate_details(crate_name, crate_info).await
+                    crates_io_api_helper::request_crate_details(&crate_name, crate_info).await
                 {
                     let _ = tx.send(Action::ShowErrorPopup(error_message));
                 };
                 loading_status.store(false, Ordering::SeqCst);
+                info!("Retrieved details for {crate_name}: {uuid}");
+                let _ = tx.send(Action::ClearTaskDetailsHandle(uuid.to_string()));
             });
+            self.last_task_details_handle
+                .insert(uuid, last_task_details_handle);
         }
     }
 

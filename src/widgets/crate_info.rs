@@ -3,11 +3,11 @@ use ratatui::{prelude::*, widgets::*};
 
 pub struct CrateInfoWidget {
     // FIXME don't abbreviate this
-    crate_info: crates_io_api::Crate,
+    crate_info: crates_io_api::FullCrate,
 }
 
 impl CrateInfoWidget {
-    pub fn new(crate_info: crates_io_api::Crate) -> Self {
+    pub fn new(crate_info: crates_io_api::FullCrate) -> Self {
         Self { crate_info }
     }
 }
