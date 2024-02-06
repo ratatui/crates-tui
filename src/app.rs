@@ -21,7 +21,7 @@ use crate::{
         crate_info::CrateInfo,
         crates_table::{CrateTableState, CratesTable},
         popup::Popup,
-        prompt::Prompt,
+        prompt::{Prompt, PromptState},
     },
 };
 
@@ -57,6 +57,7 @@ pub struct App {
     info: Option<String>,
     popup_scroll: usize,
     last_tick_key_events: Vec<KeyEvent>,
+    prompt_state: PromptState,
 }
 
 impl App {
@@ -81,6 +82,7 @@ impl App {
             info: Default::default(),
             popup_scroll: Default::default(),
             last_tick_key_events: Default::default(),
+            prompt_state: Default::default(),
         }
     }
 
@@ -518,10 +520,11 @@ impl App {
             self.mode,
             &self.input,
         );
-        frame.render_widget(&p, prompt);
-        p.render_cursor(frame, prompt);
-        if loading_status {
-            p.render_spinner(frame, prompt);
+        frame.render_stateful_widget(&p, prompt, &mut self.prompt_state);
+
+        self.prompt_state.frame_count(frame.count());
+        if let Some(cursor_position) = self.prompt_state.cursor_position() {
+            frame.set_cursor(cursor_position.x, cursor_position.y)
         }
 
         if let Some(err) = &self.error {

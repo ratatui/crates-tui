@@ -1,6 +1,22 @@
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{layout::Position, prelude::*, widgets::*};
 
 use crate::{app::Mode, config};
+
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
+pub struct PromptState {
+    cursor_position: Option<Position>,
+    frame_count: usize,
+}
+
+impl PromptState {
+    pub fn frame_count(&mut self, frame_count: usize) {
+        self.frame_count = frame_count
+    }
+
+    pub fn cursor_position(&self) -> Option<Position> {
+        self.cursor_position
+    }
+}
 
 pub struct Prompt<'a> {
     total_num_crates: u64,
@@ -33,12 +49,12 @@ impl<'a> Prompt<'a> {
         }
     }
 
-    pub fn render_spinner(&self, f: &mut Frame, area: Rect) {
+    pub fn render_spinner(&self, area: Rect, buf: &mut Buffer, frame_count: usize) {
         let spinner = ["◑", "◒", "◐", "◓"];
-        let index = f.count() % spinner.len();
+        let index = frame_count % spinner.len();
         let symbol = spinner[index];
 
-        f.buffer_mut().set_string(
+        buf.set_string(
             area.x + area.width.saturating_sub(1),
             area.y,
             symbol,
@@ -91,6 +107,18 @@ impl<'a> Prompt<'a> {
         let scroll = self.input.cursor().saturating_sub(width.saturating_sub(4));
         Paragraph::new(self.input.value()).scroll((0, scroll as u16))
     }
+
+    fn update_cursor_state(&self, area: Rect, state: &mut PromptState) {
+        if self.mode == Mode::Search || self.mode == Mode::Filter {
+            state.cursor_position = Some(Position::new(
+                (area.x + self.horizontal_margin + self.input.cursor() as u16)
+                    .min(area.x + area.width.saturating_sub(2)),
+                area.y + self.vertical_margin,
+            ));
+        } else {
+            state.cursor_position = None
+        }
+    }
 }
 
 impl Widget for &Prompt<'_> {
@@ -103,5 +131,23 @@ impl Widget for &Prompt<'_> {
             }),
             buf,
         );
+    }
+}
+
+impl StatefulWidget for &Prompt<'_> {
+    type State = PromptState;
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        self.input_block().render(area, buf);
+        self.input_text(area.width as usize).render(
+            area.inner(&Margin {
+                horizontal: self.horizontal_margin,
+                vertical: self.vertical_margin,
+            }),
+            buf,
+        );
+        if self.loading {
+            self.render_spinner(area, buf, state.frame_count);
+        }
+        self.update_cursor_state(area, state);
     }
 }
