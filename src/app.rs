@@ -697,8 +697,8 @@ impl StatefulWidget for AppWidget {
             .right_aligned()
             .render(
                 remaining_table.inner(&Margin {
-                    horizontal: 0,
-                    vertical: 1,
+                    horizontal: 1,
+                    vertical: 2,
                 }),
                 buf,
             );

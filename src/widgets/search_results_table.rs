@@ -105,7 +105,6 @@ impl StatefulWidget for SearchResultsTableWidget {
             Constraint::Max(20),
             Constraint::Min(0),
             Constraint::Max(10),
-            Constraint::Max(22),
         ];
         let (areas, spacers) =
             Layout::horizontal(widths)
@@ -120,7 +119,7 @@ impl StatefulWidget for SearchResultsTableWidget {
         let table_widget = {
             let selected_style = Style::default();
             let header = Row::new(
-                ["Name", "Description", "Downloads", "Last Updated"]
+                ["Name", "Description", "Downloads"]
                     .iter()
                     .map(|h| Text::from(vec!["".into(), Line::from(h.bold()), "".into()])),
             )
@@ -146,11 +145,6 @@ impl StatefulWidget for SearchResultsTableWidget {
                         Line::from(item.downloads.to_formatted_string(&Locale::en)),
                         "".into(),
                     ]),
-                    Text::from(vec![
-                        "".into(),
-                        Line::from(item.updated_at.format("%Y-%m-%d %H:%M:%S").to_string()),
-                        "".into(),
-                    ]),
                 ])
                 .bg(match i % 2 {
                     0 => config::get().style.row_background_color_1,
@@ -160,12 +154,7 @@ impl StatefulWidget for SearchResultsTableWidget {
                 .height(height.saturating_add(1) as u16)
             });
 
-            let widths = [
-                Constraint::Max(20),
-                Constraint::Min(0),
-                Constraint::Max(10),
-                Constraint::Max(22),
-            ];
+            let widths = [Constraint::Max(20), Constraint::Min(0), Constraint::Max(10)];
             Table::new(rows, widths)
                 .header(header)
                 .column_spacing(1)
