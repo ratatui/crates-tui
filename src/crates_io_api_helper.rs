@@ -12,6 +12,7 @@ pub struct SearchParameters {
     pub page_size: u64,
     pub crates: Arc<Mutex<Vec<crates_io_api::Crate>>>,
     pub loading_status: Arc<AtomicBool>,
+    pub sort: crates_io_api::Sort,
     pub tx: UnboundedSender<Action>,
 }
 
@@ -43,7 +44,7 @@ fn create_query(params: &SearchParameters) -> CratesQuery {
         .search(&params.search)
         .page(params.page)
         .page_size(params.page_size)
-        .sort(crates_io_api::Sort::Relevance)
+        .sort(params.sort.clone())
         .build()
 }
 

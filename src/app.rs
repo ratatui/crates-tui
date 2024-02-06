@@ -54,6 +54,9 @@ pub struct App {
     /// The number of crates displayed per page in the UI.
     page_size: u64,
 
+    /// Sort preference for search results
+    sort: crates_io_api::Sort,
+
     /// A thread-safe indicator of whether data is currently being loaded,
     /// allowing different parts of the app to know if it's in a loading state.
     loading_status: Arc<AtomicBool>,
@@ -124,6 +127,7 @@ impl App {
             tx,
             page: 1,
             page_size: 25,
+            sort: crates_io_api::Sort::Relevance,
             mode: Mode::default(),
             loading_status: Default::default(),
             search: Default::default(),
@@ -260,6 +264,7 @@ impl App {
             Action::ShowErrorPopup(ref err) => self.set_error_flag(err.clone()),
             Action::ShowInfoPopup(ref info) => self.set_info_flag(info.clone()),
             Action::ClosePopup => self.clear_error_and_info_flags(),
+            Action::ToggleSortBy => self.toggle_sort_by()?,
             _ => {}
         }
         let maybe_action = match action {
@@ -386,6 +391,20 @@ impl App {
         }
     }
 
+    fn toggle_sort_by(&mut self) -> Result<()> {
+        use crates_io_api::Sort as S;
+        self.sort = match self.sort {
+            S::Alphabetical => S::Relevance,
+            S::Relevance => S::Downloads,
+            S::Downloads => S::RecentDownloads,
+            S::RecentDownloads => S::RecentUpdates,
+            S::RecentUpdates => S::NewlyAdded,
+            S::NewlyAdded => S::Alphabetical,
+        };
+        self.tx.send(Action::ReloadData)?;
+        Ok(())
+    }
+
     fn set_error_flag(&mut self, err: String) {
         error!("Error: {err}");
         self.error_message = Some(err);
@@ -443,6 +462,7 @@ impl App {
             page_size: self.page_size,
             crates: self.crates.clone(),
             loading_status: self.loading_status.clone(),
+            sort: self.sort.clone(),
             tx: self.tx.clone(),
         }
     }
@@ -507,6 +527,20 @@ impl App {
             frame.set_cursor(cursor_position.x, cursor_position.y)
         }
     }
+
+    fn render_crate_info(&self, area: Rect, buf: &mut Buffer) -> Rect {
+        match self.crate_info.lock().unwrap().clone() {
+            Some(ci) => {
+                // split available area
+                let [table, info] =
+                    Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
+                        .areas(area);
+                CrateInfoWidget::new(ci).render(info, buf);
+                table
+            }
+            _ => area,
+        }
+    }
 }
 
 impl StatefulWidget for AppWidget {
@@ -523,36 +557,26 @@ impl StatefulWidget for AppWidget {
         ])
         .areas(area);
 
-        // FIXME every part of this method has complex logic that calls or creats other
-        // methods That makes it hard to understand the whole method. Split it
-        // into smaller methods
-        let table = match state.crate_info.lock().unwrap().clone() {
-            Some(ci) if state.show_crate_info => {
-                let [table, info] =
-                    Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
-                        .areas(table);
-                CrateInfoWidget::new(ci).render(info, buf);
-                table
-            }
-            _ => table,
+        let remaining_table = if state.show_crate_info {
+            state.render_crate_info(table, buf)
+        } else {
+            table
         };
 
         SearchResultsWidget::new(state.mode == Mode::Picker).render(
-            table,
+            remaining_table,
             buf,
             &mut state.search_results,
         );
 
-        let loading_status = state.loading_status.load(Ordering::SeqCst);
         let selected = state.search_results.selected().map_or(0, |n| {
             (state.page.saturating_sub(1) * state.page_size) + n as u64 + 1
         });
-        let total_num_crates = state.total_num_crates.unwrap_or_default();
 
         let p = PromptWidget::new(
-            total_num_crates,
+            state.total_num_crates.unwrap_or_default(),
             selected,
-            loading_status,
+            state.loading_status.load(Ordering::SeqCst),
             state.mode,
             &state.input,
         );

@@ -21,6 +21,7 @@ pub enum Action {
     HandleFilterPromptChange,
     IncrementPage,
     DecrementPage,
+    ToggleSortBy,
     EnterNormal,
     ScrollBottom,
     ScrollTop,
