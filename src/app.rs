@@ -165,10 +165,12 @@ impl App {
         }
     }
 
-    /// The main 'run' function delegates to the two functions below,
-    /// to handle TUI events and App actions respectively.
+    /// Runs the main loop of the application, handling events and actions
     pub async fn run(&mut self, mut tui: Tui) -> Result<()> {
-        tui.enter()?;
+        // uncomment to test error handling
+        // panic!("test panic");
+        // Err(color_eyre::eyre::eyre!("Error"))?;
+
         loop {
             if let Some(e) = tui.next().await {
                 self.handle_tui_event(e)?.map(|action| self.tx.send(action));
@@ -181,7 +183,6 @@ impl App {
                 break;
             }
         }
-        tui.exit()?;
         Ok(())
     }
 

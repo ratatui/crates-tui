@@ -1,11 +1,15 @@
-use color_eyre::eyre::Result;
+use std::panic;
+
+use color_eyre::{
+    config::{EyreHook, HookBuilder, PanicHook},
+    eyre::{self, Result},
+};
 use tracing::error;
 
-// FIXME: simplify this similar to the template add a comment about what each
-// piece actually does (I think there are 4 types of error hooks here and its
-// not clear why)
+use crate::tui;
+
 pub fn install_hooks() -> Result<()> {
-    let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default()
+    let (panic_hook, eyre_hook) = HookBuilder::default()
         .panic_section(format!(
             "This is a bug. Consider reporting it at {}",
             env!("CARGO_PKG_REPOSITORY")
@@ -14,44 +18,54 @@ pub fn install_hooks() -> Result<()> {
         .display_location_section(false)
         .display_env_section(false)
         .into_hooks();
-    eyre_hook.install()?;
-    std::panic::set_hook(Box::new(move |panic_info| {
-        if let Ok(mut t) = crate::tui::Tui::new() {
-            if let Err(r) = t.exit() {
-                error!("Unable to exit Terminal: {:?}", r);
-            }
+
+    #[cfg(debug_assertions)]
+    install_better_panic();
+    #[cfg(not(debug_assertions))]
+    install_human_panic();
+
+    install_color_eyre_panic_hook(panic_hook);
+    install_eyre_hook(eyre_hook)?;
+
+    Ok(())
+}
+
+fn install_better_panic() {
+    better_panic::Settings::auto()
+        .most_recent_first(false)
+        .verbosity(better_panic::Verbosity::Full)
+        .install()
+}
+
+fn install_human_panic() {
+    human_panic::setup_panic!(Metadata {
+        name: env!("CARGO_PKG_NAME").into(),
+        version: env!("CARGO_PKG_VERSION").into(),
+        authors: env!("CARGO_PKG_AUTHORS").replace(':', ", ").into(),
+        homepage: env!("CARGO_PKG_HOMEPAGE").into(),
+    });
+}
+
+fn install_color_eyre_panic_hook(panic_hook: PanicHook) {
+    // convert from a `color_eyre::config::PanicHook`` to a `Box<dyn Fn(&PanicInfo<'_>`
+    let panic_hook = panic_hook.into_panic_hook();
+    panic::set_hook(Box::new(move |panic_info| {
+        if let Err(err) = tui::restore_backend() {
+            error!("Unable to restore terminal: {err:?}");
         }
 
-        #[cfg(not(debug_assertions))]
-        {
-            use human_panic::{handle_dump, print_msg, Metadata};
-            let meta = Metadata {
-                version: env!("CARGO_PKG_VERSION").into(),
-                name: env!("CARGO_PKG_NAME").into(),
-                authors: env!("CARGO_PKG_AUTHORS").replace(':', ", ").into(),
-                homepage: env!("CARGO_PKG_HOMEPAGE").into(),
-            };
-
-            let file_path = handle_dump(&meta, panic_info);
-            // prints human-panic message
-            print_msg(file_path, &meta)
-                .expect("human-panic: printing error message to console failed");
-            eprintln!("{}", panic_hook.panic_report(panic_info)); // prints color-eyre stack trace to stderr
-        }
-        let msg = format!("{}", panic_hook.panic_report(panic_info));
-        error!("Error: {}", strip_ansi_escapes::strip_str(msg));
-
-        #[cfg(debug_assertions)]
-        {
-            // Better Panic stacktrace that is only enabled when debugging.
-            better_panic::Settings::auto()
-                .most_recent_first(false)
-                .lineno_suffix(true)
-                .verbosity(better_panic::Verbosity::Full)
-                .create_panic_handler()(panic_info);
-        }
-        // FIXME: do we need to import an entire library for the constant value 1?
-        std::process::exit(libc::EXIT_FAILURE);
+        // not sure about this
+        // let msg = format!("{}", panic_hook.panic_report(panic_info));
+        // error!("Error: {}", strip_ansi_escapes::strip_str(msg));
+        panic_hook(panic_info);
     }));
+}
+
+fn install_eyre_hook(eyre_hook: EyreHook) -> color_eyre::Result<()> {
+    let eyre_hook = eyre_hook.into_eyre_hook();
+    eyre::set_hook(Box::new(move |error| {
+        tui::restore_backend().unwrap();
+        eyre_hook(error)
+    }))?;
     Ok(())
 }
