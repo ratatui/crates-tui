@@ -569,19 +569,17 @@ impl StatefulWidget for AppWidget {
             &mut state.search_results,
         );
 
-        let selected = state.search_results.selected().map_or(0, |n| {
-            (state.page.saturating_sub(1) * state.page_size) + n as u64 + 1
-        });
-
         let p = PromptWidget::new(
             state.total_num_crates.unwrap_or_default(),
-            selected,
+            state.search_results.selected().map_or(0, |n| {
+                (state.page.saturating_sub(1) * state.page_size) + n as u64 + 1
+            }),
             state.loading_status.load(Ordering::SeqCst),
             state.mode,
             &state.input,
         );
 
-        StatefulWidget::render(&p, prompt, buf, &mut state.prompt);
+        p.render(prompt, buf, &mut state.prompt);
 
         if let Some(err) = &state.error_message {
             PopupMessageWidget::new("Error", err, state.popup_scroll_index).render(area, buf);

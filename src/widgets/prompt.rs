@@ -111,20 +111,7 @@ impl<'a> PromptWidget<'a> {
     }
 }
 
-impl Widget for &PromptWidget<'_> {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        self.input_block().render(area, buf);
-        self.input_text(area.width as usize).render(
-            area.inner(&Margin {
-                horizontal: self.horizontal_margin,
-                vertical: self.vertical_margin,
-            }),
-            buf,
-        );
-    }
-}
-
-impl StatefulWidget for &PromptWidget<'_> {
+impl StatefulWidget for PromptWidget<'_> {
     type State = Prompt;
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         self.input_block().render(area, buf);
