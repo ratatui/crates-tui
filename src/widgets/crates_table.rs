@@ -6,8 +6,9 @@ use crate::config;
 
 #[derive(Debug, Default)]
 pub struct CrateTableState {
-    table_state: TableState,
-    scrollbar_state: ScrollbarState,
+    pub crates: Vec<crates_io_api::Crate>,
+    pub table_state: TableState,
+    pub scrollbar_state: ScrollbarState,
 }
 
 impl CrateTableState {
@@ -23,31 +24,31 @@ impl CrateTableState {
         self.table_state.selected()
     }
 
-    pub fn next_crate(&mut self, crates: &[crates_io_api::Crate]) {
-        if crates.is_empty() {
+    pub fn next_crate(&mut self) {
+        if self.crates.is_empty() {
             self.table_state.select(None)
         } else {
             // wrapping behavior
             let i = self
                 .table_state
                 .selected()
-                .map_or(0, |i| (i + 1) % crates.len());
+                .map_or(0, |i| (i + 1) % self.crates.len());
             self.table_state.select(Some(i));
             self.scrollbar_state = self.scrollbar_state.position(i);
         }
     }
 
-    pub fn previous_crate(&mut self, crates: &[crates_io_api::Crate]) {
-        if crates.is_empty() {
+    pub fn previous_crate(&mut self) {
+        if self.crates.is_empty() {
             self.table_state.select(None)
         } else {
             // wrapping behavior
             let i = self
                 .table_state
                 .selected()
-                .map_or(crates.len().saturating_sub(1), |i| {
+                .map_or(self.crates.len().saturating_sub(1), |i| {
                     if i == 0 {
-                        crates.len().saturating_sub(1)
+                        self.crates.len().saturating_sub(1)
                     } else {
                         i.saturating_sub(1)
                     }
@@ -57,8 +58,8 @@ impl CrateTableState {
         }
     }
 
-    pub fn top(&mut self, crates: &[crates_io_api::Crate]) {
-        if crates.is_empty() {
+    pub fn top(&mut self) {
+        if self.crates.is_empty() {
             self.table_state.select(None)
         } else {
             self.table_state.select(Some(0));
@@ -66,28 +67,27 @@ impl CrateTableState {
         }
     }
 
-    pub fn bottom(&mut self, crates: &[crates_io_api::Crate]) {
-        if crates.is_empty() {
+    pub fn bottom(&mut self) {
+        if self.crates.is_empty() {
             self.table_state.select(None)
         } else {
-            self.table_state.select(Some(crates.len() - 1));
-            self.scrollbar_state = self.scrollbar_state.position(crates.len() - 1);
+            self.table_state.select(Some(self.crates.len() - 1));
+            self.scrollbar_state = self.scrollbar_state.position(self.crates.len() - 1);
         }
     }
 }
 
-pub struct CratesTable<'a> {
-    crates: &'a [crates_io_api::Crate],
+pub struct CratesTable {
     highlight: bool,
 }
 
-impl<'a> CratesTable<'a> {
-    pub fn new(crates: &'a [crates_io_api::Crate], highlight: bool) -> Self {
-        Self { crates, highlight }
+impl CratesTable {
+    pub fn new(highlight: bool) -> Self {
+        Self { highlight }
     }
 }
 
-impl<'a> StatefulWidget for CratesTable<'a> {
+impl StatefulWidget for CratesTable {
     type State = CrateTableState;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
@@ -125,7 +125,7 @@ impl<'a> StatefulWidget for CratesTable<'a> {
             .height(3);
             let highlight_symbol = if self.highlight { " \u{2022} " } else { "   " };
 
-            let rows = self.crates.iter().enumerate().map(|(i, item)| {
+            let rows = state.crates.iter().enumerate().map(|(i, item)| {
                 let mut desc = textwrap::wrap(
                     &item.description.clone().unwrap_or_default(),
                     text_wrap_width,
@@ -178,7 +178,7 @@ impl<'a> StatefulWidget for CratesTable<'a> {
         StatefulWidget::render(table_widget, area, buf, &mut state.table_state);
 
         // only render margins when there's items in the table
-        if !self.crates.is_empty() {
+        if !state.crates.is_empty() {
             // don't render margin for the first column
             for space in spacers.iter().skip(2).copied() {
                 Text::from(

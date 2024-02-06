@@ -45,7 +45,6 @@ pub struct App {
     loading_status: Arc<AtomicBool>,
     search: String,
     filter: String,
-    filtered_crates: Vec<crates_io_api::Crate>,
     crates: Arc<Mutex<Vec<crates_io_api::Crate>>>,
     crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
     total_num_crates: Option<u64>,
@@ -69,7 +68,6 @@ impl App {
             loading_status: Default::default(),
             search: Default::default(),
             filter: Default::default(),
-            filtered_crates: Default::default(),
             crates: Default::default(),
             crate_info: Default::default(),
             total_num_crates: Default::default(),
@@ -124,7 +122,8 @@ impl App {
 
     fn enter_normal_mode(&mut self) {
         self.mode = Mode::Picker;
-        if !self.filtered_crates.is_empty() && self.crate_table_state.selected().is_none() {
+        if !self.crate_table_state.crates.is_empty() && self.crate_table_state.selected().is_none()
+        {
             self.crate_table_state.select(Some(0))
         }
     }
@@ -237,13 +236,13 @@ impl App {
     fn selected_crate_name(&self) -> Option<String> {
         self.crate_table_state
             .selected()
-            .and_then(|index| self.filtered_crates.get(index))
+            .and_then(|index| self.crate_table_state.crates.get(index))
             .filter(|crate_| !crate_.name.is_empty())
             .map(|crate_| crate_.name.clone())
     }
 
     fn fetch_crate_details(&mut self) {
-        if self.filtered_crates.is_empty() {
+        if self.crate_table_state.crates.is_empty() {
             return;
         }
         if let Some(crate_name) = self.selected_crate_name() {
@@ -297,13 +296,13 @@ impl App {
 
     fn update_crate_table_state(&mut self) {
         self.crate_table_state
-            .content_length(self.filtered_crates.len());
+            .content_length(self.crate_table_state.crates.len());
     }
 
     fn update_filtered_crates(&mut self) {
         let filter = self.filter.clone();
         let filter_words = filter.split_whitespace().collect::<Vec<_>>();
-        self.filtered_crates = self
+        self.crate_table_state.crates = self
             .crates
             .lock()
             .unwrap()
@@ -411,10 +410,10 @@ impl App {
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
             Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll_previous(),
             Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll_next(),
-            Action::ScrollUp => self.crate_table_state.previous_crate(&self.filtered_crates),
-            Action::ScrollDown => self.crate_table_state.next_crate(&self.filtered_crates),
-            Action::ScrollTop => self.crate_table_state.top(&self.filtered_crates),
-            Action::ScrollBottom => self.crate_table_state.bottom(&self.filtered_crates),
+            Action::ScrollUp => self.crate_table_state.previous_crate(),
+            Action::ScrollDown => self.crate_table_state.next_crate(),
+            Action::ScrollTop => self.crate_table_state.top(),
+            Action::ScrollBottom => self.crate_table_state.bottom(),
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
@@ -499,7 +498,7 @@ impl App {
         };
 
         frame.render_stateful_widget(
-            CratesTable::new(&self.filtered_crates, self.mode == Mode::Picker),
+            CratesTable::new(self.mode == Mode::Picker),
             table,
             &mut self.crate_table_state,
         );
