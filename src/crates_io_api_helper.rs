@@ -11,6 +11,7 @@ pub struct SearchParameters {
     pub page: u64,
     pub page_size: u64,
     pub crates: Arc<Mutex<Vec<crates_io_api::Crate>>>,
+    pub versions: Arc<Mutex<Vec<crates_io_api::Version>>>,
     pub loading_status: Arc<AtomicBool>,
     pub sort: crates_io_api::Sort,
     pub tx: UnboundedSender<Action>,
@@ -22,8 +23,8 @@ pub async fn request_crates(params: &SearchParameters) -> Result<(), String> {
     // Fetch crates using the created client with the error handling in one place.
     let client = create_client()?;
     let query = create_query(&params);
-    let crates = fetch_crates(client, query).await?;
-    update_state_with_fetched_crates(crates, params);
+    let (crates, versions, total) = fetch_crates_and_metadata(client, query).await?;
+    update_state_with_fetched_crates(crates, versions, total, params);
     Ok(())
 }
 
@@ -48,27 +49,37 @@ fn create_query(params: &SearchParameters) -> CratesQuery {
         .build()
 }
 
-async fn fetch_crates(
+async fn fetch_crates_and_metadata(
     client: crates_io_api::AsyncClient,
     query: crates_io_api::CratesQuery,
-) -> Result<Vec<crates_io_api::Crate>, String> {
+) -> Result<(Vec<crates_io_api::Crate>, Vec<crates_io_api::Version>, u64), String> {
     let page_result = client
         .crates(query)
         .await
         .map_err(|err| format!("API Client Error: {err:#?}"))?;
-    let mut crates = page_result.crates;
-    crates.sort_by(|a, b| b.downloads.cmp(&a.downloads));
+    let crates = page_result.crates;
+    let total = page_result.meta.total;
+    let versions = page_result.versions;
 
-    Ok(crates)
+    Ok((crates, versions, total))
 }
 
 /// Handles the result after fetching crates and sending corresponding
 /// actions.
-fn update_state_with_fetched_crates(crates: Vec<crates_io_api::Crate>, params: &SearchParameters) {
+fn update_state_with_fetched_crates(
+    crates: Vec<crates_io_api::Crate>,
+    versions: Vec<crates_io_api::Version>,
+    total: u64,
+    params: &SearchParameters,
+) {
     // Lock and update the shared state container
     let mut app_crates = params.crates.lock().unwrap();
     app_crates.clear();
     app_crates.extend(crates);
+
+    let mut app_versions = params.versions.lock().unwrap();
+    app_versions.clear();
+    app_versions.extend(versions);
 
     // After a successful fetch, send relevant actions based on the result
     if app_crates.is_empty() {
@@ -77,9 +88,7 @@ fn update_state_with_fetched_crates(crates: Vec<crates_io_api::Crate>, params: &
             params.search
         )));
     } else {
-        let _ = params
-            .tx
-            .send(Action::StoreTotalNumberOfCrates(app_crates.len() as u64));
+        let _ = params.tx.send(Action::StoreTotalNumberOfCrates(total));
         let _ = params.tx.send(Action::Tick);
         let _ = params.tx.send(Action::ScrollDown);
     }

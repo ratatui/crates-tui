@@ -7,6 +7,7 @@ use crate::config;
 #[derive(Debug, Default)]
 pub struct SearchResults {
     pub crates: Vec<crates_io_api::Crate>,
+    pub versions: Vec<crates_io_api::Version>,
     pub table_state: TableState,
     pub scrollbar_state: ScrollbarState,
 }
@@ -102,7 +103,7 @@ impl StatefulWidget for SearchResultsWidget {
             Constraint::Max(20),
             Constraint::Min(0),
             Constraint::Max(10),
-            Constraint::Max(20),
+            Constraint::Max(22),
         ];
         let (areas, spacers) =
             Layout::horizontal(widths)
@@ -161,7 +162,7 @@ impl StatefulWidget for SearchResultsWidget {
                 Constraint::Max(20),
                 Constraint::Min(0),
                 Constraint::Max(10),
-                Constraint::Max(20),
+                Constraint::Max(22),
             ];
             Table::new(rows, widths)
                 .header(header)

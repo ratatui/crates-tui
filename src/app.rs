@@ -5,6 +5,7 @@ use std::sync::{
 
 use color_eyre::eyre::Result;
 use crossterm::event::KeyEvent;
+use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use strum::Display;
@@ -64,6 +65,10 @@ pub struct App {
     /// A thread-safe, shared vector holding the list of crates fetched from
     /// crates.io, wrapped in a mutex to control concurrent access.
     crates: Arc<Mutex<Vec<crates_io_api::Crate>>>,
+
+    /// A thread-safe, shared vector holding the list of version fetched from
+    /// crates.io, wrapped in a mutex to control concurrent access.
+    versions: Arc<Mutex<Vec<crates_io_api::Version>>>,
 
     /// A thread-safe shared container holding the detailed information about
     /// the currently selected crate; this can be `None` if no crate is
@@ -133,6 +138,7 @@ impl App {
             search: Default::default(),
             filter: Default::default(),
             crates: Default::default(),
+            versions: Default::default(),
             crate_info: Default::default(),
             total_num_crates: Default::default(),
             input: Default::default(),
@@ -290,23 +296,46 @@ impl App {
         let filter = self.filter.clone();
         let filter_words = filter.split_whitespace().collect::<Vec<_>>();
 
-        self.search_results.crates = self
-            .crates
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|c| {
-                filter_words.iter().all(|word| {
-                    c.name.to_lowercase().contains(word)
-                        || c.description
-                            .clone()
-                            .unwrap_or_default()
-                            .to_lowercase()
-                            .contains(word)
+        let versions = self.versions.lock().unwrap().iter().cloned().collect_vec();
+        let crates = self.crates.lock().unwrap().iter().cloned().collect_vec();
+
+        if crates.len() == versions.len() {
+            let (crates, versions): (Vec<_>, Vec<_>) = crates
+                .iter()
+                .zip(versions)
+                .filter(|(c, _)| {
+                    filter_words.iter().all(|word| {
+                        c.name.to_lowercase().contains(word)
+                            || c.description
+                                .clone()
+                                .unwrap_or_default()
+                                .to_lowercase()
+                                .contains(word)
+                    })
                 })
-            })
-            .cloned()
-            .collect();
+                .map(|(c, v)| (c.clone(), v))
+                .unzip();
+
+            self.search_results.crates = crates;
+            self.search_results.versions = versions;
+        } else {
+            let crates: Vec<_> = crates
+                .iter()
+                .filter(|c| {
+                    filter_words.iter().all(|word| {
+                        c.name.to_lowercase().contains(word)
+                            || c.description
+                                .clone()
+                                .unwrap_or_default()
+                                .to_lowercase()
+                                .contains(word)
+                    })
+                })
+                .cloned()
+                .collect_vec();
+            self.search_results.crates = crates;
+            self.search_results.versions.drain(..);
+        }
     }
 
     fn key_refresh_tick(&mut self) {
@@ -461,6 +490,7 @@ impl App {
             page: self.page.clamp(1, u64::MAX),
             page_size: self.page_size,
             crates: self.crates.clone(),
+            versions: self.versions.clone(),
             loading_status: self.loading_status.clone(),
             sort: self.sort.clone(),
             tx: self.tx.clone(),
@@ -541,21 +571,66 @@ impl App {
             _ => area,
         }
     }
+
+    fn events_widget(&self) -> Block {
+        let title = if self.last_tick_key_events.is_empty() {
+            " ".into()
+        } else {
+            format!(
+                "{:?}",
+                self.last_tick_key_events
+                    .iter()
+                    .map(key_event_to_string)
+                    .collect::<Vec<_>>()
+            )
+        };
+        Block::default()
+            .title(title)
+            .title_position(ratatui::widgets::block::Position::Bottom)
+            .title_alignment(ratatui::layout::Alignment::Right)
+    }
 }
 
 impl StatefulWidget for AppWidget {
     type State = App;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        use Constraint::*;
         Block::default()
             .bg(config::get().style.background_color)
             .render(area, buf);
 
-        let [table, prompt] = Layout::vertical([
-            Constraint::Fill(0),
+        let [prompt, table] = Layout::vertical([
             Constraint::Length(3 + config::get().prompt_padding * 2),
+            Constraint::Fill(0),
         ])
         .areas(area);
+
+        let p = PromptWidget::new(
+            state.total_num_crates.unwrap_or_default(),
+            state.search_results.selected().map_or(0, |n| {
+                (state.page.saturating_sub(1) * state.page_size) + n as u64 + 1
+            }),
+            state.loading_status.load(Ordering::SeqCst),
+            state.mode,
+            &state.input,
+        );
+        p.render(prompt, buf, &mut state.prompt);
+
+        let [_, meta] = Layout::horizontal([Constraint::Percentage(75), Fill(0)]).areas(prompt);
+
+        Paragraph::new(Line::from(vec![
+            "Sort By: ".into(),
+            format!("{:?}", state.sort.clone()).red(),
+        ]))
+        .centered()
+        .render(
+            meta.inner(&Margin {
+                horizontal: 0,
+                vertical: config::get().prompt_padding + 1,
+            }),
+            buf,
+        );
 
         let remaining_table = if state.show_crate_info {
             state.render_crate_info(table, buf)
@@ -569,18 +644,6 @@ impl StatefulWidget for AppWidget {
             &mut state.search_results,
         );
 
-        let p = PromptWidget::new(
-            state.total_num_crates.unwrap_or_default(),
-            state.search_results.selected().map_or(0, |n| {
-                (state.page.saturating_sub(1) * state.page_size) + n as u64 + 1
-            }),
-            state.loading_status.load(Ordering::SeqCst),
-            state.mode,
-            &state.input,
-        );
-
-        p.render(prompt, buf, &mut state.prompt);
-
         if let Some(err) = &state.error_message {
             PopupMessageWidget::new("Error", err, state.popup_scroll_index).render(area, buf);
         }
@@ -588,18 +651,6 @@ impl StatefulWidget for AppWidget {
             PopupMessageWidget::new("Info", info, state.popup_scroll_index).render(area, buf);
         }
 
-        let events = Block::default()
-            .title(format!(
-                "{:?}",
-                state
-                    .last_tick_key_events
-                    .iter()
-                    .map(key_event_to_string)
-                    .collect::<Vec<_>>()
-            ))
-            .title_position(ratatui::widgets::block::Position::Bottom)
-            .title_alignment(ratatui::layout::Alignment::Right);
-
-        events.render(area, buf);
+        state.events_widget().render(area, buf);
     }
 }

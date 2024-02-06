@@ -65,7 +65,7 @@ impl<'a> PromptWidget<'a> {
     fn input_block(&self) -> impl Widget {
         let ncrates = self.total_num_crates;
         let loading_status = if self.loading {
-            format!("Loaded {ncrates} ...")
+            " ".into()
         } else {
             format!("{}/{}", self.selected, ncrates)
         };
@@ -99,10 +99,10 @@ impl<'a> PromptWidget<'a> {
     }
 
     fn update_cursor_state(&self, area: Rect, state: &mut Prompt) {
+        let width = ((area.width as f64 * 0.75) as u16).saturating_sub(2);
         if self.mode == Mode::Search || self.mode == Mode::Filter {
             state.cursor_position = Some(Position::new(
-                (area.x + self.horizontal_margin + self.input.cursor() as u16)
-                    .min(area.x + area.width.saturating_sub(2)),
+                (area.x + self.horizontal_margin + self.input.cursor() as u16).min(width),
                 area.y + self.vertical_margin,
             ));
         } else {
@@ -115,7 +115,7 @@ impl StatefulWidget for PromptWidget<'_> {
     type State = Prompt;
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         self.input_block().render(area, buf);
-        self.input_text(area.width as usize).render(
+        self.input_text((area.width as f64 * 0.75) as usize).render(
             area.inner(&Margin {
                 horizontal: self.horizontal_margin,
                 vertical: self.vertical_margin,

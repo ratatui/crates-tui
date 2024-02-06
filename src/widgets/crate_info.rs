@@ -33,10 +33,19 @@ impl Widget for CrateInfoWidget {
         .collect_vec();
 
         if let Some(description) = self.crate_info.description {
-            rows.push(Row::new(vec![
-                Cell::from("Description"),
-                Cell::from(description),
-            ]));
+            // assume description is wrapped in 75%
+            let desc = textwrap::wrap(&description, (area.width as f64 * 0.75) as usize)
+                .iter()
+                .map(|s| Line::from(s.to_string()))
+                .collect_vec();
+            let height = desc.len();
+            rows.push(
+                Row::new(vec![
+                    Cell::from("Description"),
+                    Cell::from(Text::from(desc)),
+                ])
+                .height(height as u16),
+            );
         }
         if let Some(homepage) = self.crate_info.homepage {
             rows.push(Row::new(vec![Cell::from("Homepage"), Cell::from(homepage)]));
