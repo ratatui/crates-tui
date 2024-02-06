@@ -14,7 +14,7 @@ use tui_input::backend::crossterm::EventHandler;
 
 use crate::{
     action::Action,
-    config,
+    config, crates_io_api_helper,
     serde_helper::keybindings::key_event_to_string,
     tui::{self, Tui},
     widgets::{
@@ -38,7 +38,6 @@ pub enum Mode {
 
 struct AppWidget;
 
-// FIXME comments on the fields
 #[derive(Debug)]
 pub struct App {
     /// Receiver end of an asynchronous channel for actions that the app needs
@@ -323,8 +322,6 @@ impl App {
         self.mode = Mode::Quit
     }
 
-    // FIXME: can we make this infinitely scrollable instead of manually handling
-    // the page size?
     fn increment_page(&mut self) {
         if let Some(n) = self.total_num_crates {
             let max_page_size = (n / self.page_size) + 1;
@@ -418,67 +415,46 @@ impl App {
     fn store_total_number_of_crates(&mut self, n: u64) {
         self.total_num_crates = Some(n)
     }
+}
 
-    // FIXME overly long and complex method
+impl App {
+    /// Reloads the list of crates based on the current search parameters,
+    /// updating the application state accordingly. This involves fetching
+    /// data asynchronously from the crates.io API and updating various parts of
+    /// the application state, such as the crates listing, current crate
+    /// info, and loading status.
     fn reload_data(&mut self) {
+        self.prepare_reload();
+        let search_params = self.create_search_parameters();
+        self.spawn_search(search_params);
+    }
+
+    /// Clears current search results and resets the UI to prepare for new data.
+    fn prepare_reload(&mut self) {
         self.search_results.select(None);
         *self.crate_info.lock().unwrap() = None;
-        let crates = self.crates.clone();
-        let search = self.search.clone();
-        let loading_status = self.loading_status.clone();
-        let tx = self.tx.clone();
-        let page = self.page.clamp(1, u64::MAX);
-        let page_size = self.page_size;
+    }
+
+    /// Creates the parameters required for the search task.
+    fn create_search_parameters(&self) -> crates_io_api_helper::SearchParameters {
+        crates_io_api_helper::SearchParameters {
+            search: self.search.clone(),
+            page: self.page.clamp(1, u64::MAX),
+            page_size: self.page_size,
+            crates: self.crates.clone(),
+            loading_status: self.loading_status.clone(),
+            tx: self.tx.clone(),
+        }
+    }
+
+    /// Spawns an asynchronous task to fetch crate data from crates.io.
+    fn spawn_search(&self, params: crates_io_api_helper::SearchParameters) {
         tokio::spawn(async move {
-            loading_status.store(true, Ordering::SeqCst);
-            match crates_io_api::AsyncClient::new(
-                "crates-tui (crates-tui@kdheepak.com)",
-                std::time::Duration::from_millis(1000),
-            ) {
-                Ok(client) => {
-                    let query = crates_io_api::CratesQueryBuilder::default()
-                        .search(&search)
-                        .page(page)
-                        .page_size(page_size)
-                        .sort(crates_io_api::Sort::Relevance)
-                        .build();
-                    match client.crates(query).await {
-                        Ok(page) => {
-                            let mut all_crates = vec![];
-                            for crate_ in page.crates.iter() {
-                                all_crates.push(crate_.clone())
-                            }
-                            all_crates.sort_by(|a, b| b.downloads.cmp(&a.downloads));
-                            crates.lock().unwrap().drain(0..);
-                            *crates.lock().unwrap() = all_crates;
-                            if crates.lock().unwrap().len() > 0 {
-                                tx.send(Action::StoreTotalNumberOfCrates(page.meta.total))
-                                    .unwrap_or_default();
-                                tx.send(Action::Tick).unwrap_or_default();
-                                tx.send(Action::ScrollDown).unwrap_or_default();
-                            } else {
-                                tx.send(Action::ShowErrorPopup(format!(
-                                    "Could not find any crates with query `{search}`.",
-                                )))
-                                .unwrap_or_default();
-                            }
-                            loading_status.store(false, Ordering::SeqCst);
-                        }
-                        Err(err) => {
-                            tx.send(Action::ShowErrorPopup(format!(
-                                "API Client Error: {err:#?}"
-                            )))
-                            .unwrap_or_default();
-                            loading_status.store(false, Ordering::SeqCst);
-                        }
-                    }
-                }
-                Err(err) => tx
-                    .send(Action::ShowErrorPopup(format!(
-                        "Error creating client: {err:#?}"
-                    )))
-                    .unwrap_or_default(),
+            params.loading_status.store(true, Ordering::SeqCst);
+            if let Err(error_message) = crates_io_api_helper::perform_search(&params).await {
+                let _ = params.tx.send(Action::ShowErrorPopup(error_message));
             }
+            params.loading_status.store(false, Ordering::SeqCst);
         });
     }
 

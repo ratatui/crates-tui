@@ -2,6 +2,7 @@ mod action;
 mod app;
 mod cli;
 mod config;
+mod crates_io_api_helper;
 mod errors;
 mod logging;
 mod serde_helper;
