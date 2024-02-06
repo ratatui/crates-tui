@@ -152,7 +152,7 @@ fn project_dirs() -> Result<ProjectDirs> {
 /// - a configuration file
 /// - environment variables
 /// - command line arguments
-pub fn initialize_config(cli: &Cli) -> Result<()> {
+pub fn init(cli: &Cli) -> Result<()> {
     let config_file = cli.config_file.clone().unwrap_or_else(default_config_file);
     let config = Figment::new()
         .merge(Serialized::defaults(Config::default()))
