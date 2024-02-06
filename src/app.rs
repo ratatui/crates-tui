@@ -42,7 +42,6 @@ pub struct App {
     page: u64,
     page_size: u64,
     mode: Mode,
-    last_key_events: Vec<KeyEvent>,
     loading_status: Arc<AtomicBool>,
     search: String,
     filter: String,
@@ -67,7 +66,6 @@ impl App {
             page: 1,
             page_size: 25,
             mode: Mode::default(),
-            last_key_events: Default::default(),
             loading_status: Default::default(),
             search: Default::default(),
             filter: Default::default(),
@@ -293,7 +291,6 @@ impl App {
 
     fn tick(&mut self) {
         // FIXME: this is not obvious what it does what are the last_events? Why are you removing them?
-        self.last_key_events.drain(..);
         self.update_filtered_crates();
         self.update_crate_table_state();
     }
