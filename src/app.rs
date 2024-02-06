@@ -473,10 +473,21 @@ impl App {
     // FIXME - render a single top level widget and then inside that widget render the other
     // widgets
     pub fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) {
-        frame.render_widget(
-            Block::default().bg(config::get().style.background_color),
-            area,
-        );
+        let buf = frame.buffer_mut();
+        self.render(area, buf);
+
+        self.prompt_state.frame_count(frame.count());
+        if let Some(cursor_position) = self.prompt_state.cursor_position() {
+            frame.set_cursor(cursor_position.x, cursor_position.y)
+        }
+    }
+}
+
+impl Widget for &mut App {
+    fn render(self, area: Rect, buf: &mut Buffer) {
+        Block::default()
+            .bg(config::get().style.background_color)
+            .render(area, buf);
 
         let [table, prompt] = Layout::vertical([
             Constraint::Fill(0),
@@ -491,17 +502,13 @@ impl App {
                 let [table, info] =
                     Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
                         .areas(table);
-                frame.render_widget(CrateInfo::new(ci), info);
+                CrateInfo::new(ci).render(info, buf);
                 table
             }
             _ => table,
         };
 
-        frame.render_stateful_widget(
-            CratesTable::new(self.mode == Mode::Picker),
-            table,
-            &mut self.crate_table_state,
-        );
+        CratesTable::new(self.mode == Mode::Picker).render(table, buf, &mut self.crate_table_state);
 
         let loading_status = self.loading_status.load(Ordering::SeqCst);
         let selected = self.crate_table_state.selected().map_or(0, |n| {
@@ -516,32 +523,27 @@ impl App {
             self.mode,
             &self.input,
         );
-        frame.render_stateful_widget(&p, prompt, &mut self.prompt_state);
 
-        self.prompt_state.frame_count(frame.count());
-        if let Some(cursor_position) = self.prompt_state.cursor_position() {
-            frame.set_cursor(cursor_position.x, cursor_position.y)
-        }
+        StatefulWidget::render(&p, prompt, buf, &mut self.prompt_state);
 
         if let Some(err) = &self.error {
-            frame.render_widget(Popup::new("Error", err, self.popup_scroll), area);
+            Popup::new("Error", err, self.popup_scroll).render(area, buf);
         }
         if let Some(info) = &self.info {
-            frame.render_widget(Popup::new("Info", info, self.popup_scroll), area);
+            Popup::new("Info", info, self.popup_scroll).render(area, buf);
         }
 
-        frame.render_widget(
-            Block::default()
-                .title(format!(
-                    "{:?}",
-                    self.last_tick_key_events
-                        .iter()
-                        .map(key_event_to_string)
-                        .collect::<Vec<_>>()
-                ))
-                .title_position(ratatui::widgets::block::Position::Bottom)
-                .title_alignment(ratatui::layout::Alignment::Right),
-            frame.size(),
-        );
+        let events = Block::default()
+            .title(format!(
+                "{:?}",
+                self.last_tick_key_events
+                    .iter()
+                    .map(key_event_to_string)
+                    .collect::<Vec<_>>()
+            ))
+            .title_position(ratatui::widgets::block::Position::Bottom)
+            .title_alignment(ratatui::layout::Alignment::Right);
+
+        events.render(area, buf);
     }
 }
