@@ -11,16 +11,12 @@ mod widgets;
 use app::App;
 use color_eyre::eyre::Result;
 
-use crate::{
-    config::initialize_config, errors::initialize_panic_handler, logging::initialize_logging,
-};
-
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = cli::parse();
-    initialize_config(&cli)?;
-    initialize_logging()?;
-    initialize_panic_handler()?;
+    config::init(&cli)?;
+    logging::init()?;
+    errors::install_hooks()?;
 
     if cli.print_default_config {
         println!("{}", toml::to_string_pretty(config::get())?);

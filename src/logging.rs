@@ -7,7 +7,7 @@ use tracing_subscriber::{
 
 use crate::config;
 
-pub fn initialize_logging() -> Result<()> {
+pub fn init() -> Result<()> {
     let config = config::get();
     let directory = config.data_home.clone();
     std::fs::create_dir_all(directory.clone())?;
