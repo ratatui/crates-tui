@@ -1,4 +1,4 @@
-pub mod crate_info;
+pub mod crate_info_table;
 pub mod popup_message;
-pub mod prompt;
-pub mod search_results;
+pub mod search_filter_prompt;
+pub mod search_results_table;

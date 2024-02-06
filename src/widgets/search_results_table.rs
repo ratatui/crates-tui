@@ -5,14 +5,14 @@ use ratatui::{prelude::*, widgets::*};
 use crate::config;
 
 #[derive(Debug, Default)]
-pub struct SearchResults {
+pub struct SearchResultsTable {
     pub crates: Vec<crates_io_api::Crate>,
     pub versions: Vec<crates_io_api::Version>,
     pub table_state: TableState,
     pub scrollbar_state: ScrollbarState,
 }
 
-impl SearchResults {
+impl SearchResultsTable {
     pub fn content_length(&mut self, content_length: usize) {
         self.scrollbar_state = self.scrollbar_state.content_length(content_length)
     }
@@ -78,25 +78,27 @@ impl SearchResults {
     }
 }
 
-pub struct SearchResultsWidget {
+pub struct SearchResultsTableWidget {
     highlight: bool,
 }
 
-impl SearchResultsWidget {
+impl SearchResultsTableWidget {
     pub fn new(highlight: bool) -> Self {
         Self { highlight }
     }
 }
 
-impl StatefulWidget for SearchResultsWidget {
-    type State = SearchResults;
+impl StatefulWidget for SearchResultsTableWidget {
+    type State = SearchResultsTable;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let [_, scrollbar_area] =
+            Layout::vertical([Constraint::Length(3), Constraint::Fill(1)]).areas(area);
         Scrollbar::default()
             .track_symbol(Some(" "))
             .begin_symbol(None)
             .end_symbol(None)
-            .render(area, buf, &mut state.scrollbar_state);
+            .render(scrollbar_area, buf, &mut state.scrollbar_state);
 
         let widths = [
             Constraint::Length(1),

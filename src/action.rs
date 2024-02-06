@@ -22,6 +22,7 @@ pub enum Action {
     IncrementPage,
     DecrementPage,
     ToggleSortBy,
+    ToggleSortByAndReload,
     EnterNormal,
     ScrollBottom,
     ScrollTop,

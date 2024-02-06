@@ -25,10 +25,10 @@ use crate::{
     serde_helper::keybindings::key_event_to_string,
     tui::{self, Tui},
     widgets::{
-        crate_info::CrateInfoWidget,
+        crate_info_table::CrateInfoTableWidget,
         popup_message::PopupMessageWidget,
-        prompt::{Prompt, PromptWidget},
-        search_results::{SearchResults, SearchResultsWidget},
+        search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
+        search_results_table::{SearchResultsTable, SearchResultsTableWidget},
     },
 };
 
@@ -101,7 +101,7 @@ pub struct App {
 
     /// A table component designed to handle the listing and selection of crates
     /// within the terminal UI.
-    search_results: SearchResults,
+    search_results: SearchResultsTable,
 
     /// A boolean flag that determines whether detailed crate information should
     /// be displayed within the UI.
@@ -125,11 +125,14 @@ pub struct App {
 
     /// A prompt displaying the current search or filter query, if any, that the
     /// user can interact with.
-    prompt: Prompt,
+    prompt: SearchFilterPrompt,
 
     /// A list of key events that have been held since the last tick, useful for
     /// interpreting sequences of key presses.
     last_tick_key_events: Vec<KeyEvent>,
+
+    /// frame counter
+    frame_count: usize,
 }
 
 impl App {
@@ -158,6 +161,7 @@ impl App {
             popup_scroll_index: Default::default(),
             prompt: Default::default(),
             last_tick_key_events: Default::default(),
+            frame_count: Default::default(),
         }
     }
 
@@ -279,6 +283,7 @@ impl App {
             Action::ShowErrorPopup(ref err) => self.set_error_flag(err.clone()),
             Action::ShowInfoPopup(ref info) => self.set_info_flag(info.clone()),
             Action::ClosePopup => self.clear_error_and_info_flags(),
+            Action::ToggleSortByAndReload => self.toggle_sort_by_and_reload()?,
             Action::ToggleSortBy => self.toggle_sort_by()?,
             Action::ClearTaskDetailsHandle(ref id) => {
                 self.clear_task_details_handle(uuid::Uuid::parse_str(&id)?)?
@@ -302,7 +307,7 @@ impl App {
         Ok(())
     }
 
-    fn clear_all_task_details_handles(&mut self) {
+    fn clear_all_previous_task_details_handles(&mut self) {
         *self.crate_info.lock().unwrap() = None;
         for (_, v) in self.last_task_details_handle.iter() {
             v.abort()
@@ -411,6 +416,8 @@ impl App {
     }
 
     fn submit_search(&mut self) {
+        self.clear_all_previous_task_details_handles();
+        self.show_crate_info = false;
         self.mode = Mode::Picker;
         self.filter.clear();
         self.search = self.input.value().into();
@@ -421,7 +428,7 @@ impl App {
         if self.show_crate_info {
             self.request_crate_details()
         } else {
-            self.clear_all_task_details_handles();
+            self.clear_all_previous_task_details_handles();
         }
     }
 
@@ -435,6 +442,11 @@ impl App {
             S::RecentUpdates => S::NewlyAdded,
             S::NewlyAdded => S::Alphabetical,
         };
+        Ok(())
+    }
+
+    fn toggle_sort_by_and_reload(&mut self) -> Result<()> {
+        self.toggle_sort_by()?;
         self.tx.send(Action::ReloadData)?;
         Ok(())
     }
@@ -459,10 +471,10 @@ impl App {
 
     fn update_current_selection_crate_info(&mut self) {
         if self.show_crate_info {
-            self.clear_all_task_details_handles();
+            self.clear_all_previous_task_details_handles();
             self.request_crate_details();
         } else {
-            self.clear_all_task_details_handles();
+            self.clear_all_previous_task_details_handles();
         }
     }
 
@@ -557,14 +569,19 @@ impl App {
     fn draw(&mut self, tui: &mut Tui) -> Result<()> {
         tui.draw(|frame| {
             frame.render_stateful_widget(AppWidget, frame.size(), self);
-            self.update_prompt(frame);
+            self.update_frame_count(frame);
+            self.update_cursor(frame);
         })?;
         Ok(())
     }
 
-    // Sets cursor for the prompt as well as lets prompt know the frame count
-    fn update_prompt(&mut self, frame: &mut Frame<'_>) {
-        self.prompt.frame_count(frame.count());
+    // Sets the frame count
+    fn update_frame_count(&mut self, frame: &mut Frame<'_>) {
+        self.frame_count = frame.count();
+    }
+
+    // Sets cursor for the prompt
+    fn update_cursor(&mut self, frame: &mut Frame<'_>) {
         if let Some(cursor_position) = self.prompt.cursor_position() {
             frame.set_cursor(cursor_position.x, cursor_position.y)
         }
@@ -577,29 +594,66 @@ impl App {
                 let [table, info] =
                     Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
                         .areas(area);
-                CrateInfoWidget::new(ci).render(info, buf);
+                CrateInfoTableWidget::new(ci).render(info, buf);
                 table
             }
             _ => area,
         }
     }
 
-    fn events_widget(&self) -> Block {
-        let title = if self.last_tick_key_events.is_empty() {
-            " ".into()
+    fn events_widget(&self) -> Option<Block> {
+        if self.last_tick_key_events.is_empty() {
+            return None;
+        }
+
+        let title = format!(
+            "{:?}",
+            self.last_tick_key_events
+                .iter()
+                .map(key_event_to_string)
+                .collect::<Vec<_>>()
+        );
+        Some(
+            Block::default()
+                .title(title)
+                .title_position(ratatui::widgets::block::Position::Bottom)
+                .title_alignment(ratatui::layout::Alignment::Right),
+        )
+    }
+
+    fn selected_with_page_context(&self) -> u64 {
+        self.search_results.selected().map_or(0, |n| {
+            (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1
+        })
+    }
+
+    fn loading(&self) -> bool {
+        self.loading_status.load(Ordering::SeqCst)
+    }
+
+    fn search_results_status(&self) -> String {
+        let selected = self.selected_with_page_context();
+        let ncrates = self.total_num_crates.unwrap_or_default();
+        if self.loading() {
+            self.spinner()
         } else {
-            format!(
-                "{:?}",
-                self.last_tick_key_events
-                    .iter()
-                    .map(key_event_to_string)
-                    .collect::<Vec<_>>()
-            )
-        };
-        Block::default()
-            .title(title)
-            .title_position(ratatui::widgets::block::Position::Bottom)
-            .title_alignment(ratatui::layout::Alignment::Right)
+            format!("{}/{}", selected, ncrates)
+        }
+    }
+
+    fn focused(&self) -> bool {
+        if self.mode == Mode::Search || self.mode == Mode::Filter {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn spinner(&self) -> String {
+        let spinner = ["◑", "◒", "◐", "◓"];
+        let index = self.frame_count % spinner.len();
+        let symbol = spinner[index];
+        symbol.into()
     }
 }
 
@@ -612,21 +666,13 @@ impl StatefulWidget for AppWidget {
             .bg(config::get().style.background_color)
             .render(area, buf);
 
-        let [prompt, table] = Layout::vertical([
-            Constraint::Length(3 + config::get().prompt_padding * 2),
-            Constraint::Fill(0),
-        ])
-        .areas(area);
+        let [table, prompt] = if state.focused() {
+            Layout::vertical([Constraint::Fill(0), Constraint::Length(5)]).areas(area)
+        } else {
+            Layout::vertical([Constraint::Fill(0), Constraint::Length(1)]).areas(area)
+        };
 
-        let p = PromptWidget::new(
-            state.total_num_crates.unwrap_or_default(),
-            state.search_results.selected().map_or(0, |n| {
-                (state.page.saturating_sub(1) * state.page_size) + n as u64 + 1
-            }),
-            state.loading_status.load(Ordering::SeqCst),
-            state.mode,
-            &state.input,
-        );
+        let p = SearchFilterPromptWidget::new(state.focused(), state.mode, &state.input);
         p.render(prompt, buf, &mut state.prompt);
 
         let [_, meta] = Layout::horizontal([Constraint::Percentage(75), Fill(0)]).areas(prompt);
@@ -639,7 +685,7 @@ impl StatefulWidget for AppWidget {
         .render(
             meta.inner(&Margin {
                 horizontal: 0,
-                vertical: config::get().prompt_padding + 1,
+                vertical: 2,
             }),
             buf,
         );
@@ -650,11 +696,21 @@ impl StatefulWidget for AppWidget {
             table
         };
 
-        SearchResultsWidget::new(state.mode == Mode::Picker).render(
+        SearchResultsTableWidget::new(state.mode == Mode::Picker).render(
             remaining_table,
             buf,
             &mut state.search_results,
         );
+
+        Line::from(state.search_results_status())
+            .right_aligned()
+            .render(
+                remaining_table.inner(&Margin {
+                    horizontal: 0,
+                    vertical: 1,
+                }),
+                buf,
+            );
 
         if let Some(err) = &state.error_message {
             PopupMessageWidget::new("Error", err, state.popup_scroll_index).render(area, buf);

@@ -24,7 +24,7 @@ prompt_padding = 1
 "/" = "EnterFilterInsertMode"
 "j" = "ScrollDown"
 "k" = "ScrollUp"
-"TAB" = "ToggleSortBy"
+"TAB" = "ToggleSortByAndReload"
 "Down" = "ScrollDown"
 "Up" = "ScrollUp"
 "l" = "IncrementPage"
@@ -35,6 +35,7 @@ prompt_padding = 1
 "Enter" = "ToggleShowCrateInfo"
 
 [key_bindings.search]
+"TAB" = "ToggleSortBy"
 "ESC" = "EnterNormal"
 "Enter" = "SubmitSearch"
 
