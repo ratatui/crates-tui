@@ -458,6 +458,8 @@ impl App {
         });
     }
 
+    /// Spawns an asynchronous task to fetch crate details from crates.io based
+    /// on currently selected crate
     fn fetch_crate_details(&mut self) {
         if self.search_results.crates.is_empty() {
             return;
@@ -489,6 +491,7 @@ impl App {
             .map(|crate_| crate_.name.clone())
     }
 
+    // Render the `AppWidget` as a stateful widget using `self` as the `State`
     fn draw(&mut self, tui: &mut Tui) -> Result<()> {
         tui.draw(|frame| {
             frame.render_stateful_widget(AppWidget, frame.size(), self);
@@ -497,6 +500,7 @@ impl App {
         Ok(())
     }
 
+    // Sets cursor for the prompt as well as lets prompt know the frame count
     fn update_prompt(&mut self, frame: &mut Frame<'_>) {
         self.prompt.frame_count(frame.count());
         if let Some(cursor_position) = self.prompt.cursor_position() {
