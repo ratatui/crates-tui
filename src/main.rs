@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    let tui = tui::Tui::new()?;
+    let tui = tui::Tui::init()?;
     App::new().run(tui).await?;
 
     Ok(())
