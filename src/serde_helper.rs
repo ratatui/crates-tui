@@ -65,7 +65,7 @@ pub mod keybindings {
                     string_event_map.insert(key_string, action.clone());
                 }
 
-                serialized_map.insert(mode.clone(), string_event_map);
+                serialized_map.insert(*mode, string_event_map);
             }
 
             serialized_map.serialize(serializer)
@@ -175,7 +175,7 @@ pub mod keybindings {
                 char = format!("f({c})");
                 &char
             }
-            KeyCode::Char(c) if c == ' ' => "space",
+            KeyCode::Char(' ') => "space",
             KeyCode::Char(c) => {
                 char = c.to_string();
                 &char

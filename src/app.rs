@@ -191,17 +191,13 @@ impl App {
     /// This function forwards events to input prompt handler
     fn forward_key_events(&mut self, key: KeyEvent) -> Result<()> {
         match self.mode {
-            Mode::Search => match key.code {
-                _ => {
-                    self.input.handle_event(&crossterm::event::Event::Key(key));
-                }
-            },
-            Mode::Filter => match key.code {
-                _ => {
-                    self.input.handle_event(&crossterm::event::Event::Key(key));
-                    self.tx.send(Action::HandleFilterPromptChange)?
-                }
-            },
+            Mode::Search => {
+                self.input.handle_event(&crossterm::event::Event::Key(key));
+            }
+            Mode::Filter => {
+                self.input.handle_event(&crossterm::event::Event::Key(key));
+                self.tx.send(Action::HandleFilterPromptChange)?
+            }
             _ => (),
         };
         Ok(())
