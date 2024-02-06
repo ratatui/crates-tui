@@ -541,6 +541,18 @@ impl App {
             _ => area,
         }
     }
+
+    fn prompt_widget(&self) -> PromptWidget<'_> {
+        PromptWidget::new(
+            self.total_num_crates.unwrap_or_default(),
+            self.search_results.selected().map_or(0, |n| {
+                (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1
+            }),
+            self.loading_status.load(Ordering::SeqCst),
+            self.mode,
+            &self.input,
+        )
+    }
 }
 
 impl StatefulWidget for AppWidget {
@@ -569,17 +581,7 @@ impl StatefulWidget for AppWidget {
             &mut state.search_results,
         );
 
-        let p = PromptWidget::new(
-            state.total_num_crates.unwrap_or_default(),
-            state.search_results.selected().map_or(0, |n| {
-                (state.page.saturating_sub(1) * state.page_size) + n as u64 + 1
-            }),
-            state.loading_status.load(Ordering::SeqCst),
-            state.mode,
-            &state.input,
-        );
-
-        p.render(prompt, buf, &mut state.prompt);
+        state.prompt_widget().render(prompt, buf, &mut state.prompt);
 
         if let Some(err) = &state.error_message {
             PopupMessageWidget::new("Error", err, state.popup_scroll_index).render(area, buf);
