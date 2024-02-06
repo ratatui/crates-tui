@@ -8,15 +8,14 @@ use crossterm::event::KeyEvent;
 use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use strum::Display;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
-use tracing::{debug, error, info};
+use tokio::sync::mpsc::UnboundedSender;
+use tracing::{error, info};
 use tui_input::backend::crossterm::EventHandler;
 
 use crate::{
     action::Action,
     config,
     serde_helper::keybindings::key_event_to_string,
-    tui::{self, Tui},
     widgets::{
         crate_info::CrateInfo,
         crates_table::{CratesTable, CratesTableState},
@@ -35,13 +34,14 @@ pub enum Mode {
     Popup,
 }
 
+pub struct Root;
+
 // FIXME comments on the fields
 #[derive(Debug)]
-pub struct App {
+pub struct RootState {
     tx: UnboundedSender<Action>,
     page: u64,
     page_size: u64,
-    mode: Mode,
     loading_status: Arc<AtomicBool>,
     search: String,
     filter: String,
@@ -54,11 +54,12 @@ pub struct App {
     error: Option<String>,
     info: Option<String>,
     popup_scroll: usize,
-    last_tick_key_events: Vec<KeyEvent>,
-    prompt_state: PromptState,
+    pub mode: Mode,
+    pub prompt_state: PromptState,
+    pub last_tick_key_events: Vec<KeyEvent>,
 }
 
-impl App {
+impl RootState {
     pub fn new(tx: UnboundedSender<Action>) -> Self {
         Self {
             tx,
@@ -77,8 +78,8 @@ impl App {
             error: Default::default(),
             info: Default::default(),
             popup_scroll: Default::default(),
-            last_tick_key_events: Default::default(),
             prompt_state: Default::default(),
+            last_tick_key_events: Default::default(),
         }
     }
 
@@ -253,7 +254,7 @@ impl App {
             // Spawn the async work to fetch crate details.
             tokio::spawn(async move {
                 loading_status.store(true, Ordering::SeqCst);
-                App::async_fetch_crate_details(crate_name, tx, crate_info).await;
+                RootState::async_fetch_crate_details(crate_name, tx, crate_info).await;
                 loading_status.store(false, Ordering::SeqCst);
             });
         }
@@ -322,88 +323,7 @@ impl App {
     }
 }
 
-impl App {
-    // The main 'run' function now delegates to the two functions above,
-    // to handle TUI events and App actions respectively.
-    pub async fn run(&mut self, tui: &mut Tui, mut rx: UnboundedReceiver<Action>) -> Result<()> {
-        let mut should_quit = false;
-        let tx = self.tx.clone();
-
-        tui.enter()?;
-
-        loop {
-            if let Some(e) = tui.next().await {
-                self.handle_tui_event(e, &tx).await?;
-            }
-            while let Ok(action) = rx.try_recv() {
-                if let Some(inner_action) = self.update(action.clone())? {
-                    tx.send(inner_action)?
-                };
-                self.handle_action(action.clone(), tui, &tx).await?;
-                if action == Action::Quit {
-                    should_quit = true;
-                    break;
-                }
-            }
-            if should_quit {
-                tui.stop()?;
-                break;
-            }
-        }
-        tui.exit()?;
-        Ok(())
-    }
-
-    async fn handle_tui_event(
-        &mut self,
-        e: tui::Event,
-        tx: &UnboundedSender<Action>,
-    ) -> Result<()> {
-        match e {
-            tui::Event::Quit => tx.send(Action::Quit)?,
-            tui::Event::Tick => tx.send(Action::Tick)?,
-            tui::Event::KeyRefresh => tx.send(Action::KeyRefresh)?,
-            tui::Event::Render => tx.send(Action::Render)?,
-            tui::Event::Resize(x, y) => tx.send(Action::Resize(x, y))?,
-            tui::Event::Key(key) => {
-                debug!("Received key {:?}", key);
-                if let Some(action) = self.handle_key_events(key)? {
-                    tx.send(action)?;
-                }
-                if let Some(action) = self.handle_key_events_from_config(key) {
-                    tx.send(action)?;
-                }
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-
-    async fn handle_action(
-        &mut self,
-        action: Action,
-        tui: &mut Tui,
-        tx: &UnboundedSender<Action>,
-    ) -> Result<()> {
-        if action != Action::Tick && action != Action::Render {
-            info!("{action:?}");
-        }
-        match action {
-            Action::KeyRefresh => {
-                self.last_tick_key_events.drain(..);
-            }
-            Action::Resize(w, h) => {
-                tui.resize(Rect::new(0, 0, w, h))?;
-                tx.send(Action::Render)?;
-            }
-            Action::Render => {
-                tui.draw(|f| self.draw(f, f.size()))?;
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-
+impl RootState {
     pub fn update(&mut self, action: Action) -> Result<Option<Action>> {
         match action {
             Action::Tick => self.tick(),
@@ -438,18 +358,6 @@ impl App {
         }
     }
 
-    pub fn handle_key_events_from_config(&mut self, key: KeyEvent) -> Option<Action> {
-        self.last_tick_key_events.push(key);
-        let config = config::get();
-        let action = config
-            .key_bindings
-            .event_to_action(&self.mode, &self.last_tick_key_events);
-        if action.is_some() {
-            self.last_tick_key_events.drain(..);
-        }
-        action
-    }
-
     pub fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
         match self.mode {
             Mode::Search => match key.code {
@@ -469,22 +377,12 @@ impl App {
             _ => return Ok(None),
         };
     }
-
-    // FIXME - render a single top level widget and then inside that widget render the other
-    // widgets
-    pub fn draw(&mut self, frame: &mut Frame<'_>, area: Rect) {
-        let buf = frame.buffer_mut();
-        self.render(area, buf);
-
-        self.prompt_state.frame_count(frame.count());
-        if let Some(cursor_position) = self.prompt_state.cursor_position() {
-            frame.set_cursor(cursor_position.x, cursor_position.y)
-        }
-    }
 }
 
-impl Widget for &mut App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl StatefulWidget for Root {
+    type State = RootState;
+
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         Block::default()
             .bg(config::get().style.background_color)
             .render(area, buf);
@@ -497,8 +395,8 @@ impl Widget for &mut App {
 
         // FIXME every part of this method has complex logic that calls or creats other methods
         // That makes it hard to understand the whole method. Split it into smaller methods
-        let table = match self.crate_info.lock().unwrap().clone() {
-            Some(ci) if self.show_crate_info => {
+        let table = match state.crate_info.lock().unwrap().clone() {
+            Some(ci) if state.show_crate_info => {
                 let [table, info] =
                     Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
                         .areas(table);
@@ -508,35 +406,40 @@ impl Widget for &mut App {
             _ => table,
         };
 
-        CratesTable::new(self.mode == Mode::Picker).render(table, buf, &mut self.crate_table_state);
+        CratesTable::new(state.mode == Mode::Picker).render(
+            table,
+            buf,
+            &mut state.crate_table_state,
+        );
 
-        let loading_status = self.loading_status.load(Ordering::SeqCst);
-        let selected = self.crate_table_state.selected().map_or(0, |n| {
-            (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1
+        let loading_status = state.loading_status.load(Ordering::SeqCst);
+        let selected = state.crate_table_state.selected().map_or(0, |n| {
+            (state.page.saturating_sub(1) * state.page_size) + n as u64 + 1
         });
-        let total_num_crates = self.total_num_crates.unwrap_or_default();
+        let total_num_crates = state.total_num_crates.unwrap_or_default();
 
         let p = Prompt::new(
             total_num_crates,
             selected,
             loading_status,
-            self.mode,
-            &self.input,
+            state.mode,
+            &state.input,
         );
 
-        StatefulWidget::render(&p, prompt, buf, &mut self.prompt_state);
+        StatefulWidget::render(&p, prompt, buf, &mut state.prompt_state);
 
-        if let Some(err) = &self.error {
-            Popup::new("Error", err, self.popup_scroll).render(area, buf);
+        if let Some(err) = &state.error {
+            Popup::new("Error", err, state.popup_scroll).render(area, buf);
         }
-        if let Some(info) = &self.info {
-            Popup::new("Info", info, self.popup_scroll).render(area, buf);
+        if let Some(info) = &state.info {
+            Popup::new("Info", info, state.popup_scroll).render(area, buf);
         }
 
         let events = Block::default()
             .title(format!(
                 "{:?}",
-                self.last_tick_key_events
+                state
+                    .last_tick_key_events
                     .iter()
                     .map(key_event_to_string)
                     .collect::<Vec<_>>()
