@@ -83,3 +83,19 @@ fn update_state_with_fetched_crates(crates: Vec<crates_io_api::Crate>, params: &
         let _ = params.tx.send(Action::ScrollDown);
     }
 }
+
+// Performs the async fetch of crate details.
+pub async fn async_fetch_crate_details(
+    crate_name: String,
+    crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
+) -> Result<(), String> {
+    let client = create_client()?;
+
+    let crate_data = client
+        .get_crate(&crate_name)
+        .await
+        .map_err(|err| format!("Error fetching crate details: {err:#?}"))?;
+
+    *crate_info.lock().unwrap() = Some(crate_data.crate_data);
+    Ok(())
+}

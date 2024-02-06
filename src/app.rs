@@ -458,15 +458,6 @@ impl App {
         });
     }
 
-    // Extracts the selected crate name, if possible.
-    fn selected_crate_name(&self) -> Option<String> {
-        self.search_results
-            .selected()
-            .and_then(|index| self.search_results.crates.get(index))
-            .filter(|crate_| !crate_.name.is_empty())
-            .map(|crate_| crate_.name.clone())
-    }
-
     fn fetch_crate_details(&mut self) {
         if self.search_results.crates.is_empty() {
             return;
@@ -479,40 +470,23 @@ impl App {
             // Spawn the async work to fetch crate details.
             tokio::spawn(async move {
                 loading_status.store(true, Ordering::SeqCst);
-                App::async_fetch_crate_details(crate_name, tx, crate_info).await;
+                if let Err(error_message) =
+                    crates_io_api_helper::async_fetch_crate_details(crate_name, crate_info).await
+                {
+                    let _ = tx.send(Action::ShowErrorPopup(error_message));
+                };
                 loading_status.store(false, Ordering::SeqCst);
             });
         }
     }
 
-    // Performs the async fetch of crate details.
-    async fn async_fetch_crate_details(
-        crate_name: String,
-        tx: UnboundedSender<Action>,
-        crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
-    ) {
-        let client = match crates_io_api::AsyncClient::new(
-            "crates-tui (crates-tui@kdheepak.com)",
-            std::time::Duration::from_millis(1000),
-        ) {
-            Ok(client) => client,
-            Err(error_message) => {
-                return tx
-                    .send(Action::ShowErrorPopup(format!("{}", error_message)))
-                    .unwrap_or_default();
-            }
-        };
-
-        let result = client.get_crate(&crate_name).await;
-
-        match result {
-            Ok(crate_data) => *crate_info.lock().unwrap() = Some(crate_data.crate_data),
-            Err(err) => {
-                let error_message = format!("Error fetching crate details: {err}");
-                tx.send(Action::ShowErrorPopup(error_message))
-                    .unwrap_or_default();
-            }
-        }
+    // Extracts the selected crate name, if possible.
+    fn selected_crate_name(&self) -> Option<String> {
+        self.search_results
+            .selected()
+            .and_then(|index| self.search_results.crates.get(index))
+            .filter(|crate_| !crate_.name.is_empty())
+            .map(|crate_| crate_.name.clone())
     }
 
     fn draw(&mut self, tui: &mut Tui) -> Result<()> {
