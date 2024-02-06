@@ -1,9 +1,9 @@
 mod action;
-mod app;
 mod cli;
 mod config;
 mod errors;
 mod logging;
+mod root;
 mod serde_helper;
 mod tui;
 mod widgets;
@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
 
     let (tx, rx) = mpsc::unbounded_channel();
     // FIXME seems odd passing the tx via new and the rx via run???
-    let mut app = app::App::new(tx);
+    let mut app = root::App::new(tx);
     app.run(&mut tui, rx).await?;
 
     Ok(())
