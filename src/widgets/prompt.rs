@@ -62,16 +62,6 @@ impl<'a> Prompt<'a> {
         );
     }
 
-    pub fn render_cursor(&self, f: &mut Frame, area: Rect) {
-        if self.mode == Mode::Search || self.mode == Mode::Filter {
-            f.set_cursor(
-                (area.x + self.horizontal_margin + self.input.cursor() as u16)
-                    .min(area.x + area.width.saturating_sub(2)),
-                area.y + self.vertical_margin,
-            );
-        }
-    }
-
     fn input_block(&self) -> impl Widget {
         let ncrates = self.total_num_crates;
         let loading_status = if self.loading {

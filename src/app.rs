@@ -124,9 +124,9 @@ impl App {
                 tx.send(Action::Render)?;
             }
             Action::Render => {
-                tui.draw(|f| {
-                    f.render_stateful_widget(Root, f.size(), &mut self.root_state);
-                    self.update_prompt(f);
+                tui.draw(|frame| {
+                    frame.render_stateful_widget(Root, frame.size(), &mut self.root_state);
+                    self.update_prompt(frame);
                 })?;
             }
             _ => {}
