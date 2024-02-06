@@ -17,7 +17,7 @@ pub struct SearchParameters {
 
 /// Performs the actual search, and sends the result back through the
 /// sender.
-pub async fn perform_search(params: &SearchParameters) -> Result<(), String> {
+pub async fn request_crates(params: &SearchParameters) -> Result<(), String> {
     // Fetch crates using the created client with the error handling in one place.
     let client = create_client()?;
     let query = create_query(&params);
@@ -85,7 +85,7 @@ fn update_state_with_fetched_crates(crates: Vec<crates_io_api::Crate>, params: &
 }
 
 // Performs the async fetch of crate details.
-pub async fn async_fetch_crate_details(
+pub async fn request_crate_details(
     crate_name: String,
     crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
 ) -> Result<(), String> {

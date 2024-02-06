@@ -380,7 +380,7 @@ impl App {
     fn toggle_show_crate_info(&mut self) {
         self.show_crate_info = !self.show_crate_info;
         if self.show_crate_info {
-            self.fetch_crate_details()
+            self.request_crate_details()
         } else {
             *self.crate_info.lock().unwrap() = None;
         }
@@ -406,7 +406,7 @@ impl App {
 
     fn update_current_selection_crate_info(&mut self) {
         if self.show_crate_info {
-            self.fetch_crate_details();
+            self.request_crate_details();
         } else {
             *self.crate_info.lock().unwrap() = None;
         }
@@ -426,7 +426,7 @@ impl App {
     fn reload_data(&mut self) {
         self.prepare_reload();
         let search_params = self.create_search_parameters();
-        self.spawn_search(search_params);
+        self.request_crates(search_params);
     }
 
     /// Clears current search results and resets the UI to prepare for new data.
@@ -448,10 +448,10 @@ impl App {
     }
 
     /// Spawns an asynchronous task to fetch crate data from crates.io.
-    fn spawn_search(&self, params: crates_io_api_helper::SearchParameters) {
+    fn request_crates(&self, params: crates_io_api_helper::SearchParameters) {
         tokio::spawn(async move {
             params.loading_status.store(true, Ordering::SeqCst);
-            if let Err(error_message) = crates_io_api_helper::perform_search(&params).await {
+            if let Err(error_message) = crates_io_api_helper::request_crates(&params).await {
                 let _ = params.tx.send(Action::ShowErrorPopup(error_message));
             }
             params.loading_status.store(false, Ordering::SeqCst);
@@ -460,7 +460,7 @@ impl App {
 
     /// Spawns an asynchronous task to fetch crate details from crates.io based
     /// on currently selected crate
-    fn fetch_crate_details(&mut self) {
+    fn request_crate_details(&mut self) {
         if self.search_results.crates.is_empty() {
             return;
         }
@@ -473,7 +473,7 @@ impl App {
             tokio::spawn(async move {
                 loading_status.store(true, Ordering::SeqCst);
                 if let Err(error_message) =
-                    crates_io_api_helper::async_fetch_crate_details(crate_name, crate_info).await
+                    crates_io_api_helper::request_crate_details(crate_name, crate_info).await
                 {
                     let _ = tx.send(Action::ShowErrorPopup(error_message));
                 };
