@@ -1,8 +1,9 @@
 use color_eyre::eyre::Result;
 use tracing::error;
 
-// FIXME: simplify this similar to the template add a comment about what each piece actually does (I
-// think there are 4 types of error hooks here and its not clear why)
+// FIXME: simplify this similar to the template add a comment about what each
+// piece actually does (I think there are 4 types of error hooks here and its
+// not clear why)
 pub fn install_hooks() -> Result<()> {
     let (panic_hook, eyre_hook) = color_eyre::config::HookBuilder::default()
         .panic_section(format!(

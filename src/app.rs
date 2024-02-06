@@ -19,9 +19,9 @@ use crate::{
     tui::{self, Tui},
     widgets::{
         crate_info::CrateInfoWidget,
-        crates_table::{CratesTable, CratesTableWidget},
-        popup::PopupWidget,
+        popup_message::PopupMessageWidget,
         prompt::{Prompt, PromptWidget},
+        search_results::{SearchResults, SearchResultsWidget},
     },
 };
 
@@ -41,24 +41,79 @@ struct AppWidget;
 // FIXME comments on the fields
 #[derive(Debug)]
 pub struct App {
+    /// Receiver end of an asynchronous channel for actions that the app needs
+    /// to process.
     rx: UnboundedReceiver<Action>,
+
+    /// Sender end of an asynchronous channel for dispatching actions from
+    /// various parts of the app to be handled by the event loop.
     tx: UnboundedSender<Action>,
+
+    /// The current page number being displayed or interacted with in the UI.
     page: u64,
+
+    /// The number of crates displayed per page in the UI.
     page_size: u64,
+
+    /// A thread-safe indicator of whether data is currently being loaded,
+    /// allowing different parts of the app to know if it's in a loading state.
     loading_status: Arc<AtomicBool>,
-    search: String,
-    filter: String,
+
+    /// A thread-safe, shared vector holding the list of crates fetched from
+    /// crates.io, wrapped in a mutex to control concurrent access.
     crates: Arc<Mutex<Vec<crates_io_api::Crate>>>,
+
+    /// A thread-safe shared container holding the detailed information about
+    /// the currently selected crate; this can be `None` if no crate is
+    /// selected.
     crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
+
+    /// The total number of crates fetchable from crates.io, which may not be
+    /// known initially and can be used for UI elements like pagination.
     total_num_crates: Option<u64>,
+
+    /// A string for the current search input by the user, submitted to
+    /// crates.io as a query
+    search: String,
+
+    /// A string for the current filter input by the user, used only locally
+    /// for filtering for the list of crates in the current view.
+    filter: String,
+
+    /// An input handler component for managing raw user input into textual
+    /// form.
     input: tui_input::Input,
-    crate_table: CratesTable,
+
+    /// A table component designed to handle the listing and selection of crates
+    /// within the terminal UI.
+    search_results: SearchResults,
+
+    /// A boolean flag that determines whether detailed crate information should
+    /// be displayed within the UI.
     show_crate_info: bool,
-    error: Option<String>,
-    info: Option<String>,
-    popup_scroll: usize,
+
+    /// An optional error message that, when set, should be shown to the user,
+    /// in the form of a popup.
+    error_message: Option<String>,
+
+    /// An optional info message that, when set, should be shown to the user, in
+    /// the form of a popup.
+    info_message: Option<String>,
+
+    /// Current scroll index used for navigating through scrollable content in a
+    /// popup.
+    popup_scroll_index: usize,
+
+    /// The active mode of the application, which could change how user inputs
+    /// and commands are interpreted.
     mode: Mode,
+
+    /// A prompt displaying the current search or filter query, if any, that the
+    /// user can interact with.
     prompt: Prompt,
+
+    /// A list of key events that have been held since the last tick, useful for
+    /// interpreting sequences of key presses.
     last_tick_key_events: Vec<KeyEvent>,
 }
 
@@ -78,30 +133,27 @@ impl App {
             crate_info: Default::default(),
             total_num_crates: Default::default(),
             input: Default::default(),
-            crate_table: Default::default(),
+            search_results: Default::default(),
             show_crate_info: Default::default(),
-            error: Default::default(),
-            info: Default::default(),
-            popup_scroll: Default::default(),
+            error_message: Default::default(),
+            info_message: Default::default(),
+            popup_scroll_index: Default::default(),
             prompt: Default::default(),
             last_tick_key_events: Default::default(),
         }
     }
 
-    // The main 'run' function now delegates to the two functions below,
-    // to handle TUI events and App actions respectively.
+    /// The main 'run' function delegates to the two functions below,
+    /// to handle TUI events and App actions respectively.
     pub async fn run(&mut self, mut tui: Tui) -> Result<()> {
         tui.enter()?;
         loop {
             if let Some(e) = tui.next().await {
-                if let Some(action) = self.handle_tui_event(e)? {
-                    self.tx.send(action)?
-                };
+                self.handle_tui_event(e)?.map(|action| self.tx.send(action));
             }
             while let Ok(action) = self.rx.try_recv() {
-                if let Some(inner_action) = self.handle_action(action.clone(), &mut tui)? {
-                    self.tx.send(inner_action)?
-                };
+                self.handle_action(action.clone(), &mut tui)?
+                    .map(|action| self.tx.send(action));
             }
             if self.should_quit() {
                 break;
@@ -111,6 +163,12 @@ impl App {
         Ok(())
     }
 
+    /// Handles an event by producing an optional `Action` that the application
+    /// should perform in response.
+    ///
+    /// This method maps incoming events from the terminal user interface to
+    /// specific `Action` that represents tasks or operations the
+    /// application needs to carry out.
     fn handle_tui_event(&mut self, e: tui::Event) -> Result<Option<Action>> {
         let maybe_action = match e {
             tui::Event::Quit => Some(Action::Quit),
@@ -120,15 +178,18 @@ impl App {
             tui::Event::Resize(x, y) => Some(Action::Resize(x, y)),
             tui::Event::Key(key) => {
                 debug!("Received key {:?}", key);
-                self.handle_key_events(key);
+                self.forward_key_events(key)?;
                 self.handle_key_events_from_config(key)
             }
-            _ => return Ok(None),
+            _ => None,
         };
         Ok(maybe_action)
     }
 
-    fn handle_key_events(&mut self, key: KeyEvent) {
+    /// Processes key events depending on the current mode
+    ///
+    /// This function forwards events to input prompt handler
+    fn forward_key_events(&mut self, key: KeyEvent) -> Result<()> {
         match self.mode {
             Mode::Search => match key.code {
                 _ => {
@@ -138,14 +199,20 @@ impl App {
             Mode::Filter => match key.code {
                 _ => {
                     self.input.handle_event(&crossterm::event::Event::Key(key));
-                    self.filter = self.input.value().into();
-                    self.crate_table.select(None);
+                    self.tx.send(Action::HandleFilterPromptChange)?
                 }
             },
             _ => (),
         };
+        Ok(())
     }
 
+    /// Evaluates a sequence of key events against user-configured key bindings
+    /// to determine if an `Action` should be triggered.
+    ///
+    /// This method supports user-configurable key sequences by collecting key
+    /// events over time and then translating them into actions according to the
+    /// current mode.
     fn handle_key_events_from_config(&mut self, key: KeyEvent) -> Option<Action> {
         self.last_tick_key_events.push(key);
         let config = config::get();
@@ -158,6 +225,16 @@ impl App {
         action
     }
 
+    /// Performs the `Action` by calling on a respective app method.
+    ///
+    /// `Action`'s represent a reified method call on the `App` instance.
+    ///
+    /// Upon receiving an action, this function updates the application state,
+    /// performs necessary operations like drawing or resizing the view, or
+    /// changing the mode. Actions that affect the navigation within the
+    /// application, are also handled. Certain actions generate a follow-up
+    /// action which will be to be processed in the next iteration of the main
+    /// event loop.
     fn handle_action(&mut self, action: Action, tui: &mut Tui) -> Result<Option<Action>> {
         if action != Action::Tick && action != Action::Render {
             info!("{action:?}");
@@ -171,31 +248,33 @@ impl App {
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
             Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll_previous(),
             Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll_next(),
-            Action::ScrollUp => self.crate_table.previous_crate(),
-            Action::ScrollDown => self.crate_table.next_crate(),
-            Action::ScrollTop => self.crate_table.top(),
-            Action::ScrollBottom => self.crate_table.bottom(),
+            Action::ScrollUp => self.search_results.scroll_previous(1),
+            Action::ScrollDown => self.search_results.scroll_next(1),
+            Action::ScrollTop => self.search_results.scroll_to_top(),
+            Action::ScrollBottom => self.search_results.scroll_to_bottom(),
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
             Action::EnterSearchInsertMode => self.enter_search_insert_mode(),
             Action::EnterFilterInsertMode => self.enter_filter_insert_mode(),
+            Action::HandleFilterPromptChange => self.handle_filter_prompt_change(),
             Action::EnterNormal => self.enter_normal_mode(),
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
-            Action::Error(ref err) => self.set_error_flag(err.clone()),
-            Action::Info(ref info) => self.set_info_flag(info.clone()),
+            Action::ShowErrorPopup(ref err) => self.set_error_flag(err.clone()),
+            Action::ShowInfoPopup(ref info) => self.set_info_flag(info.clone()),
             Action::ClosePopup => self.clear_error_and_info_flags(),
             _ => {}
         }
-        match action {
+        let maybe_action = match action {
             Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom => {
-                Ok(Some(Action::UpdateCurrentSelectionCrateInfo))
+                Some(Action::UpdateCurrentSelectionCrateInfo)
             }
-            Action::SubmitSearch => Ok(Some(Action::ReloadData)),
-            _ => Ok(None),
-        }
+            Action::SubmitSearch => Some(Action::ReloadData),
+            _ => None,
+        };
+        Ok(maybe_action)
     }
 }
 
@@ -205,13 +284,13 @@ impl App {
     }
 
     fn update_crate_table(&mut self) {
-        self.crate_table
-            .content_length(self.crate_table.crates.len());
+        self.search_results
+            .content_length(self.search_results.crates.len());
 
         let filter = self.filter.clone();
         let filter_words = filter.split_whitespace().collect::<Vec<_>>();
 
-        self.crate_table.crates = self
+        self.search_results.crates = self
             .crates
             .lock()
             .unwrap()
@@ -248,7 +327,8 @@ impl App {
         self.mode = Mode::Quit
     }
 
-    // FIXME: can we make this infinitely scrollable instead of manually handling the page size?
+    // FIXME: can we make this infinitely scrollable instead of manually handling
+    // the page size?
     fn increment_page(&mut self) {
         if let Some(n) = self.total_num_crates {
             let max_page_size = (n / self.page_size) + 1;
@@ -268,11 +348,11 @@ impl App {
     }
 
     fn popup_scroll_previous(&mut self) {
-        self.popup_scroll = self.popup_scroll.saturating_sub(1)
+        self.popup_scroll_index = self.popup_scroll_index.saturating_sub(1)
     }
 
     fn popup_scroll_next(&mut self) {
-        self.popup_scroll = self.popup_scroll.saturating_add(1)
+        self.popup_scroll_index = self.popup_scroll_index.saturating_add(1)
     }
 
     fn enter_search_insert_mode(&mut self) {
@@ -288,9 +368,14 @@ impl App {
 
     fn enter_normal_mode(&mut self) {
         self.mode = Mode::Picker;
-        if !self.crate_table.crates.is_empty() && self.crate_table.selected().is_none() {
-            self.crate_table.select(Some(0))
+        if !self.search_results.crates.is_empty() && self.search_results.selected().is_none() {
+            self.search_results.select(Some(0))
         }
+    }
+
+    fn handle_filter_prompt_change(&mut self) {
+        self.filter = self.input.value().into();
+        self.search_results.select(None);
     }
 
     fn submit_search(&mut self) {
@@ -310,19 +395,19 @@ impl App {
 
     fn set_error_flag(&mut self, err: String) {
         error!("Error: {err}");
-        self.error = Some(err);
+        self.error_message = Some(err);
         self.mode = Mode::Popup;
     }
 
     fn set_info_flag(&mut self, info: String) {
         info!("Info: {info}");
-        self.info = Some(info);
+        self.info_message = Some(info);
         self.mode = Mode::Popup;
     }
 
     fn clear_error_and_info_flags(&mut self) {
-        self.error = None;
-        self.info = None;
+        self.error_message = None;
+        self.info_message = None;
         self.mode = Mode::Search;
     }
 
@@ -340,7 +425,7 @@ impl App {
 
     // FIXME overly long and complex method
     fn reload_data(&mut self) {
-        self.crate_table.select(None);
+        self.search_results.select(None);
         *self.crate_info.lock().unwrap() = None;
         let crates = self.crates.clone();
         let search = self.search.clone();
@@ -376,7 +461,7 @@ impl App {
                                 tx.send(Action::Tick).unwrap_or_default();
                                 tx.send(Action::ScrollDown).unwrap_or_default();
                             } else {
-                                tx.send(Action::Error(format!(
+                                tx.send(Action::ShowErrorPopup(format!(
                                     "Could not find any crates with query `{search}`.",
                                 )))
                                 .unwrap_or_default();
@@ -384,14 +469,18 @@ impl App {
                             loading_status.store(false, Ordering::SeqCst);
                         }
                         Err(err) => {
-                            tx.send(Action::Error(format!("API Client Error: {err:#?}")))
-                                .unwrap_or_default();
+                            tx.send(Action::ShowErrorPopup(format!(
+                                "API Client Error: {err:#?}"
+                            )))
+                            .unwrap_or_default();
                             loading_status.store(false, Ordering::SeqCst);
                         }
                     }
                 }
                 Err(err) => tx
-                    .send(Action::Error(format!("Error creating client: {err:#?}")))
+                    .send(Action::ShowErrorPopup(format!(
+                        "Error creating client: {err:#?}"
+                    )))
                     .unwrap_or_default(),
             }
         });
@@ -399,15 +488,15 @@ impl App {
 
     // Extracts the selected crate name, if possible.
     fn selected_crate_name(&self) -> Option<String> {
-        self.crate_table
+        self.search_results
             .selected()
-            .and_then(|index| self.crate_table.crates.get(index))
+            .and_then(|index| self.search_results.crates.get(index))
             .filter(|crate_| !crate_.name.is_empty())
             .map(|crate_| crate_.name.clone())
     }
 
     fn fetch_crate_details(&mut self) {
-        if self.crate_table.crates.is_empty() {
+        if self.search_results.crates.is_empty() {
             return;
         }
         if let Some(crate_name) = self.selected_crate_name() {
@@ -437,7 +526,7 @@ impl App {
             Ok(client) => client,
             Err(error_message) => {
                 return tx
-                    .send(Action::Error(format!("{}", error_message)))
+                    .send(Action::ShowErrorPopup(format!("{}", error_message)))
                     .unwrap_or_default();
             }
         };
@@ -448,7 +537,8 @@ impl App {
             Ok(crate_data) => *crate_info.lock().unwrap() = Some(crate_data.crate_data),
             Err(err) => {
                 let error_message = format!("Error fetching crate details: {err}");
-                tx.send(Action::Error(error_message)).unwrap_or_default();
+                tx.send(Action::ShowErrorPopup(error_message))
+                    .unwrap_or_default();
             }
         }
     }
@@ -483,8 +573,9 @@ impl StatefulWidget for AppWidget {
         ])
         .areas(area);
 
-        // FIXME every part of this method has complex logic that calls or creats other methods
-        // That makes it hard to understand the whole method. Split it into smaller methods
+        // FIXME every part of this method has complex logic that calls or creats other
+        // methods That makes it hard to understand the whole method. Split it
+        // into smaller methods
         let table = match state.crate_info.lock().unwrap().clone() {
             Some(ci) if state.show_crate_info => {
                 let [table, info] =
@@ -496,14 +587,14 @@ impl StatefulWidget for AppWidget {
             _ => table,
         };
 
-        CratesTableWidget::new(state.mode == Mode::Picker).render(
+        SearchResultsWidget::new(state.mode == Mode::Picker).render(
             table,
             buf,
-            &mut state.crate_table,
+            &mut state.search_results,
         );
 
         let loading_status = state.loading_status.load(Ordering::SeqCst);
-        let selected = state.crate_table.selected().map_or(0, |n| {
+        let selected = state.search_results.selected().map_or(0, |n| {
             (state.page.saturating_sub(1) * state.page_size) + n as u64 + 1
         });
         let total_num_crates = state.total_num_crates.unwrap_or_default();
@@ -518,11 +609,11 @@ impl StatefulWidget for AppWidget {
 
         StatefulWidget::render(&p, prompt, buf, &mut state.prompt);
 
-        if let Some(err) = &state.error {
-            PopupWidget::new("Error", err, state.popup_scroll).render(area, buf);
+        if let Some(err) = &state.error_message {
+            PopupMessageWidget::new("Error", err, state.popup_scroll_index).render(area, buf);
         }
-        if let Some(info) = &state.info {
-            PopupWidget::new("Info", info, state.popup_scroll).render(area, buf);
+        if let Some(info) = &state.info_message {
+            PopupMessageWidget::new("Info", info, state.popup_scroll_index).render(area, buf);
         }
 
         let events = Block::default()

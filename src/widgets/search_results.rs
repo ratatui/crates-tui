@@ -5,13 +5,13 @@ use ratatui::{prelude::*, widgets::*};
 use crate::config;
 
 #[derive(Debug, Default)]
-pub struct CratesTable {
+pub struct SearchResults {
     pub crates: Vec<crates_io_api::Crate>,
     pub table_state: TableState,
     pub scrollbar_state: ScrollbarState,
 }
 
-impl CratesTable {
+impl SearchResults {
     pub fn content_length(&mut self, content_length: usize) {
         self.scrollbar_state = self.scrollbar_state.content_length(content_length)
     }
@@ -24,7 +24,7 @@ impl CratesTable {
         self.table_state.selected()
     }
 
-    pub fn next_crate(&mut self) {
+    pub fn scroll_next(&mut self, count: usize) {
         if self.crates.is_empty() {
             self.table_state.select(None)
         } else {
@@ -32,13 +32,13 @@ impl CratesTable {
             let i = self
                 .table_state
                 .selected()
-                .map_or(0, |i| (i + 1) % self.crates.len());
+                .map_or(0, |i| (i + count) % self.crates.len());
             self.table_state.select(Some(i));
             self.scrollbar_state = self.scrollbar_state.position(i);
         }
     }
 
-    pub fn previous_crate(&mut self) {
+    pub fn scroll_previous(&mut self, count: usize) {
         if self.crates.is_empty() {
             self.table_state.select(None)
         } else {
@@ -50,7 +50,7 @@ impl CratesTable {
                     if i == 0 {
                         self.crates.len().saturating_sub(1)
                     } else {
-                        i.saturating_sub(1)
+                        i.saturating_sub(count)
                     }
                 });
             self.table_state.select(Some(i));
@@ -58,7 +58,7 @@ impl CratesTable {
         }
     }
 
-    pub fn top(&mut self) {
+    pub fn scroll_to_top(&mut self) {
         if self.crates.is_empty() {
             self.table_state.select(None)
         } else {
@@ -67,7 +67,7 @@ impl CratesTable {
         }
     }
 
-    pub fn bottom(&mut self) {
+    pub fn scroll_to_bottom(&mut self) {
         if self.crates.is_empty() {
             self.table_state.select(None)
         } else {
@@ -77,18 +77,18 @@ impl CratesTable {
     }
 }
 
-pub struct CratesTableWidget {
+pub struct SearchResultsWidget {
     highlight: bool,
 }
 
-impl CratesTableWidget {
+impl SearchResultsWidget {
     pub fn new(highlight: bool) -> Self {
         Self { highlight }
     }
 }
 
-impl StatefulWidget for CratesTableWidget {
-    type State = CratesTable;
+impl StatefulWidget for SearchResultsWidget {
+    type State = SearchResults;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         Scrollbar::default()

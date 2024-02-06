@@ -41,9 +41,10 @@ pub enum Event {
     Resize(u16, u16),
 }
 
-// FIXME: this struct seems like it's doing a lot of different things. It's a terminal, a task, a
-// cancellation token, and a channel all in one. It's also a bit of a kitchen sink in terms of
-// configuration options. (CoPilot completed that, but it's a good point.)
+// FIXME: this struct seems like it's doing a lot of different things. It's a
+// terminal, a task, a cancellation token, and a channel all in one. It's also a
+// bit of a kitchen sink in terms of configuration options. (CoPilot completed
+// that, but it's a good point.)
 pub struct Tui {
     pub terminal: ratatui::Terminal<Backend<std::io::Stdout>>,
     pub task: JoinHandle<()>,
@@ -82,8 +83,8 @@ impl Tui {
         })
     }
 
-    // FIXME: a lot of unused methods here. I think we should remove them and then add them back as
-    // we need them.
+    // FIXME: a lot of unused methods here. I think we should remove them and then
+    // add them back as we need them.
     #[allow(unused)]
     pub fn tick_rate(mut self, tick_rate: f64) -> Self {
         self.tick_rate = tick_rate;
@@ -108,8 +109,9 @@ impl Tui {
         self
     }
 
-    // FIXME: the nesting in this method is a bit hard to follow. It's also doing a lot of different
-    // things. Looking at this you have to understand the whole thing to understand any part of it.
+    // FIXME: the nesting in this method is a bit hard to follow. It's also doing a
+    // lot of different things. Looking at this you have to understand the whole
+    // thing to understand any part of it.
     pub fn start(&mut self) {
         let tick_delay = std::time::Duration::from_secs_f64(1.0 / self.tick_rate);
         let key_refresh_delay = std::time::Duration::from_secs_f64(1.0 / self.key_refresh_rate);
@@ -129,7 +131,8 @@ impl Tui {
                 let key_refresh_delay = key_refresh_interval.tick();
                 let render_delay = render_interval.tick();
                 let crossterm_event = reader.next().fuse();
-                // FIXME: use small composable tasks rather than large select blocks like this to make this easier to read
+                // FIXME: use small composable tasks rather than large select blocks like this
+                // to make this easier to read
                 tokio::select! {
                   _ = _cancellation_token.cancelled() => {
                     break;

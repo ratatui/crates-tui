@@ -34,8 +34,8 @@ pub fn init() -> Result<()> {
     Ok(())
 }
 
-// FIXME: can you explain the benefit of this macro? Why do we need it? Why is it better than just
-// using `tracing::debug!` directly?
+// FIXME: can you explain the benefit of this macro? Why do we need it? Why is
+// it better than just using `tracing::debug!` directly?
 /// Similar to the `std::dbg!` macro, but generates `tracing` events rather
 /// than printing to stdout.
 ///

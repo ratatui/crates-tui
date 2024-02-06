@@ -25,14 +25,16 @@ pub struct Config {
     /// The directory to use for storing application data (logs etc.).
     pub data_home: PathBuf,
 
-    /// The directory to use for storing application configuration (colors etc.).
+    /// The directory to use for storing application configuration (colors
+    /// etc.).
     pub config_home: PathBuf,
 
-    /// The directory to use for storing application configuration (colors etc.).
+    /// The directory to use for storing application configuration (colors
+    /// etc.).
     pub config_file: PathBuf,
 
-    /// The log level to use. Valid values are: error, warn, info, debug, trace, off. The default is
-    /// info.
+    /// The log level to use. Valid values are: error, warn, info, debug, trace,
+    /// off. The default is info.
     #[serde_as(as = "NoneAsEmptyString")]
     pub log_level: Option<LevelFilter>,
 
