@@ -296,46 +296,24 @@ impl App {
         let filter = self.filter.clone();
         let filter_words = filter.split_whitespace().collect::<Vec<_>>();
 
-        let versions = self.versions.lock().unwrap().iter().cloned().collect_vec();
-        let crates = self.crates.lock().unwrap().iter().cloned().collect_vec();
-
-        if crates.len() == versions.len() {
-            let (crates, versions): (Vec<_>, Vec<_>) = crates
-                .iter()
-                .zip(versions)
-                .filter(|(c, _)| {
-                    filter_words.iter().all(|word| {
-                        c.name.to_lowercase().contains(word)
-                            || c.description
-                                .clone()
-                                .unwrap_or_default()
-                                .to_lowercase()
-                                .contains(word)
-                    })
+        let crates: Vec<_> = self
+            .crates
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|c| {
+                filter_words.iter().all(|word| {
+                    c.name.to_lowercase().contains(word)
+                        || c.description
+                            .clone()
+                            .unwrap_or_default()
+                            .to_lowercase()
+                            .contains(word)
                 })
-                .map(|(c, v)| (c.clone(), v))
-                .unzip();
-
-            self.search_results.crates = crates;
-            self.search_results.versions = versions;
-        } else {
-            let crates: Vec<_> = crates
-                .iter()
-                .filter(|c| {
-                    filter_words.iter().all(|word| {
-                        c.name.to_lowercase().contains(word)
-                            || c.description
-                                .clone()
-                                .unwrap_or_default()
-                                .to_lowercase()
-                                .contains(word)
-                    })
-                })
-                .cloned()
-                .collect_vec();
-            self.search_results.crates = crates;
-            self.search_results.versions.drain(..);
-        }
+            })
+            .cloned()
+            .collect_vec();
+        self.search_results.crates = crates;
     }
 
     fn key_refresh_tick(&mut self) {
