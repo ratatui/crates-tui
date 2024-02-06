@@ -662,7 +662,6 @@ impl StatefulWidget for AppWidget {
     type State = App;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        use Constraint::*;
         Block::default()
             .bg(config::get().style.background_color)
             .render(area, buf);
@@ -673,23 +672,13 @@ impl StatefulWidget for AppWidget {
             Layout::vertical([Constraint::Fill(0), Constraint::Length(1)]).areas(area)
         };
 
-        let p = SearchFilterPromptWidget::new(state.focused(), state.mode, &state.input);
-        p.render(prompt, buf, &mut state.prompt);
-
-        let [_, meta] = Layout::horizontal([Constraint::Percentage(75), Fill(0)]).areas(prompt);
-
-        Paragraph::new(Line::from(vec![
-            "Sort By: ".into(),
-            format!("{:?}", state.sort.clone()).red(),
-        ]))
-        .centered()
-        .render(
-            meta.inner(&Margin {
-                horizontal: 0,
-                vertical: 2,
-            }),
-            buf,
+        let p = SearchFilterPromptWidget::new(
+            state.focused(),
+            state.mode,
+            state.sort.clone(),
+            &state.input,
         );
+        p.render(prompt, buf, &mut state.prompt);
 
         let remaining_table = if state.show_crate_info {
             state.render_crate_info(table, buf)

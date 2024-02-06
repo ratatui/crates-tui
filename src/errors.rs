@@ -30,6 +30,7 @@ pub fn install_hooks() -> Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 fn install_better_panic() {
     better_panic::Settings::auto()
         .most_recent_first(false)
@@ -37,6 +38,7 @@ fn install_better_panic() {
         .install()
 }
 
+#[allow(dead_code)]
 fn install_human_panic() {
     human_panic::setup_panic!(Metadata {
         name: env!("CARGO_PKG_NAME").into(),
@@ -47,7 +49,8 @@ fn install_human_panic() {
 }
 
 fn install_color_eyre_panic_hook(panic_hook: PanicHook) {
-    // convert from a `color_eyre::config::PanicHook`` to a `Box<dyn Fn(&PanicInfo<'_>`
+    // convert from a `color_eyre::config::PanicHook`` to a `Box<dyn
+    // Fn(&PanicInfo<'_>`
     let panic_hook = panic_hook.into_panic_hook();
     panic::set_hook(Box::new(move |panic_info| {
         if let Err(err) = tui::restore_backend() {

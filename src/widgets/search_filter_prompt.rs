@@ -16,16 +16,23 @@ impl SearchFilterPrompt {
 pub struct SearchFilterPromptWidget<'a> {
     focused: bool,
     mode: Mode,
+    sort: crates_io_api::Sort,
     input: &'a tui_input::Input,
     vertical_margin: u16,
     horizontal_margin: u16,
 }
 
 impl<'a> SearchFilterPromptWidget<'a> {
-    pub fn new(focused: bool, mode: Mode, input: &'a tui_input::Input) -> Self {
+    pub fn new(
+        focused: bool,
+        mode: Mode,
+        sort: crates_io_api::Sort,
+        input: &'a tui_input::Input,
+    ) -> Self {
         Self {
             focused,
             mode,
+            sort,
             input,
             vertical_margin: 2,
             horizontal_margin: 2,
@@ -78,9 +85,27 @@ impl<'a> SearchFilterPromptWidget<'a> {
             })
     }
 
+    fn sort_by_info(&self) -> impl Widget {
+        Paragraph::new(Line::from(vec![
+            "Sort By: ".into(),
+            format!("{:?}", self.sort.clone()).red(),
+        ]))
+        .right_aligned()
+    }
+
     fn input_text(&self, width: usize) -> impl Widget + '_ {
         let scroll = self.input.cursor().saturating_sub(width.saturating_sub(4));
-        Paragraph::new(self.input.value()).scroll((0, scroll as u16))
+        let text = if self.focused() {
+            Line::from(vec![self.input.value().into()])
+        } else {
+            Line::from(vec![
+                self.input.value().into(),
+                " (".into(),
+                format!("{:?}", self.sort.clone()).red(),
+                ")".into(),
+            ])
+        };
+        Paragraph::new(text).scroll((0, scroll as u16))
     }
 
     fn update_cursor_state(&self, area: Rect, state: &mut SearchFilterPrompt) {
@@ -100,13 +125,26 @@ impl StatefulWidget for SearchFilterPromptWidget<'_> {
     type State = SearchFilterPrompt;
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         self.input_block().render(area, buf);
-        self.input_text((area.width as f64 * 0.75) as usize).render(
-            area.inner(&Margin {
+        let [input, meta] =
+            Layout::horizontal([Constraint::Percentage(75), Constraint::Fill(0)]).areas(area);
+
+        if self.focused() {
+            self.sort_by_info().render(
+                meta.inner(&Margin {
+                    horizontal: self.horizontal_margin(),
+                    vertical: self.vertical_margin(),
+                }),
+                buf,
+            );
+        }
+        self.input_text(input.width as usize).render(
+            input.inner(&Margin {
                 horizontal: self.horizontal_margin(),
                 vertical: self.vertical_margin(),
             }),
             buf,
         );
+
         self.update_cursor_state(area, state);
     }
 }
