@@ -22,8 +22,9 @@ use tui_input::backend::crossterm::EventHandler;
 use crate::{
     action::Action,
     config, crates_io_api_helper,
+    events::{Event, Events},
     serde_helper::keybindings::key_event_to_string,
-    tui::{self, Tui},
+    tui::Tui,
     widgets::{
         crate_info_table::CrateInfoTableWidget,
         popup_message::PopupMessageWidget,
@@ -166,14 +167,14 @@ impl App {
     }
 
     /// Runs the main loop of the application, handling events and actions
-    pub async fn run(&mut self, mut tui: Tui) -> Result<()> {
+    pub async fn run(&mut self, mut tui: Tui, mut events: Events) -> Result<()> {
         // uncomment to test error handling
         // panic!("test panic");
         // Err(color_eyre::eyre::eyre!("Error"))?;
 
         loop {
-            if let Some(e) = tui.next().await {
-                self.handle_tui_event(e)?.map(|action| self.tx.send(action));
+            if let Some(e) = events.next().await {
+                self.handle_event(e)?.map(|action| self.tx.send(action));
             }
             while let Ok(action) = self.rx.try_recv() {
                 self.handle_action(action.clone(), &mut tui)?
@@ -192,14 +193,14 @@ impl App {
     /// This method maps incoming events from the terminal user interface to
     /// specific `Action` that represents tasks or operations the
     /// application needs to carry out.
-    fn handle_tui_event(&mut self, e: tui::Event) -> Result<Option<Action>> {
+    fn handle_event(&mut self, e: Event) -> Result<Option<Action>> {
         let maybe_action = match e {
-            tui::Event::Quit => Some(Action::Quit),
-            tui::Event::Tick => Some(Action::Tick),
-            tui::Event::KeyRefresh => Some(Action::KeyRefresh),
-            tui::Event::Render => Some(Action::Render),
-            tui::Event::Resize(x, y) => Some(Action::Resize(x, y)),
-            tui::Event::Key(key) => {
+            Event::Quit => Some(Action::Quit),
+            Event::Tick => Some(Action::Tick),
+            Event::KeyRefresh => Some(Action::KeyRefresh),
+            Event::Render => Some(Action::Render),
+            Event::Resize(x, y) => Some(Action::Resize(x, y)),
+            Event::Key(key) => {
                 debug!("Received key {:?}", key);
                 self.forward_key_events(key)?;
                 self.handle_key_events_from_config(key)
