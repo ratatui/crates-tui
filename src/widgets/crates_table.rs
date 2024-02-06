@@ -5,13 +5,13 @@ use ratatui::{prelude::*, widgets::*};
 use crate::config;
 
 #[derive(Debug, Default)]
-pub struct CratesTableState {
+pub struct CratesTable {
     pub crates: Vec<crates_io_api::Crate>,
     pub table_state: TableState,
     pub scrollbar_state: ScrollbarState,
 }
 
-impl CratesTableState {
+impl CratesTable {
     pub fn content_length(&mut self, content_length: usize) {
         self.scrollbar_state = self.scrollbar_state.content_length(content_length)
     }
@@ -77,18 +77,18 @@ impl CratesTableState {
     }
 }
 
-pub struct CratesTable {
+pub struct CratesTableWidget {
     highlight: bool,
 }
 
-impl CratesTable {
+impl CratesTableWidget {
     pub fn new(highlight: bool) -> Self {
         Self { highlight }
     }
 }
 
-impl StatefulWidget for CratesTable {
-    type State = CratesTableState;
+impl StatefulWidget for CratesTableWidget {
+    type State = CratesTable;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         Scrollbar::default()

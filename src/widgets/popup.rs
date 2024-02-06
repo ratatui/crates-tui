@@ -1,11 +1,11 @@
 use ratatui::{layout::Flex, prelude::*, widgets::*};
-pub struct Popup<'a> {
+pub struct PopupWidget<'a> {
     title: &'a str,
     message: &'a str,
     scroll: usize,
 }
 
-impl<'a> Popup<'a> {
+impl<'a> PopupWidget<'a> {
     pub fn new(title: &'a str, message: &'a str, scroll: usize) -> Self {
         Self {
             title,
@@ -15,7 +15,7 @@ impl<'a> Popup<'a> {
     }
 }
 
-impl Widget for Popup<'_> {
+impl Widget for PopupWidget<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let [center] = Layout::vertical([Constraint::Percentage(50)])
             .flex(Flex::Center)

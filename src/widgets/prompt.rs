@@ -3,12 +3,12 @@ use ratatui::{layout::Position, prelude::*, widgets::*};
 use crate::{app::Mode, config};
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct PromptState {
+pub struct Prompt {
     cursor_position: Option<Position>,
     frame_count: usize,
 }
 
-impl PromptState {
+impl Prompt {
     pub fn frame_count(&mut self, frame_count: usize) {
         self.frame_count = frame_count
     }
@@ -18,7 +18,7 @@ impl PromptState {
     }
 }
 
-pub struct Prompt<'a> {
+pub struct PromptWidget<'a> {
     total_num_crates: u64,
     loading: bool,
     selected: u64,
@@ -28,7 +28,7 @@ pub struct Prompt<'a> {
     horizontal_margin: u16,
 }
 
-impl<'a> Prompt<'a> {
+impl<'a> PromptWidget<'a> {
     pub fn new(
         total_num_crates: u64,
         selected: u64,
@@ -98,7 +98,7 @@ impl<'a> Prompt<'a> {
         Paragraph::new(self.input.value()).scroll((0, scroll as u16))
     }
 
-    fn update_cursor_state(&self, area: Rect, state: &mut PromptState) {
+    fn update_cursor_state(&self, area: Rect, state: &mut Prompt) {
         if self.mode == Mode::Search || self.mode == Mode::Filter {
             state.cursor_position = Some(Position::new(
                 (area.x + self.horizontal_margin + self.input.cursor() as u16)
@@ -111,7 +111,7 @@ impl<'a> Prompt<'a> {
     }
 }
 
-impl Widget for &Prompt<'_> {
+impl Widget for &PromptWidget<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         self.input_block().render(area, buf);
         self.input_text(area.width as usize).render(
@@ -124,8 +124,8 @@ impl Widget for &Prompt<'_> {
     }
 }
 
-impl StatefulWidget for &Prompt<'_> {
-    type State = PromptState;
+impl StatefulWidget for &PromptWidget<'_> {
+    type State = Prompt;
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         self.input_block().render(area, buf);
         self.input_text(area.width as usize).render(

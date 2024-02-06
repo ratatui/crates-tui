@@ -1,18 +1,18 @@
 use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
 
-pub struct CrateInfo {
+pub struct CrateInfoWidget {
     // FIXME don't abbreviate this
     crate_info: crates_io_api::Crate,
 }
 
-impl CrateInfo {
+impl CrateInfoWidget {
     pub fn new(crate_info: crates_io_api::Crate) -> Self {
         Self { crate_info }
     }
 }
 
-impl Widget for CrateInfo {
+impl Widget for CrateInfoWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let ci = self.crate_info.clone();
 

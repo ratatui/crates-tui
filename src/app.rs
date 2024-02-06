@@ -18,10 +18,10 @@ use crate::{
     serde_helper::keybindings::key_event_to_string,
     tui::{self, Tui},
     widgets::{
-        crate_info::CrateInfo,
-        crates_table::{CratesTable, CratesTableState},
-        popup::Popup,
-        prompt::{Prompt, PromptState},
+        crate_info::CrateInfoWidget,
+        crates_table::{CratesTable, CratesTableWidget},
+        popup::PopupWidget,
+        prompt::{Prompt, PromptWidget},
     },
 };
 
@@ -33,9 +33,10 @@ pub enum Mode {
     Filter,
     Picker,
     Popup,
+    Quit,
 }
 
-pub struct AppWidget;
+struct AppWidget;
 
 // FIXME comments on the fields
 #[derive(Debug)]
@@ -51,13 +52,13 @@ pub struct App {
     crate_info: Arc<Mutex<Option<crates_io_api::Crate>>>,
     total_num_crates: Option<u64>,
     input: tui_input::Input,
-    crate_table_state: CratesTableState,
+    crate_table: CratesTable,
     show_crate_info: bool,
     error: Option<String>,
     info: Option<String>,
     popup_scroll: usize,
     mode: Mode,
-    prompt_state: PromptState,
+    prompt: Prompt,
     last_tick_key_events: Vec<KeyEvent>,
 }
 
@@ -77,40 +78,32 @@ impl App {
             crate_info: Default::default(),
             total_num_crates: Default::default(),
             input: Default::default(),
-            crate_table_state: Default::default(),
+            crate_table: Default::default(),
             show_crate_info: Default::default(),
             error: Default::default(),
             info: Default::default(),
             popup_scroll: Default::default(),
-            prompt_state: Default::default(),
+            prompt: Default::default(),
             last_tick_key_events: Default::default(),
         }
     }
 
-    // The main 'run' function now delegates to the two functions above,
+    // The main 'run' function now delegates to the two functions below,
     // to handle TUI events and App actions respectively.
     pub async fn run(&mut self, mut tui: Tui) -> Result<()> {
-        let mut should_quit = false;
-        let tx = self.tx.clone();
-
         tui.enter()?;
-
         loop {
             if let Some(e) = tui.next().await {
-                self.handle_tui_event(e, &tx).await?;
+                if let Some(action) = self.handle_tui_event(e)? {
+                    self.tx.send(action)?
+                };
             }
             while let Ok(action) = self.rx.try_recv() {
-                if let Some(inner_action) = self.update(action.clone())? {
-                    tx.send(inner_action)?
+                if let Some(inner_action) = self.handle_action(action.clone(), &mut tui)? {
+                    self.tx.send(inner_action)?
                 };
-                self.handle_action(action.clone(), &mut tui, &tx).await?;
-                if action == Action::Quit {
-                    should_quit = true;
-                    break;
-                }
             }
-            if should_quit {
-                tui.stop()?;
+            if self.should_quit() {
                 break;
             }
         }
@@ -118,32 +111,42 @@ impl App {
         Ok(())
     }
 
-    async fn handle_tui_event(
-        &mut self,
-        e: tui::Event,
-        tx: &UnboundedSender<Action>,
-    ) -> Result<()> {
-        match e {
-            tui::Event::Quit => tx.send(Action::Quit)?,
-            tui::Event::Tick => tx.send(Action::Tick)?,
-            tui::Event::KeyRefresh => tx.send(Action::KeyRefresh)?,
-            tui::Event::Render => tx.send(Action::Render)?,
-            tui::Event::Resize(x, y) => tx.send(Action::Resize(x, y))?,
+    fn handle_tui_event(&mut self, e: tui::Event) -> Result<Option<Action>> {
+        let maybe_action = match e {
+            tui::Event::Quit => Some(Action::Quit),
+            tui::Event::Tick => Some(Action::Tick),
+            tui::Event::KeyRefresh => Some(Action::KeyRefresh),
+            tui::Event::Render => Some(Action::Render),
+            tui::Event::Resize(x, y) => Some(Action::Resize(x, y)),
             tui::Event::Key(key) => {
                 debug!("Received key {:?}", key);
-                if let Some(action) = self.handle_key_events(key)? {
-                    tx.send(action)?;
-                }
-                if let Some(action) = self.handle_key_events_from_config(key) {
-                    tx.send(action)?;
-                }
+                self.handle_key_events(key);
+                self.handle_key_events_from_config(key)
             }
-            _ => {}
-        }
-        Ok(())
+            _ => return Ok(None),
+        };
+        Ok(maybe_action)
     }
 
-    pub fn handle_key_events_from_config(&mut self, key: KeyEvent) -> Option<Action> {
+    fn handle_key_events(&mut self, key: KeyEvent) {
+        match self.mode {
+            Mode::Search => match key.code {
+                _ => {
+                    self.input.handle_event(&crossterm::event::Event::Key(key));
+                }
+            },
+            Mode::Filter => match key.code {
+                _ => {
+                    self.input.handle_event(&crossterm::event::Event::Key(key));
+                    self.filter = self.input.value().into();
+                    self.crate_table.select(None);
+                }
+            },
+            _ => (),
+        };
+    }
+
+    fn handle_key_events_from_config(&mut self, key: KeyEvent) -> Option<Action> {
         self.last_tick_key_events.push(key);
         let config = config::get();
         let action = config
@@ -155,51 +158,23 @@ impl App {
         action
     }
 
-    async fn handle_action(
-        &mut self,
-        action: Action,
-        tui: &mut Tui,
-        tx: &UnboundedSender<Action>,
-    ) -> Result<()> {
+    fn handle_action(&mut self, action: Action, tui: &mut Tui) -> Result<Option<Action>> {
         if action != Action::Tick && action != Action::Render {
             info!("{action:?}");
         }
         match action {
-            Action::KeyRefresh => {
-                self.last_tick_key_events.drain(..);
-            }
-            Action::Resize(w, h) => {
-                tui.resize(Rect::new(0, 0, w, h))?;
-                tx.send(Action::Render)?;
-            }
-            Action::Render => {
-                tui.draw(|frame| {
-                    frame.render_stateful_widget(AppWidget, frame.size(), self);
-                    self.update_prompt(frame);
-                })?;
-            }
-            _ => {}
-        }
-        Ok(())
-    }
-
-    pub fn update_prompt(&mut self, frame: &mut Frame<'_>) {
-        self.prompt_state.frame_count(frame.count());
-        if let Some(cursor_position) = self.prompt_state.cursor_position() {
-            frame.set_cursor(cursor_position.x, cursor_position.y)
-        }
-    }
-
-    pub fn update(&mut self, action: Action) -> Result<Option<Action>> {
-        match action {
+            Action::Quit => self.quit(),
+            Action::Render => self.draw(tui)?,
+            Action::KeyRefresh => self.key_refresh_tick(),
+            Action::Resize(w, h) => self.resize(tui, (w, h))?,
             Action::Tick => self.tick(),
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
             Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll_previous(),
             Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll_next(),
-            Action::ScrollUp => self.crate_table_state.previous_crate(),
-            Action::ScrollDown => self.crate_table_state.next_crate(),
-            Action::ScrollTop => self.crate_table_state.top(),
-            Action::ScrollBottom => self.crate_table_state.bottom(),
+            Action::ScrollUp => self.crate_table.previous_crate(),
+            Action::ScrollDown => self.crate_table.next_crate(),
+            Action::ScrollTop => self.crate_table.top(),
+            Action::ScrollBottom => self.crate_table.bottom(),
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
@@ -213,8 +188,7 @@ impl App {
             Action::Info(ref info) => self.set_info_flag(info.clone()),
             Action::ClosePopup => self.clear_error_and_info_flags(),
             _ => {}
-        };
-
+        }
         match action {
             Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom => {
                 Ok(Some(Action::UpdateCurrentSelectionCrateInfo))
@@ -223,29 +197,57 @@ impl App {
             _ => Ok(None),
         }
     }
-
-    pub fn handle_key_events(&mut self, key: KeyEvent) -> Result<Option<Action>> {
-        match self.mode {
-            Mode::Search => match key.code {
-                _ => {
-                    self.input.handle_event(&crossterm::event::Event::Key(key));
-                    return Ok(None);
-                }
-            },
-            Mode::Filter => match key.code {
-                _ => {
-                    self.input.handle_event(&crossterm::event::Event::Key(key));
-                    self.filter = self.input.value().into();
-                    self.crate_table_state.select(None);
-                    return Ok(None);
-                }
-            },
-            _ => return Ok(None),
-        };
-    }
 }
 
 impl App {
+    fn tick(&mut self) {
+        self.update_crate_table();
+    }
+
+    fn update_crate_table(&mut self) {
+        self.crate_table
+            .content_length(self.crate_table.crates.len());
+
+        let filter = self.filter.clone();
+        let filter_words = filter.split_whitespace().collect::<Vec<_>>();
+
+        self.crate_table.crates = self
+            .crates
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|c| {
+                filter_words.iter().all(|word| {
+                    c.name.to_lowercase().contains(word)
+                        || c.description
+                            .clone()
+                            .unwrap_or_default()
+                            .to_lowercase()
+                            .contains(word)
+                })
+            })
+            .cloned()
+            .collect();
+    }
+
+    fn key_refresh_tick(&mut self) {
+        self.last_tick_key_events.drain(..);
+    }
+
+    fn resize(&mut self, tui: &mut Tui, (w, h): (u16, u16)) -> Result<()> {
+        tui.resize(Rect::new(0, 0, w, h))?;
+        self.tx.send(Action::Render)?;
+        Ok(())
+    }
+
+    fn should_quit(&self) -> bool {
+        self.mode == Mode::Quit
+    }
+
+    fn quit(&mut self) {
+        self.mode = Mode::Quit
+    }
+
     // FIXME: can we make this infinitely scrollable instead of manually handling the page size?
     fn increment_page(&mut self) {
         if let Some(n) = self.total_num_crates {
@@ -286,9 +288,8 @@ impl App {
 
     fn enter_normal_mode(&mut self) {
         self.mode = Mode::Picker;
-        if !self.crate_table_state.crates.is_empty() && self.crate_table_state.selected().is_none()
-        {
-            self.crate_table_state.select(Some(0))
+        if !self.crate_table.crates.is_empty() && self.crate_table.selected().is_none() {
+            self.crate_table.select(Some(0))
         }
     }
 
@@ -339,7 +340,7 @@ impl App {
 
     // FIXME overly long and complex method
     fn reload_data(&mut self) {
-        self.crate_table_state.select(None);
+        self.crate_table.select(None);
         *self.crate_info.lock().unwrap() = None;
         let crates = self.crates.clone();
         let search = self.search.clone();
@@ -398,15 +399,15 @@ impl App {
 
     // Extracts the selected crate name, if possible.
     fn selected_crate_name(&self) -> Option<String> {
-        self.crate_table_state
+        self.crate_table
             .selected()
-            .and_then(|index| self.crate_table_state.crates.get(index))
+            .and_then(|index| self.crate_table.crates.get(index))
             .filter(|crate_| !crate_.name.is_empty())
             .map(|crate_| crate_.name.clone())
     }
 
     fn fetch_crate_details(&mut self) {
-        if self.crate_table_state.crates.is_empty() {
+        if self.crate_table.crates.is_empty() {
             return;
         }
         if let Some(crate_name) = self.selected_crate_name() {
@@ -452,37 +453,19 @@ impl App {
         }
     }
 
-    fn tick(&mut self) {
-        // FIXME: this is not obvious what it does what are the last_events? Why are you removing them?
-        self.update_filtered_crates();
-        self.update_crate_table_state();
+    fn draw(&mut self, tui: &mut Tui) -> Result<()> {
+        tui.draw(|frame| {
+            frame.render_stateful_widget(AppWidget, frame.size(), self);
+            self.update_prompt(frame);
+        })?;
+        Ok(())
     }
 
-    fn update_crate_table_state(&mut self) {
-        self.crate_table_state
-            .content_length(self.crate_table_state.crates.len());
-    }
-
-    fn update_filtered_crates(&mut self) {
-        let filter = self.filter.clone();
-        let filter_words = filter.split_whitespace().collect::<Vec<_>>();
-        self.crate_table_state.crates = self
-            .crates
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|c| {
-                filter_words.iter().all(|word| {
-                    c.name.to_lowercase().contains(word)
-                        || c.description
-                            .clone()
-                            .unwrap_or_default()
-                            .to_lowercase()
-                            .contains(word)
-                })
-            })
-            .cloned()
-            .collect();
+    fn update_prompt(&mut self, frame: &mut Frame<'_>) {
+        self.prompt.frame_count(frame.count());
+        if let Some(cursor_position) = self.prompt.cursor_position() {
+            frame.set_cursor(cursor_position.x, cursor_position.y)
+        }
     }
 }
 
@@ -507,25 +490,25 @@ impl StatefulWidget for AppWidget {
                 let [table, info] =
                     Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
                         .areas(table);
-                CrateInfo::new(ci).render(info, buf);
+                CrateInfoWidget::new(ci).render(info, buf);
                 table
             }
             _ => table,
         };
 
-        CratesTable::new(state.mode == Mode::Picker).render(
+        CratesTableWidget::new(state.mode == Mode::Picker).render(
             table,
             buf,
-            &mut state.crate_table_state,
+            &mut state.crate_table,
         );
 
         let loading_status = state.loading_status.load(Ordering::SeqCst);
-        let selected = state.crate_table_state.selected().map_or(0, |n| {
+        let selected = state.crate_table.selected().map_or(0, |n| {
             (state.page.saturating_sub(1) * state.page_size) + n as u64 + 1
         });
         let total_num_crates = state.total_num_crates.unwrap_or_default();
 
-        let p = Prompt::new(
+        let p = PromptWidget::new(
             total_num_crates,
             selected,
             loading_status,
@@ -533,13 +516,13 @@ impl StatefulWidget for AppWidget {
             &state.input,
         );
 
-        StatefulWidget::render(&p, prompt, buf, &mut state.prompt_state);
+        StatefulWidget::render(&p, prompt, buf, &mut state.prompt);
 
         if let Some(err) = &state.error {
-            Popup::new("Error", err, state.popup_scroll).render(area, buf);
+            PopupWidget::new("Error", err, state.popup_scroll).render(area, buf);
         }
         if let Some(info) = &state.info {
-            Popup::new("Info", info, state.popup_scroll).render(area, buf);
+            PopupWidget::new("Info", info, state.popup_scroll).render(area, buf);
         }
 
         let events = Block::default()
