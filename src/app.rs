@@ -8,7 +8,7 @@ use crossterm::event::KeyEvent;
 use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use strum::Display;
-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::{debug, error, info};
 use tui_input::backend::crossterm::EventHandler;
 
@@ -40,6 +40,7 @@ pub struct AppWidget;
 // FIXME comments on the fields
 #[derive(Debug)]
 pub struct App {
+    rx: UnboundedReceiver<Action>,
     tx: UnboundedSender<Action>,
     page: u64,
     page_size: u64,
@@ -61,8 +62,10 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(tx: UnboundedSender<Action>) -> Self {
+    pub fn new() -> Self {
+        let (tx, rx) = mpsc::unbounded_channel();
         Self {
+            rx,
             tx,
             page: 1,
             page_size: 25,
@@ -86,7 +89,7 @@ impl App {
 
     // The main 'run' function now delegates to the two functions above,
     // to handle TUI events and App actions respectively.
-    pub async fn run(&mut self, tui: &mut Tui, mut rx: UnboundedReceiver<Action>) -> Result<()> {
+    pub async fn run(&mut self, mut tui: Tui) -> Result<()> {
         let mut should_quit = false;
         let tx = self.tx.clone();
 
@@ -96,11 +99,11 @@ impl App {
             if let Some(e) = tui.next().await {
                 self.handle_tui_event(e, &tx).await?;
             }
-            while let Ok(action) = rx.try_recv() {
+            while let Ok(action) = self.rx.try_recv() {
                 if let Some(inner_action) = self.update(action.clone())? {
                     tx.send(inner_action)?
                 };
-                self.handle_action(action.clone(), tui, &tx).await?;
+                self.handle_action(action.clone(), &mut tui, &tx).await?;
                 if action == Action::Quit {
                     should_quit = true;
                     break;
