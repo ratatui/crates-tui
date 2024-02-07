@@ -464,6 +464,7 @@ name = "crates-tui"
 version = "0.1.0"
 dependencies = [
  "better-panic",
+ "cfg-if",
  "chrono",
  "clap",
  "color-eyre",

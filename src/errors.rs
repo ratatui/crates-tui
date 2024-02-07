@@ -7,6 +7,7 @@ use color_eyre::{
 use tracing::error;
 
 use crate::tui;
+use cfg_if::cfg_if;
 
 pub fn install_hooks() -> Result<()> {
     let (panic_hook, eyre_hook) = HookBuilder::default()
@@ -19,11 +20,13 @@ pub fn install_hooks() -> Result<()> {
         .display_env_section(false)
         .into_hooks();
 
-    #[cfg(debug_assertions)]
-    install_better_panic();
-    #[cfg(not(debug_assertions))]
-    install_human_panic();
-
+    cfg_if! {
+        if #[cfg(debug_assertions)] {
+            install_better_panic();
+        } else {
+            install_human_panic();
+        }
+    }
     install_color_eyre_panic_hook(panic_hook);
     install_eyre_hook(eyre_hook)?;
 
