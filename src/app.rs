@@ -767,11 +767,7 @@ impl App {
     fn search_results_status(&self) -> String {
         let selected = self.selected_with_page_context();
         let ncrates = self.total_num_crates.unwrap_or_default();
-        if self.loading() {
-            self.spinner()
-        } else {
-            format!("{}/{} Results", selected, ncrates)
-        }
+        format!("{}/{} Results", selected, ncrates)
     }
 
     fn spinner(&self) -> String {
@@ -821,15 +817,6 @@ impl App {
         if let Some(summary) = self.summary.lock().unwrap().clone() {
             SummaryWidget(&summary).render(area, buf);
         }
-        if self.loading() {
-            Line::from(self.spinner()).right_aligned().render(
-                area.inner(&Margin {
-                    horizontal: 1,
-                    vertical: 2,
-                }),
-                buf,
-            );
-        }
     }
 }
 
@@ -853,6 +840,12 @@ impl StatefulWidget for AppWidget {
         match state.mode {
             Mode::Summary => state.render_summary(table, buf),
             _ => state.render_search_results(table, buf),
+        }
+
+        if state.loading() {
+            Line::from(state.spinner())
+                .right_aligned()
+                .render(area, buf);
         }
 
         if let Some(err) = &state.error_message {

@@ -187,14 +187,15 @@ impl StatefulWidget for SearchResultsTableWidget {
             // don't render margin for the first column
             for space in spacers.iter().skip(2).copied() {
                 Text::from(
-                    std::iter::once(" ")
-                        .chain(std::iter::once(" "))
-                        .chain(std::iter::once(" "))
-                        .chain(std::iter::repeat("│").take(space.height as usize))
+                    std::iter::once(" ".into())
+                        .chain(std::iter::once(" ".into()))
+                        .chain(std::iter::once(" ".into()))
+                        .chain(
+                            std::iter::repeat("│".fg(Color::DarkGray)).take(space.height as usize),
+                        )
                         .map(Line::from)
                         .collect_vec(),
                 )
-                .style(Style::default().fg(Color::DarkGray))
                 .render(space, buf);
             }
         }
