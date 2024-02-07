@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use ratatui::{layout::Flex, prelude::*, widgets::*};
 pub struct PopupMessageWidget<'a> {
     title: &'a str,
@@ -17,19 +18,28 @@ impl<'a> PopupMessageWidget<'a> {
 
 impl Widget for PopupMessageWidget<'_> {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let [center] = Layout::vertical([Constraint::Percentage(50)])
+        let [center] = Layout::horizontal([Constraint::Percentage(50)])
             .flex(Flex::Center)
             .areas(area);
-        let [center] = Layout::horizontal([Constraint::Percentage(50)])
+
+        let message = textwrap::wrap(self.message, center.width as usize)
+            .iter()
+            .map(|s| Line::from(s.to_string()))
+            .collect_vec();
+        let height = message.len() as u16;
+
+        let [center] = Layout::vertical([Constraint::Length(height + 3)])
             .flex(Flex::Center)
             .areas(center);
         Clear.render(center, buf);
+
         Paragraph::new(self.message)
             .block(
                 Block::bordered()
+                    .border_style(Color::DarkGray)
                     .title(block::Title::from(self.title))
                     .title(
-                        block::Title::from("Press `ESC` to exit")
+                        block::Title::from(Line::from(vec!["ESC".bold(), " to close".into()]))
                             .position(block::Position::Bottom)
                             .alignment(Alignment::Right),
                     ),

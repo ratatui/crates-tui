@@ -50,22 +50,11 @@ impl<'a> SearchFilterPromptWidget<'a> {
 
     fn input_block(&self) -> impl Widget {
         let line = if self.mode.is_filter() {
-            vec![
-                "Filter: ".into(),
-                "Press ".into(),
-                "Enter".bold(),
-                " to submit".into(),
-            ]
+            vec!["Filter: ".into(), "Enter".bold(), " to submit".into()]
         } else if self.mode.is_search() {
-            vec![
-                "Search: ".into(),
-                "Press ".into(),
-                "Enter".bold(),
-                " to submit".into(),
-            ]
+            vec!["Search: ".into(), "Enter".bold(), " to submit".into()]
         } else {
             vec![
-                "Press ".into(),
                 "?".bold(),
                 " to search, ".into(),
                 "/".bold(),
