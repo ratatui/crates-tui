@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use strum::Display;
 
+use crate::app::Mode;
+
 #[derive(Debug, Display, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Action {
     Tick,
@@ -16,13 +18,11 @@ pub enum Action {
     ClosePopup,
     Help,
     GetCrates,
-    EnterSearchInsertMode,
-    EnterFilterInsertMode,
+    SwitchMode(Mode),
     HandleFilterPromptChange,
     IncrementPage,
     DecrementPage,
     ToggleSortBy { reload: bool, forward: bool },
-    EnterNormal,
     ScrollBottom,
     ScrollTop,
     ScrollDown,

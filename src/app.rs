@@ -11,7 +11,7 @@ use crossterm::event::KeyEvent;
 use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
-use strum::Display;
+use strum::{Display, EnumIs};
 use tokio::{
     sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
     task::JoinHandle,
@@ -33,16 +33,37 @@ use crate::{
     },
 };
 
-#[derive(Default, Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Default, Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIs,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum Mode {
     #[default]
+    Summary,
     Search,
     Filter,
-    Picker,
+    // Picker(CrateInfo),
+    PickerShowCrateInfo,
+    PickerHideCrateInfo,
     Popup,
     FullCrateDetails,
     Quit,
+}
+
+impl Mode {
+    fn is_picker(&self) -> bool {
+        self.is_picker_hide_crate_info() || self.is_picker_show_crate_info()
+    }
+    fn toggle_crate_info(&mut self) {
+        *self = match self {
+            Mode::PickerShowCrateInfo => Mode::PickerHideCrateInfo,
+            Mode::PickerHideCrateInfo => Mode::PickerShowCrateInfo,
+            _ => self.clone(),
+        };
+    }
+    fn should_show_crate_info(&self) -> bool {
+        matches!(self, Mode::PickerShowCrateInfo)
+    }
 }
 
 struct AppWidget;
@@ -113,10 +134,6 @@ pub struct App {
     /// within the terminal UI.
     search_results: SearchResultsTable,
 
-    /// A boolean flag that determines whether detailed crate information should
-    /// be displayed within the UI.
-    show_crate_info: bool,
-
     /// An optional error message that, when set, should be shown to the user,
     /// in the form of a popup.
     error_message: Option<String>,
@@ -167,7 +184,6 @@ impl App {
             total_num_crates: Default::default(),
             input: Default::default(),
             search_results: Default::default(),
-            show_crate_info: Default::default(),
             error_message: Default::default(),
             info_message: Default::default(),
             popup_scroll_index: Default::default(),
@@ -288,10 +304,12 @@ impl App {
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
-            Action::EnterSearchInsertMode => self.enter_search_insert_mode(),
-            Action::EnterFilterInsertMode => self.enter_filter_insert_mode(),
+            Action::SwitchMode(mode) if mode.is_search() || mode.is_filter() => {
+                self.enter_insert_mode(mode)
+            }
+            Action::SwitchMode(Mode::PickerHideCrateInfo) => self.enter_normal_mode(),
+            Action::SwitchMode(Mode::PickerShowCrateInfo) => self.enter_normal_mode(),
             Action::HandleFilterPromptChange => self.handle_filter_prompt_change(),
-            Action::EnterNormal => self.enter_normal_mode(),
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
@@ -424,19 +442,13 @@ impl App {
         self.crate_info.select(Some(i));
     }
 
-    fn enter_search_insert_mode(&mut self) {
-        self.mode = Mode::Search;
+    fn enter_insert_mode(&mut self, mode: Mode) {
+        self.mode = mode;
         self.input = self.input.clone().with_value(self.search.clone());
     }
 
-    fn enter_filter_insert_mode(&mut self) {
-        self.show_crate_info = false;
-        self.mode = Mode::Filter;
-        self.input = self.input.clone().with_value(self.filter.clone());
-    }
-
     fn enter_normal_mode(&mut self) {
-        self.mode = Mode::Picker;
+        self.mode = Mode::PickerHideCrateInfo;
         if !self.search_results.crates.is_empty() && self.search_results.selected().is_none() {
             self.search_results.select(Some(0))
         }
@@ -449,15 +461,14 @@ impl App {
 
     fn submit_search(&mut self) {
         self.clear_all_previous_task_details_handles();
-        self.show_crate_info = false;
-        self.mode = Mode::Picker;
+        self.mode = Mode::PickerHideCrateInfo;
         self.filter.clear();
         self.search = self.input.value().into();
     }
 
     fn toggle_show_crate_info(&mut self) {
-        self.show_crate_info = !self.show_crate_info;
-        if self.show_crate_info {
+        self.mode.toggle_crate_info();
+        if self.mode.should_show_crate_info() {
             self.request_crate_details()
         } else {
             self.clear_all_previous_task_details_handles();
@@ -757,13 +768,13 @@ impl StatefulWidget for AppWidget {
         );
         p.render(prompt, buf, &mut state.prompt);
 
-        let remaining_table = if state.show_crate_info {
+        let remaining_table = if state.mode.should_show_crate_info() {
             state.render_crate_info(table, buf)
         } else {
             table
         };
 
-        SearchResultsTableWidget::new(state.mode == Mode::Picker).render(
+        SearchResultsTableWidget::new(state.mode.is_picker()).render(
             remaining_table,
             buf,
             &mut state.search_results,

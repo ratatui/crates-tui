@@ -160,3 +160,23 @@ fn project_dirs() -> Result<ProjectDirs> {
     ProjectDirs::from("rs", "ratatui", "crates-tui")
         .ok_or_else(|| eyre!("user home directory not found"))
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::serde_helper::keybindings::parse_key_sequence;
+
+    use super::*;
+
+    #[test]
+
+    fn create_config() {
+        let mut c = Config::default();
+        c.key_bindings.insert(
+            crate::app::Mode::PickerShowCrateInfo,
+            &parse_key_sequence("q").unwrap(),
+            crate::action::Action::Quit,
+        );
+
+        println!("{}", toml::to_string_pretty(&c).unwrap());
+    }
+}
