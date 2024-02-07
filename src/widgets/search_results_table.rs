@@ -154,10 +154,17 @@ impl StatefulWidget for SearchResultsTableWidget {
                         "".into(),
                     ]),
                 ])
-                .bg(match i % 2 {
-                    0 => config::get().style.row_background_color_1,
-                    1 => config::get().style.row_background_color_2,
-                    _ => unreachable!("Cannot reach this line"),
+                .style({
+                    let s = Style::default().bg(match i % 2 {
+                        0 => config::get().style.row_background_color_1,
+                        1 => config::get().style.row_background_color_2,
+                        _ => unreachable!("Cannot reach this line"),
+                    });
+                    if i == selected {
+                        s.bg(config::get().style.row_background_color_highlight)
+                    } else {
+                        s
+                    }
                 })
                 .height(if i == selected {
                     height.saturating_add(1) as u16

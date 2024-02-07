@@ -68,6 +68,9 @@ pub struct Style {
     pub filter_query_outline_color: ratatui::style::Color,
 
     #[serde_as(as = "DisplayFromStr")]
+    pub row_background_color_highlight: ratatui::style::Color,
+
+    #[serde_as(as = "DisplayFromStr")]
     pub row_background_color_1: ratatui::style::Color,
 
     #[serde_as(as = "DisplayFromStr")]
@@ -96,6 +99,7 @@ impl Default for Config {
                 filter_query_outline_color: YELLOW.c400,
                 row_background_color_1: GRAY.c900,
                 row_background_color_2: GRAY.c800,
+                row_background_color_highlight: STONE.c700,
             },
         }
     }
