@@ -608,7 +608,7 @@ impl App {
     fn open_crates_io_url_in_browser(&self) -> Result<()> {
         if let Some(crate_response) = self.crate_response.lock().unwrap().clone() {
             let name = crate_response.crate_data.name;
-            webbrowser::open(&format!("https://crates.io/{name}"))?;
+            webbrowser::open(&format!("https://crates.io/crates/{name}"))?;
         }
         Ok(())
     }
