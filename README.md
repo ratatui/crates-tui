@@ -57,6 +57,10 @@ https://github.com/ratatui-org/crates-tui/assets/1813121/c84eaad7-4688-4ebb-91c0
 - Shows table state at the top right
 - Shows user key presses per tick in bottom right
 
+## Summary home page
+
+https://github.com/ratatui-org/crates-tui/assets/1813121/6cf5ba45-c574-456e-80fc-adecd5544f98
+
 ## Open in browser
 
 https://github.com/ratatui-org/crates-tui/assets/1813121/89aa322d-e1f9-4d1f-b1f4-3320c067cd29
