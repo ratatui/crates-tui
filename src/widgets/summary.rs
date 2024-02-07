@@ -235,7 +235,7 @@ impl StatefulWidget for &SummaryWidget<'_> {
 
         let [_, area] = Layout::vertical([Min(0), Percentage(90)]).areas(area);
 
-        let [_, area, _] = Layout::horizontal([Min(0), Percentage(75), Min(0)]).areas(area);
+        let [_, area, _] = Layout::horizontal([Min(0), Percentage(85), Min(0)]).areas(area);
 
         let [top, bottom] = Layout::vertical([Percentage(50), Percentage(50)]).areas(area);
 
