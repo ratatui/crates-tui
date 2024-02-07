@@ -68,6 +68,10 @@ prompt_padding = 1
 [key_bindings.summary]
 "q" = "Quit"
 "ESC" = "Quit"
+"j" = "ScrollDown"
+"k" = "ScrollUp"
+"h" = "PreviousSummaryMode"
+"l" = "NextSummaryMode"
 "?" = { SwitchMode = "search" }
 "/" = { SwitchMode = "filter" }
 

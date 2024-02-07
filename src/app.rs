@@ -30,7 +30,7 @@ use crate::{
         popup_message::PopupMessageWidget,
         search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
         search_results_table::{SearchResultsTable, SearchResultsTableWidget},
-        summary::SummaryWidget,
+        summary::{Summary, SummaryWidget},
     },
 };
 
@@ -119,7 +119,10 @@ pub struct App {
     /// A thread-safe shared container holding the detailed information about
     /// the currently selected crate; this can be `None` if no crate is
     /// selected.
-    summary: Arc<Mutex<Option<crates_io_api::Summary>>>,
+    summary_data: Arc<Mutex<Option<crates_io_api::Summary>>>,
+
+    /// contains list state for summary
+    summary: Summary,
 
     /// contains table state for info popup
     crate_info: TableState,
@@ -192,6 +195,7 @@ impl App {
             full_crate_info: Default::default(),
             crate_response: Default::default(),
             crate_info: Default::default(),
+            summary_data: Default::default(),
             summary: Default::default(),
             last_task_details_handle: Default::default(),
             total_num_crates: Default::default(),
@@ -310,6 +314,8 @@ impl App {
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
             Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll_previous(),
             Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll_next(),
+            Action::ScrollUp if self.mode == Mode::Summary => self.summary.scroll_previous(),
+            Action::ScrollDown if self.mode == Mode::Summary => self.summary.scroll_next(),
             Action::ScrollUp => self.search_results.scroll_previous(1),
             Action::ScrollDown => self.search_results.scroll_next(1),
             Action::ScrollTop => self.search_results.scroll_to_top(),
@@ -319,6 +325,8 @@ impl App {
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
+            Action::NextSummaryMode => self.summary.next_mode(),
+            Action::PreviousSummaryMode => self.summary.previous_mode(),
             Action::SwitchMode(mode) if mode.is_search() || mode.is_filter() => {
                 self.enter_insert_mode(mode)
             }
@@ -341,6 +349,11 @@ impl App {
             _ => {}
         }
         let maybe_action = match action {
+            Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom
+                if self.mode.is_summary() =>
+            {
+                None
+            }
             Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom => {
                 Some(Action::UpdateCurrentSelectionCrateInfo)
             }
@@ -368,20 +381,6 @@ impl App {
 
     fn init(&mut self) -> Result<()> {
         self.request_summary()?;
-        Ok(())
-    }
-
-    fn request_summary(&self) -> Result<()> {
-        let tx = self.tx.clone();
-        let loading_status = self.loading_status.clone();
-        let summary = self.summary.clone();
-        tokio::spawn(async move {
-            loading_status.store(true, Ordering::SeqCst);
-            if let Err(error_message) = crates_io_api_helper::request_summary(summary).await {
-                let _ = tx.send(Action::ShowErrorPopup(error_message));
-            }
-            loading_status.store(false, Ordering::SeqCst);
-        });
         Ok(())
     }
 
@@ -711,6 +710,21 @@ impl App {
         }
     }
 
+    fn request_summary(&self) -> Result<()> {
+        let tx = self.tx.clone();
+        let loading_status = self.loading_status.clone();
+        let summary = self.summary_data.clone();
+        tokio::spawn(async move {
+            loading_status.store(true, Ordering::SeqCst);
+            if let Err(error_message) = crates_io_api_helper::request_summary(summary).await {
+                let _ = tx.send(Action::ShowErrorPopup(error_message));
+            }
+            loading_status.store(false, Ordering::SeqCst);
+            let _ = tx.send(Action::ScrollDown);
+        });
+        Ok(())
+    }
+
     // Sets the frame count
     fn update_frame_count(&mut self, frame: &mut Frame<'_>) {
         self.frame_count = frame.count();
@@ -814,8 +828,8 @@ impl App {
     }
 
     fn render_summary(&mut self, area: Rect, buf: &mut Buffer) {
-        if let Some(summary) = self.summary.lock().unwrap().clone() {
-            SummaryWidget(&summary).render(area, buf);
+        if let Some(summary) = self.summary_data.lock().unwrap().clone() {
+            SummaryWidget(&summary).render(area, buf, &mut self.summary);
         }
     }
 }
