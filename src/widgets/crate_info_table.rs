@@ -40,22 +40,22 @@ impl StatefulWidget for CrateInfoTableWidget {
             Row::new(cells)
         })
         .collect_vec();
-        let versions = self
+        let keywords = self
             .crate_info
-            .versions
+            .keywords
             .iter()
-            .map(|v| v.num.clone())
+            .map(|k| k.keyword.clone())
             .map(Line::from)
             .join(", ");
-        let versions = textwrap::wrap(&versions, (area.width as f64 * 0.75) as usize)
+        let keywords = textwrap::wrap(&keywords, (area.width as f64 * 0.75) as usize)
             .iter()
             .map(|s| Line::from(s.to_string()))
             .collect_vec();
-        let height = versions.len();
+        let height = keywords.len();
         rows.push(
             Row::new(vec![
-                Cell::from("Versions"),
-                Cell::from(Text::from(versions)),
+                Cell::from("Keywords"),
+                Cell::from(Text::from(keywords)),
             ])
             .height(height as u16),
         );
