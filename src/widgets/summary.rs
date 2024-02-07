@@ -32,12 +32,8 @@ impl SummaryMode {
 
 #[derive(Default, Debug, Clone)]
 pub struct Summary {
-    pub just_updated: ListState,
-    pub most_downloaded: ListState,
-    pub new_crates: ListState,
-    pub most_recently_downloaded: ListState,
-    pub popular_categories: ListState,
-    pub popular_keywords: ListState,
+    pub state: [ListState; 6],
+    pub last_selection: [usize; 6],
     pub mode: SummaryMode,
 }
 
@@ -46,44 +42,49 @@ impl Summary {
         self.mode.clone()
     }
 
-    pub fn get_state_mut(&mut self) -> &mut ListState {
-        use SummaryMode as M;
-        match self.mode {
-            M::JustUpdated => &mut self.just_updated,
-            M::MostDownloaded => &mut self.most_downloaded,
-            M::NewCrates => &mut self.new_crates,
-            M::MostRecentlyDownloaded => &mut self.most_recently_downloaded,
-            M::PopularCategories => &mut self.popular_categories,
-            M::PopularKeywords => &mut self.popular_keywords,
-        }
+    pub fn get_state_mut(&mut self, mode: SummaryMode) -> &mut ListState {
+        &mut self.state[mode as usize]
+    }
+
+    pub fn get_state(&self, mode: SummaryMode) -> &ListState {
+        &self.state[mode as usize]
     }
 
     pub fn scroll_previous(&mut self) {
-        let state = self.get_state_mut();
+        let state = self.get_state_mut(self.mode);
         let i = state.selected().map_or(0, |i| i.saturating_sub(1));
         state.select(Some(i));
     }
 
     pub fn scroll_next(&mut self) {
-        let state = self.get_state_mut();
+        let state = self.get_state_mut(self.mode);
         let i = state.selected().map_or(0, |i| i.saturating_add(1));
         state.select(Some(i));
     }
 
+    pub fn save_state(&mut self) {
+        if let Some(i) = self.get_state(self.mode).selected() {
+            self.last_selection[self.mode as usize] = i
+        }
+    }
     pub fn next_mode(&mut self) {
-        let old_state = self.get_state_mut();
+        self.save_state();
+        let old_state = self.get_state_mut(self.mode);
         *old_state.selected_mut() = None;
         self.mode.next();
-        let new_state = self.get_state_mut();
-        *new_state.selected_mut() = Some(0);
+        let i = self.last_selection[self.mode as usize];
+        let new_state = self.get_state_mut(self.mode);
+        *new_state.selected_mut() = Some(i);
     }
 
     pub fn previous_mode(&mut self) {
-        let old_state = self.get_state_mut();
+        self.save_state();
+        let old_state = self.get_state_mut(self.mode);
         *old_state.selected_mut() = None;
         self.mode.previous();
-        let new_state = self.get_state_mut();
-        *new_state.selected_mut() = Some(0);
+        let i = self.last_selection[self.mode as usize];
+        let new_state = self.get_state_mut(self.mode);
+        *new_state.selected_mut() = Some(i);
     }
 }
 
@@ -240,6 +241,21 @@ impl<'a> SummaryWidget<'a> {
             )
             .highlight_symbol(HIGHLIGHT_SYMBOL)
     }
+
+    fn render_list(
+        &self,
+        area: Rect,
+        buf: &mut Buffer,
+        list: List,
+        mode: SummaryMode,
+        state: &mut Summary,
+    ) {
+        *(state.get_state_mut(mode).selected_mut()) = state
+            .get_state(mode)
+            .selected()
+            .map(|i| i.min(list.len().saturating_sub(1)).max(1));
+        StatefulWidget::render(list, area, buf, state.get_state_mut(mode));
+    }
 }
 
 impl StatefulWidget for &SummaryWidget<'_> {
@@ -260,25 +276,19 @@ impl StatefulWidget for &SummaryWidget<'_> {
                 .areas(top);
 
         let list = self.new_crates(state.mode.is_new_crates());
-        *(state.new_crates.selected_mut()) = state
-            .new_crates
-            .selected()
-            .map(|i| i.min(list.len().saturating_sub(1)).max(1));
-        StatefulWidget::render(list, new_crates, buf, &mut state.new_crates);
+        self.render_list(new_crates, buf, list, SummaryMode::NewCrates, state);
 
         let list = self.most_downloaded(state.mode.is_most_downloaded());
-        *(state.most_downloaded.selected_mut()) = state
-            .most_downloaded
-            .selected()
-            .map(|i| i.min(list.len().saturating_sub(1)).max(1));
-        StatefulWidget::render(list, most_downloaded, buf, &mut state.most_downloaded);
+        self.render_list(
+            most_downloaded,
+            buf,
+            list,
+            SummaryMode::MostDownloaded,
+            state,
+        );
 
         let list = self.just_updated(state.mode.is_just_updated());
-        *(state.just_updated.selected_mut()) = state
-            .just_updated
-            .selected()
-            .map(|i| i.min(list.len().saturating_sub(1)).max(1));
-        StatefulWidget::render(list, just_updated, buf, &mut state.just_updated);
+        self.render_list(just_updated, buf, list, SummaryMode::JustUpdated, state);
 
         let [most_recently_downloaded, popular_keywords, popular_categories] =
             Layout::horizontal([Percentage(30), Percentage(30), Percentage(30)])
@@ -287,29 +297,30 @@ impl StatefulWidget for &SummaryWidget<'_> {
                 .areas(bottom);
 
         let list = self.most_recently_downloaded(state.mode.is_most_recently_downloaded());
-        *(state.most_recently_downloaded.selected_mut()) = state
-            .most_recently_downloaded
-            .selected()
-            .map(|i| i.min(list.len().saturating_sub(1)).max(1));
-        StatefulWidget::render(
-            list,
+        self.render_list(
             most_recently_downloaded,
             buf,
-            &mut state.most_recently_downloaded,
+            list,
+            SummaryMode::MostRecentlyDownloaded,
+            state,
         );
 
         let list = self.popular_categories(state.mode.is_popular_categories());
-        *(state.popular_categories.selected_mut()) = state
-            .popular_categories
-            .selected()
-            .map(|i| i.min(list.len().saturating_sub(1)).max(1));
-        StatefulWidget::render(list, popular_categories, buf, &mut state.popular_categories);
+        self.render_list(
+            popular_categories,
+            buf,
+            list,
+            SummaryMode::PopularCategories,
+            state,
+        );
 
         let list = self.popular_keywords(state.mode.is_popular_keywords());
-        *(state.popular_keywords.selected_mut()) = state
-            .popular_keywords
-            .selected()
-            .map(|i| i.min(list.len().saturating_sub(1)).max(1));
-        StatefulWidget::render(list, popular_keywords, buf, &mut state.popular_keywords);
+        self.render_list(
+            popular_keywords,
+            buf,
+            list,
+            SummaryMode::PopularKeywords,
+            state,
+        );
     }
 }
