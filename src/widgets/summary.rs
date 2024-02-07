@@ -120,6 +120,7 @@ impl<'a> SummaryWidget<'a> {
                     .title_alignment(Alignment::Left),
             )
             .highlight_symbol(HIGHLIGHT_SYMBOL)
+            .highlight_spacing(HighlightSpacing::Always)
     }
 
     fn most_downloaded(&self, selected: bool) -> List {
@@ -143,6 +144,7 @@ impl<'a> SummaryWidget<'a> {
                     .title_alignment(Alignment::Left),
             )
             .highlight_symbol(HIGHLIGHT_SYMBOL)
+            .highlight_spacing(HighlightSpacing::Always)
     }
 
     fn just_updated(&self, selected: bool) -> List {
@@ -171,6 +173,7 @@ impl<'a> SummaryWidget<'a> {
                     .title_alignment(Alignment::Left),
             )
             .highlight_symbol(HIGHLIGHT_SYMBOL)
+            .highlight_spacing(HighlightSpacing::Always)
     }
 
     fn most_recently_downloaded(&self, selected: bool) -> List {
@@ -194,6 +197,7 @@ impl<'a> SummaryWidget<'a> {
                     .title_alignment(Alignment::Left),
             )
             .highlight_symbol(HIGHLIGHT_SYMBOL)
+            .highlight_spacing(HighlightSpacing::Always)
     }
 
     fn popular_keywords(&self, selected: bool) -> List {
@@ -217,6 +221,7 @@ impl<'a> SummaryWidget<'a> {
                     .title_alignment(Alignment::Left),
             )
             .highlight_symbol(HIGHLIGHT_SYMBOL)
+            .highlight_spacing(HighlightSpacing::Always)
     }
 
     fn popular_categories(&self, selected: bool) -> List {
@@ -240,6 +245,7 @@ impl<'a> SummaryWidget<'a> {
                     .title_alignment(Alignment::Left),
             )
             .highlight_symbol(HIGHLIGHT_SYMBOL)
+            .highlight_spacing(HighlightSpacing::Always)
     }
 
     fn render_list(
