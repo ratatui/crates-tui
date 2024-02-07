@@ -52,21 +52,23 @@ pub enum Mode {
 }
 
 impl Mode {
-    fn focused(&self) -> bool {
+    pub fn focused(&self) -> bool {
         matches!(self, Mode::Search | Mode::Filter)
     }
 
-    fn is_picker(&self) -> bool {
+    pub fn is_picker(&self) -> bool {
         self.is_picker_hide_crate_info() || self.is_picker_show_crate_info()
     }
-    fn toggle_crate_info(&mut self) {
+
+    pub fn toggle_crate_info(&mut self) {
         *self = match self {
             Mode::PickerShowCrateInfo => Mode::PickerHideCrateInfo,
             Mode::PickerHideCrateInfo => Mode::PickerShowCrateInfo,
             _ => self.clone(),
         };
     }
-    fn should_show_crate_info(&self) -> bool {
+
+    pub fn should_show_crate_info(&self) -> bool {
         matches!(self, Mode::PickerShowCrateInfo)
     }
 }
@@ -472,7 +474,13 @@ impl App {
 
     fn enter_insert_mode(&mut self, mode: Mode) {
         self.mode = mode;
-        self.input = self.input.clone().with_value(self.search.clone());
+        self.input = self.input.clone().with_value(if self.mode.is_search() {
+            self.search.clone()
+        } else if self.mode.is_filter() {
+            self.filter.clone()
+        } else {
+            unreachable!("Cannot enter insert mode when mode is {:?}", self.mode)
+        });
     }
 
     fn enter_normal_mode(&mut self) {
@@ -826,12 +834,7 @@ impl StatefulWidget for AppWidget {
             Layout::vertical([Constraint::Fill(0), Constraint::Length(1)]).areas(area)
         };
 
-        let p = SearchFilterPromptWidget::new(
-            state.mode.focused(),
-            state.mode,
-            state.sort.clone(),
-            &state.input,
-        );
+        let p = SearchFilterPromptWidget::new(state.mode, state.sort.clone(), &state.input);
         p.render(prompt, buf, &mut state.prompt);
 
         match state.mode {

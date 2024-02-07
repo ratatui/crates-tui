@@ -14,7 +14,6 @@ impl SearchFilterPrompt {
 }
 
 pub struct SearchFilterPromptWidget<'a> {
-    focused: bool,
     mode: Mode,
     sort: crates_io_api::Sort,
     input: &'a tui_input::Input,
@@ -23,14 +22,8 @@ pub struct SearchFilterPromptWidget<'a> {
 }
 
 impl<'a> SearchFilterPromptWidget<'a> {
-    pub fn new(
-        focused: bool,
-        mode: Mode,
-        sort: crates_io_api::Sort,
-        input: &'a tui_input::Input,
-    ) -> Self {
+    pub fn new(mode: Mode, sort: crates_io_api::Sort, input: &'a tui_input::Input) -> Self {
         Self {
-            focused,
             mode,
             sort,
             input,
@@ -39,12 +32,8 @@ impl<'a> SearchFilterPromptWidget<'a> {
         }
     }
 
-    fn focused(&self) -> bool {
-        self.focused
-    }
-
     fn horizontal_margin(&self) -> u16 {
-        if self.focused() {
+        if self.mode.focused() {
             self.horizontal_margin
         } else {
             0
@@ -52,7 +41,7 @@ impl<'a> SearchFilterPromptWidget<'a> {
     }
 
     fn vertical_margin(&self) -> u16 {
-        if self.focused() {
+        if self.mode.focused() {
             self.vertical_margin
         } else {
             0
@@ -60,23 +49,41 @@ impl<'a> SearchFilterPromptWidget<'a> {
     }
 
     fn input_block(&self) -> impl Widget {
+        let line = if self.mode.is_filter() {
+            vec![
+                "Filter: ".into(),
+                "Press ".into(),
+                "Enter".bold(),
+                " to submit".into(),
+            ]
+        } else if self.mode.is_search() {
+            vec![
+                "Search: ".into(),
+                "Press ".into(),
+                "Enter".bold(),
+                " to submit".into(),
+            ]
+        } else {
+            vec![
+                "Press ".into(),
+                "?".bold(),
+                " to search, ".into(),
+                "/".bold(),
+                " to filter".into(),
+            ]
+        };
         Block::default()
-            .borders(if self.focused() {
+            .borders(if self.mode.focused() {
                 Borders::ALL
             } else {
                 Borders::NONE
             })
             .title(
-                block::Title::from(Line::from(vec![
-                    "Press ".into(),
-                    "?".bold(),
-                    " to search, ".into(),
-                    "/".bold(),
-                    " to filter, ".into(),
-                    "Enter".bold(),
-                    " to submit".into(),
-                ]))
-                .alignment(Alignment::Right),
+                block::Title::from(Line::from(line)).alignment(if self.mode.focused() {
+                    Alignment::Left
+                } else {
+                    Alignment::Right
+                }),
             )
             .border_style(match self.mode {
                 Mode::Search => Style::default().fg(config::get().style.search_query_outline_color),
@@ -95,7 +102,7 @@ impl<'a> SearchFilterPromptWidget<'a> {
 
     fn input_text(&self, width: usize) -> impl Widget + '_ {
         let scroll = self.input.cursor().saturating_sub(width.saturating_sub(4));
-        let text = if self.focused() {
+        let text = if self.mode.focused() {
             Line::from(vec![self.input.value().into()])
         } else {
             Line::from(vec![
@@ -110,7 +117,7 @@ impl<'a> SearchFilterPromptWidget<'a> {
 
     fn update_cursor_state(&self, area: Rect, state: &mut SearchFilterPrompt) {
         let width = ((area.width as f64 * 0.75) as u16).saturating_sub(2);
-        if self.focused() {
+        if self.mode.focused() {
             state.cursor_position = Some(Position::new(
                 (area.x + self.horizontal_margin() + self.input.cursor() as u16).min(width),
                 area.y + self.vertical_margin(),
@@ -128,7 +135,7 @@ impl StatefulWidget for SearchFilterPromptWidget<'_> {
         let [input, meta] =
             Layout::horizontal([Constraint::Percentage(75), Constraint::Fill(0)]).areas(area);
 
-        if self.focused() {
+        if self.mode.focused() {
             self.sort_by_info().render(
                 meta.inner(&Margin {
                     horizontal: self.horizontal_margin(),
