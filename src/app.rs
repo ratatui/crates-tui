@@ -350,7 +350,8 @@ impl App {
             Action::ClearTaskDetailsHandle(ref id) => {
                 self.clear_task_details_handle(uuid::Uuid::parse_str(id)?)?
             }
-            Action::OpenUrlInBrowser => self.open_url_in_browser()?,
+            Action::OpenDocsUrlInBrowser => self.open_docs_url_in_browser()?,
+            Action::OpenCratesIOUrlInBrowser => self.open_crates_io_url_in_browser()?,
             Action::CopyCargoAddCommandToClipboard => self.copy_cargo_add_command_to_clipboard()?,
             _ => {}
         }
@@ -573,6 +574,7 @@ impl App {
     fn clear_error_and_info_flags(&mut self) {
         self.error_message = None;
         self.info_message = None;
+        self.popup_scroll_index = 0;
         self.mode = if self.last_mode.is_popup() {
             Mode::Search
         } else {
@@ -595,10 +597,18 @@ impl App {
         self.total_num_crates = Some(n)
     }
 
-    fn open_url_in_browser(&self) -> Result<()> {
+    fn open_docs_url_in_browser(&self) -> Result<()> {
         if let Some(crate_response) = self.crate_response.lock().unwrap().clone() {
             let name = crate_response.crate_data.name;
             webbrowser::open(&format!("https://docs.rs/{name}/latest"))?;
+        }
+        Ok(())
+    }
+
+    fn open_crates_io_url_in_browser(&self) -> Result<()> {
+        if let Some(crate_response) = self.crate_response.lock().unwrap().clone() {
+            let name = crate_response.crate_data.name;
+            webbrowser::open(&format!("https://crates.io/{name}"))?;
         }
         Ok(())
     }
@@ -607,8 +617,8 @@ impl App {
         use copypasta::ClipboardProvider;
         match copypasta::ClipboardContext::new() {
             Ok(mut ctx) => {
-                if let Some(crate_name) = self.search_results.selected_crate_name() {
-                    let msg = format!("cargo add {}", crate_name);
+                if let Some(crate_response) = self.crate_response.lock().unwrap().clone() {
+                    let msg = format!("cargo add {}", crate_response.crate_data.name);
                     let _ = match ctx.set_contents(msg.clone()).ok() {
                         Some(_) => self.tx.send(Action::ShowInfoPopup(format!(
                             "Copied to clipboard: `{msg}`"

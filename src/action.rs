@@ -41,6 +41,7 @@ pub enum Action {
     StoreTotalNumberOfCrates(u64),
     ClearTaskDetailsHandle(String),
     CopyCargoAddCommandToClipboard,
-    OpenUrlInBrowser,
+    OpenDocsUrlInBrowser,
+    OpenCratesIOUrlInBrowser,
     ShowFullCrateInfo,
 }

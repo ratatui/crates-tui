@@ -36,7 +36,8 @@ prompt_padding = 1
 "Right" = "IncrementPage"
 "r" = "ReloadData"
 "Enter" = "ToggleShowCrateInfo"
-"<g><b>" = "OpenUrlInBrowser"
+"<g><d>" = "OpenDocsUrlInBrowser"
+"<g><c>" = "OpenCratesIOUrlInBrowser"
 "<g><Enter>" = "ShowFullCrateInfo"
 "c" = "CopyCargoAddCommandToClipboard"
 
@@ -63,7 +64,8 @@ prompt_padding = 1
 "Right" = "IncrementPage"
 "r" = "ReloadData"
 "Enter" = "ToggleShowCrateInfo"
-"<g><b>" = "OpenUrlInBrowser"
+"<g><d>" = "OpenDocsUrlInBrowser"
+"<g><c>" = "OpenCratesIOUrlInBrowser"
 "<g><Enter>" = "ShowFullCrateInfo"
 "c" = "CopyCargoAddCommandToClipboard"
 
