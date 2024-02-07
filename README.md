@@ -63,7 +63,7 @@ https://github.com/ratatui-org/crates-tui/assets/1813121/6cf5ba45-c574-456e-80fc
 
 ## Open in browser
 
-https://github.com/ratatui-org/crates-tui/assets/1813121/89aa322d-e1f9-4d1f-b1f4-3320c067cd29
+https://github.com/ratatui-org/crates-tui/assets/1813121/362d7dc3-d9ef-43df-8d2e-cc56001ef31c
 
 ## Logging
 
