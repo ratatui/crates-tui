@@ -80,7 +80,12 @@ pub struct App {
     /// A thread-safe shared container holding the detailed information about
     /// the currently selected crate; this can be `None` if no crate is
     /// selected.
-    crate_info: Arc<Mutex<Option<crates_io_api::FullCrate>>>,
+    full_crate_info: Arc<Mutex<Option<crates_io_api::FullCrate>>>,
+
+    /// A thread-safe shared container holding the detailed information about
+    /// the currently selected crate; this can be `None` if no crate is
+    /// selected.
+    crate_info: Arc<Mutex<Option<crates_io_api::CrateResponse>>>,
 
     last_task_details_handle: HashMap<uuid::Uuid, JoinHandle<()>>,
 
@@ -151,6 +156,7 @@ impl App {
             filter: Default::default(),
             crates: Default::default(),
             versions: Default::default(),
+            full_crate_info: Default::default(),
             crate_info: Default::default(),
             last_task_details_handle: Default::default(),
             total_num_crates: Default::default(),
@@ -289,6 +295,7 @@ impl App {
             Action::ClearTaskDetailsHandle(ref id) => {
                 self.clear_task_details_handle(uuid::Uuid::parse_str(&id)?)?
             }
+            Action::OpenUrlInBrowser => self.open_url_in_browser()?,
             _ => {}
         }
         let maybe_action = match action {
@@ -309,7 +316,7 @@ impl App {
     }
 
     fn clear_all_previous_task_details_handles(&mut self) {
-        *self.crate_info.lock().unwrap() = None;
+        *self.full_crate_info.lock().unwrap() = None;
         for (_, v) in self.last_task_details_handle.iter() {
             v.abort()
         }
@@ -468,16 +475,20 @@ impl App {
     }
 
     fn update_current_selection_crate_info(&mut self) {
-        if self.show_crate_info {
-            self.clear_all_previous_task_details_handles();
-            self.request_crate_details();
-        } else {
-            self.clear_all_previous_task_details_handles();
-        }
+        self.clear_all_previous_task_details_handles();
+        self.request_crate_details();
     }
 
     fn store_total_number_of_crates(&mut self, n: u64) {
         self.total_num_crates = Some(n)
+    }
+
+    fn open_url_in_browser(&self) -> Result<()> {
+        if let Some(crate_info) = self.full_crate_info.lock().unwrap().clone() {
+            let name = crate_info.name;
+            webbrowser::open(&format!("https://docs.rs/{name}/latest"))?;
+        }
+        Ok(())
     }
 }
 
@@ -496,6 +507,7 @@ impl App {
     /// Clears current search results and resets the UI to prepare for new data.
     fn prepare_reload(&mut self) {
         self.search_results.select(None);
+        *self.full_crate_info.lock().unwrap() = None;
         *self.crate_info.lock().unwrap() = None;
     }
 
@@ -530,7 +542,7 @@ impl App {
         if self.search_results.crates.is_empty() {
             return;
         }
-        if let Some(crate_name) = self.selected_crate_name() {
+        if let Some(crate_name) = self.search_results.selected_crate_name() {
             let tx = self.tx.clone();
             let crate_info = self.crate_info.clone();
             let loading_status = self.loading_status.clone();
@@ -554,13 +566,35 @@ impl App {
         }
     }
 
-    // Extracts the selected crate name, if possible.
-    fn selected_crate_name(&self) -> Option<String> {
-        self.search_results
-            .selected()
-            .and_then(|index| self.search_results.crates.get(index))
-            .filter(|crate_| !crate_.name.is_empty())
-            .map(|crate_| crate_.name.clone())
+    /// Spawns an asynchronous task to fetch crate details from crates.io based
+    /// on currently selected crate
+    fn request_full_crate_details(&mut self) {
+        if self.search_results.crates.is_empty() {
+            return;
+        }
+        if let Some(crate_name) = self.search_results.selected_crate_name() {
+            let tx = self.tx.clone();
+            let full_crate_info = self.full_crate_info.clone();
+            let loading_status = self.loading_status.clone();
+
+            // Spawn the async work to fetch crate details.
+            let uuid = uuid::Uuid::new_v4();
+            let last_task_details_handle = tokio::spawn(async move {
+                info!("Requesting details for {crate_name}: {uuid}");
+                loading_status.store(true, Ordering::SeqCst);
+                if let Err(error_message) =
+                    crates_io_api_helper::request_full_crate_details(&crate_name, full_crate_info)
+                        .await
+                {
+                    let _ = tx.send(Action::ShowErrorPopup(error_message));
+                };
+                loading_status.store(false, Ordering::SeqCst);
+                info!("Retrieved details for {crate_name}: {uuid}");
+                let _ = tx.send(Action::ClearTaskDetailsHandle(uuid.to_string()));
+            });
+            self.last_task_details_handle
+                .insert(uuid, last_task_details_handle);
+        }
     }
 
     // Render the `AppWidget` as a stateful widget using `self` as the `State`

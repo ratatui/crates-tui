@@ -97,15 +97,29 @@ fn update_state_with_fetched_crates(
 // Performs the async fetch of crate details.
 pub async fn request_crate_details(
     crate_name: &str,
-    crate_info: Arc<Mutex<Option<crates_io_api::FullCrate>>>,
+    crate_info: Arc<Mutex<Option<crates_io_api::CrateResponse>>>,
 ) -> Result<(), String> {
     let client = create_client()?;
 
     let crate_data = client
+        .get_crate(&crate_name)
+        .await
+        .map_err(|err| format!("Error fetching crate details: {err:#?}"))?;
+    *crate_info.lock().unwrap() = Some(crate_data);
+    Ok(())
+}
+
+// Performs the async fetch of crate details.
+pub async fn request_full_crate_details(
+    crate_name: &str,
+    full_crate_info: Arc<Mutex<Option<crates_io_api::FullCrate>>>,
+) -> Result<(), String> {
+    let client = create_client()?;
+
+    let full_crate_data = client
         .full_crate(&crate_name, false)
         .await
         .map_err(|err| format!("Error fetching crate details: {err:#?}"))?;
-
-    *crate_info.lock().unwrap() = Some(crate_data);
+    *full_crate_info.lock().unwrap() = Some(full_crate_data);
     Ok(())
 }

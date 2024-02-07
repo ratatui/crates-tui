@@ -86,8 +86,7 @@ pub mod keybindings {
     }
 
     fn parse_key_event(raw: &str) -> Result<KeyEvent, String> {
-        let raw_lower = raw.to_ascii_lowercase();
-        let (remaining, modifiers) = extract_modifiers(&raw_lower);
+        let (remaining, modifiers) = extract_modifiers(&raw);
         parse_key_code_with_modifiers(remaining, modifiers)
     }
 
@@ -97,15 +96,15 @@ pub mod keybindings {
 
         loop {
             match current {
-                rest if rest.starts_with("ctrl-") => {
+                rest if rest.to_lowercase().starts_with("ctrl-") => {
                     modifiers.insert(KeyModifiers::CONTROL);
                     current = &rest[5..];
                 }
-                rest if rest.starts_with("alt-") => {
+                rest if rest.to_lowercase().starts_with("alt-") => {
                     modifiers.insert(KeyModifiers::ALT);
                     current = &rest[4..];
                 }
-                rest if rest.starts_with("shift-") => {
+                rest if rest.to_lowercase().starts_with("shift-") => {
                     modifiers.insert(KeyModifiers::SHIFT);
                     current = &rest[6..];
                 }
@@ -121,7 +120,7 @@ pub mod keybindings {
         raw: &str,
         mut modifiers: KeyModifiers,
     ) -> Result<KeyEvent, String> {
-        let c = match raw {
+        let c = match raw.to_lowercase().as_str() {
             "esc" => KeyCode::Esc,
             "enter" => KeyCode::Enter,
             "left" => KeyCode::Left,
@@ -156,7 +155,7 @@ pub mod keybindings {
             "minus" => KeyCode::Char('-'),
             "tab" => KeyCode::Tab,
             c if c.len() == 1 => {
-                let mut c = c.chars().next().unwrap();
+                let mut c = raw.chars().next().unwrap();
                 if modifiers.contains(KeyModifiers::SHIFT) {
                     c = c.to_ascii_uppercase();
                 }

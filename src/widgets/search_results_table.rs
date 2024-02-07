@@ -13,6 +13,13 @@ pub struct SearchResultsTable {
 }
 
 impl SearchResultsTable {
+    pub fn selected_crate_name(&self) -> Option<String> {
+        self.selected()
+            .and_then(|index| self.crates.get(index))
+            .filter(|crate_| !crate_.name.is_empty())
+            .map(|crate_| crate_.name.clone())
+    }
+
     pub fn content_length(&mut self, content_length: usize) {
         self.scrollbar_state = self.scrollbar_state.content_length(content_length)
     }

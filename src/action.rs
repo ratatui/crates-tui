@@ -34,4 +34,5 @@ pub enum Action {
     ToggleShowCrateInfo,
     StoreTotalNumberOfCrates(u64),
     ClearTaskDetailsHandle(String),
+    OpenUrlInBrowser,
 }

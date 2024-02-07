@@ -3,11 +3,11 @@ use ratatui::{prelude::*, widgets::*};
 
 pub struct CrateInfoTableWidget {
     // FIXME don't abbreviate this
-    crate_info: crates_io_api::FullCrate,
+    crate_info: crates_io_api::CrateResponse,
 }
 
 impl CrateInfoTableWidget {
-    pub fn new(crate_info: crates_io_api::FullCrate) -> Self {
+    pub fn new(crate_info: crates_io_api::CrateResponse) -> Self {
         Self { crate_info }
     }
 }
@@ -16,14 +16,22 @@ impl Widget for CrateInfoTableWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let ci = self.crate_info.clone();
 
-        let created_at = ci.created_at.format("%Y-%m-%d %H:%M:%S").to_string();
-        let updated_at = ci.updated_at.format("%Y-%m-%d %H:%M:%S").to_string();
+        let created_at = ci
+            .crate_data
+            .created_at
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
+        let updated_at = ci
+            .crate_data
+            .updated_at
+            .format("%Y-%m-%d %H:%M:%S")
+            .to_string();
 
         let mut rows = [
-            ["Name", &ci.name],
+            ["Name", &ci.crate_data.name],
             ["Created At", &created_at],
             ["Updated At", &updated_at],
-            ["Max Version", &ci.max_version],
+            ["Max Version", &ci.crate_data.max_version],
         ]
         .iter()
         .map(|row| {
@@ -32,7 +40,7 @@ impl Widget for CrateInfoTableWidget {
         })
         .collect_vec();
 
-        if let Some(description) = self.crate_info.description {
+        if let Some(description) = self.crate_info.crate_data.description {
             // assume description is wrapped in 75%
             let desc = textwrap::wrap(&description, (area.width as f64 * 0.75) as usize)
                 .iter()
@@ -47,22 +55,22 @@ impl Widget for CrateInfoTableWidget {
                 .height(height as u16),
             );
         }
-        if let Some(homepage) = self.crate_info.homepage {
+        if let Some(homepage) = self.crate_info.crate_data.homepage {
             rows.push(Row::new(vec![Cell::from("Homepage"), Cell::from(homepage)]));
         }
-        if let Some(repository) = self.crate_info.repository {
+        if let Some(repository) = self.crate_info.crate_data.repository {
             rows.push(Row::new(vec![
                 Cell::from("Repository"),
                 Cell::from(repository),
             ]));
         }
-        if let Some(recent_downloads) = self.crate_info.recent_downloads {
+        if let Some(recent_downloads) = self.crate_info.crate_data.recent_downloads {
             rows.push(Row::new(vec![
                 Cell::from("Recent Downloads"),
                 Cell::from(recent_downloads.to_string()),
             ]));
         }
-        if let Some(max_stable_version) = self.crate_info.max_stable_version {
+        if let Some(max_stable_version) = self.crate_info.crate_data.max_stable_version {
             rows.push(Row::new(vec![
                 Cell::from("Max Stable Version"),
                 Cell::from(max_stable_version),

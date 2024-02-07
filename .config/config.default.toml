@@ -33,6 +33,7 @@ prompt_padding = 1
 "Right" = "IncrementPage"
 "r" = "ReloadData"
 "Enter" = "ToggleShowCrateInfo"
+"<g><b>" = "OpenUrlInBrowser"
 
 [key_bindings.search]
 "TAB" = { ToggleSortBy = { reload = false } }
