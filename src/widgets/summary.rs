@@ -112,15 +112,7 @@ impl<'a> SummaryWidget<'a> {
                 ])
             }))
             .collect_vec();
-        List::new(items)
-            .block(
-                Block::default()
-                    .borders(borders)
-                    .title("New Crates".bold())
-                    .title_alignment(Alignment::Left),
-            )
-            .highlight_symbol(HIGHLIGHT_SYMBOL)
-            .highlight_spacing(HighlightSpacing::Always)
+        list_builder(items, "New Crates".into(), borders)
     }
 
     fn most_downloaded(&self, selected: bool) -> List {
@@ -136,15 +128,7 @@ impl<'a> SummaryWidget<'a> {
                     .map(|item| Text::from(vec![Line::raw(item.name.clone()), Line::raw("")])),
             )
             .collect_vec();
-        List::new(items)
-            .block(
-                Block::default()
-                    .borders(borders)
-                    .title("Most Downloaded".bold())
-                    .title_alignment(Alignment::Left),
-            )
-            .highlight_symbol(HIGHLIGHT_SYMBOL)
-            .highlight_spacing(HighlightSpacing::Always)
+        list_builder(items, "Most Downloaded".into(), borders)
     }
 
     fn just_updated(&self, selected: bool) -> List {
@@ -165,15 +149,7 @@ impl<'a> SummaryWidget<'a> {
                 ])
             }))
             .collect_vec();
-        List::new(items)
-            .block(
-                Block::default()
-                    .borders(borders)
-                    .title("Just Updated".bold())
-                    .title_alignment(Alignment::Left),
-            )
-            .highlight_symbol(HIGHLIGHT_SYMBOL)
-            .highlight_spacing(HighlightSpacing::Always)
+        list_builder(items, "Just Updated".into(), borders)
     }
 
     fn most_recently_downloaded(&self, selected: bool) -> List {
@@ -189,15 +165,7 @@ impl<'a> SummaryWidget<'a> {
                     .map(|item| Text::from(vec![Line::raw(item.name.clone()), Line::raw("")])),
             )
             .collect_vec();
-        List::new(items)
-            .block(
-                Block::default()
-                    .borders(borders)
-                    .title("Most Recent Downloads".bold())
-                    .title_alignment(Alignment::Left),
-            )
-            .highlight_symbol(HIGHLIGHT_SYMBOL)
-            .highlight_spacing(HighlightSpacing::Always)
+        list_builder(items, "Most Recently Downloaded".into(), borders)
     }
 
     fn popular_keywords(&self, selected: bool) -> List {
@@ -213,15 +181,7 @@ impl<'a> SummaryWidget<'a> {
                     .map(|item| Text::from(vec![Line::raw(item.keyword.clone()), Line::raw("")])),
             )
             .collect_vec();
-        List::new(items)
-            .block(
-                Block::default()
-                    .borders(borders)
-                    .title("Popular Keywords".bold())
-                    .title_alignment(Alignment::Left),
-            )
-            .highlight_symbol(HIGHLIGHT_SYMBOL)
-            .highlight_spacing(HighlightSpacing::Always)
+        list_builder(items, "Popular Keywords".into(), borders)
     }
 
     fn popular_categories(&self, selected: bool) -> List {
@@ -237,15 +197,7 @@ impl<'a> SummaryWidget<'a> {
                     .map(|item| Text::from(vec![Line::raw(item.category.clone()), Line::raw("")])),
             )
             .collect_vec();
-        List::new(items)
-            .block(
-                Block::default()
-                    .borders(borders)
-                    .title("Popular Categories".bold())
-                    .title_alignment(Alignment::Left),
-            )
-            .highlight_symbol(HIGHLIGHT_SYMBOL)
-            .highlight_spacing(HighlightSpacing::Always)
+        list_builder(items, "Popular Categories".into(), borders)
     }
 
     fn render_list(
@@ -262,6 +214,18 @@ impl<'a> SummaryWidget<'a> {
             .map(|i| i.min(list.len().saturating_sub(1)).max(1));
         StatefulWidget::render(list, area, buf, state.get_state_mut(mode));
     }
+}
+
+fn list_builder(items: Vec<Text>, title: String, borders: Borders) -> List {
+    List::new(items)
+        .block(
+            Block::default()
+                .borders(borders)
+                .title(format!("   {title}").bold())
+                .title_alignment(Alignment::Left),
+        )
+        .highlight_symbol(HIGHLIGHT_SYMBOL)
+        .highlight_spacing(HighlightSpacing::Always)
 }
 
 impl StatefulWidget for &SummaryWidget<'_> {
