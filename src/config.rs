@@ -99,7 +99,7 @@ impl Default for Config {
                 filter_query_outline_color: YELLOW.c400,
                 row_background_color_1: GRAY.c900,
                 row_background_color_2: GRAY.c800,
-                row_background_color_highlight: STONE.c700,
+                row_background_color_highlight: STONE.c800,
             },
         }
     }
