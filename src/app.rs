@@ -27,6 +27,7 @@ use crate::{
     tui::Tui,
     widgets::{
         crate_info_table::CrateInfoTableWidget,
+        help::{Help, HelpWidget},
         popup_message::PopupMessageWidget,
         search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
         search_results_table::{SearchResultsTable, SearchResultsTableWidget},
@@ -47,7 +48,7 @@ pub enum Mode {
     PickerShowCrateInfo,
     PickerHideCrateInfo,
     Popup,
-    FullCrateDetails,
+    Help,
     Quit,
 }
 
@@ -179,6 +180,8 @@ pub struct App {
 
     /// frame counter
     frame_count: usize,
+
+    help: Help,
 }
 
 impl App {
@@ -212,6 +215,7 @@ impl App {
             prompt: Default::default(),
             last_tick_key_events: Default::default(),
             frame_count: Default::default(),
+            help: Default::default(),
         }
     }
 
@@ -321,6 +325,8 @@ impl App {
             Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll_next(),
             Action::ScrollUp if self.mode == Mode::Summary => self.summary.scroll_previous(),
             Action::ScrollDown if self.mode == Mode::Summary => self.summary.scroll_next(),
+            Action::ScrollUp if self.mode == Mode::Help => self.help.scroll_previous(),
+            Action::ScrollDown if self.mode == Mode::Help => self.help.scroll_next(),
             Action::ScrollUp => self.search_results.scroll_previous(1),
             Action::ScrollDown => self.search_results.scroll_next(1),
             Action::ScrollTop => self.search_results.scroll_to_top(),
@@ -338,6 +344,7 @@ impl App {
             Action::SwitchMode(Mode::PickerHideCrateInfo) => self.enter_normal_mode(),
             Action::SwitchMode(Mode::PickerShowCrateInfo) => self.enter_normal_mode(),
             Action::SwitchMode(mode) => self.switch_mode(mode),
+            Action::SwitchToLastMode => self.switch_to_last_mode(),
             Action::HandleFilterPromptChange => self.handle_filter_prompt_change(),
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
@@ -500,6 +507,10 @@ impl App {
         self.mode = mode;
     }
 
+    fn switch_to_last_mode(&mut self) {
+        self.mode = self.last_mode;
+    }
+
     fn handle_filter_prompt_change(&mut self) {
         self.filter = self.input.value().into();
         self.search_results.select(None);
@@ -590,7 +601,7 @@ impl App {
     fn show_full_crate_details(&mut self) {
         self.clear_all_previous_task_details_handles();
         self.request_full_crate_details();
-        self.mode = Mode::FullCrateDetails;
+        // self.mode = Mode::FullCrateDetails;
     }
 
     fn store_total_number_of_crates(&mut self, n: u64) {
@@ -883,6 +894,11 @@ impl App {
             SummaryWidget(&summary).render(area, buf, &mut self.summary);
         }
     }
+
+    fn render_help(&mut self, area: Rect, buf: &mut Buffer) {
+        self.help.mode = self.mode;
+        HelpWidget.render(area, buf, &mut self.help)
+    }
 }
 
 impl StatefulWidget for AppWidget {
@@ -904,6 +920,7 @@ impl StatefulWidget for AppWidget {
 
         match state.mode {
             Mode::Summary => state.render_summary(table, buf),
+            Mode::Help => state.render_help(table, buf),
             _ => state.render_search_results(table, buf),
         }
 

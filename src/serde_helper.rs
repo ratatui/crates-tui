@@ -4,6 +4,7 @@ pub mod keybindings {
     use color_eyre::eyre::Result;
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use derive_deref::{Deref, DerefMut};
+    use itertools::Itertools;
     use serde::{de::Deserializer, Deserialize, Serialize, Serializer};
 
     use crate::{action::Action, app::Mode};
@@ -33,6 +34,28 @@ pub mod keybindings {
             } else {
                 self.event_to_action(mode, &key_events[1..])
             }
+        }
+
+        pub fn get_keybindings_for_action(&self, mode: Mode, action: Action) -> Vec<Vec<KeyEvent>> {
+            let bindings_for_mode = self.0.get(&mode).cloned().unwrap_or_default();
+            bindings_for_mode
+                .into_iter()
+                .filter(|(_, v)| *v == action)
+                .map(|(k, _)| k)
+                .collect_vec()
+        }
+
+        pub fn get_config_for_action(&self, mode: Mode, action: Action) -> Vec<String> {
+            self.get_keybindings_for_action(mode, action)
+                .iter()
+                .map(|key_events| {
+                    key_events
+                        .iter()
+                        .map(|k| key_event_to_string(k))
+                        .collect_vec()
+                        .join("")
+                })
+                .collect_vec()
         }
     }
 

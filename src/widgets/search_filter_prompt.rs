@@ -1,6 +1,6 @@
 use ratatui::{layout::Position, prelude::*, widgets::*};
 
-use crate::{app::Mode, config};
+use crate::{action::Action, app::Mode, config};
 
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct SearchFilterPrompt {
@@ -53,11 +53,25 @@ impl<'a> SearchFilterPromptWidget<'a> {
             vec!["Filter: ".into(), "Enter".bold(), " to submit".into()]
         } else if self.mode.is_search() {
             vec!["Search: ".into(), "Enter".bold(), " to submit".into()]
+        } else if self.mode.is_help() {
+            vec!["ESC".bold(), " to exit".into()]
         } else {
+            let search = config::get()
+                .key_bindings
+                .get_config_for_action(self.mode, Action::SwitchMode(Mode::Search))
+                .into_iter()
+                .next()
+                .unwrap_or_default();
+            let filter = config::get()
+                .key_bindings
+                .get_config_for_action(self.mode, Action::SwitchMode(Mode::Filter))
+                .into_iter()
+                .next()
+                .unwrap_or_default();
             vec![
-                "?".bold(),
+                format!("{}", search).bold(),
                 " to search, ".into(),
-                "/".bold(),
+                format!("{}", filter).bold(),
                 " to filter".into(),
             ]
         };
