@@ -123,6 +123,7 @@ impl StatefulWidget for SearchResultsTableWidget {
         let description_area = areas[2];
         let text_wrap_width = description_area.width as usize;
 
+        let selected = state.selected().unwrap_or_default();
         let table_widget = {
             let selected_style = Style::default();
             let header = Row::new(
@@ -158,7 +159,12 @@ impl StatefulWidget for SearchResultsTableWidget {
                     1 => config::get().style.row_background_color_2,
                     _ => unreachable!("Cannot reach this line"),
                 })
-                .height(height.saturating_add(1) as u16)
+                .height(if i == selected {
+                    height.saturating_add(1) as u16
+                } else {
+                    // TODO: make this `3` when partial rendering is implemented
+                    height.saturating_add(1) as u16
+                })
             });
 
             let widths = [Constraint::Max(20), Constraint::Min(0), Constraint::Max(10)];
