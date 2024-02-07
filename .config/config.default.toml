@@ -80,4 +80,3 @@ prompt_padding = 1
 [key_bindings.filter]
 "ESC" = { SwitchMode = "picker_hide_crate_info" }
 "Enter" = { SwitchMode = "picker_hide_crate_info" }
-

@@ -42,7 +42,7 @@ pub enum Mode {
     Summary,
     Search,
     Filter,
-    // Picker(CrateInfo),
+    // Picker(CrateInfo), unable to make configuration file work with this
     PickerShowCrateInfo,
     PickerHideCrateInfo,
     Popup,
