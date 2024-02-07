@@ -26,6 +26,7 @@ use crate::{
     serde_helper::keybindings::key_event_to_string,
     tui::Tui,
     widgets::{
+        crate_home_page::CrateHomePage,
         crate_info_table::CrateInfoTableWidget,
         popup_message::PopupMessageWidget,
         search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
@@ -36,11 +37,11 @@ use crate::{
 #[derive(Default, Debug, Display, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Mode {
-    #[default]
     Search,
     Filter,
     Picker,
     Popup,
+    #[default]
     FullCrateDetails,
     Quit,
 }
@@ -143,6 +144,8 @@ pub struct App {
 
     /// frame counter
     frame_count: usize,
+
+    home_page: CrateHomePage,
 }
 
 impl App {
@@ -174,6 +177,7 @@ impl App {
             prompt: Default::default(),
             last_tick_key_events: Default::default(),
             frame_count: Default::default(),
+            home_page: CrateHomePage::new().unwrap(),
         }
     }
 
@@ -747,49 +751,51 @@ impl StatefulWidget for AppWidget {
             .bg(config::get().style.background_color)
             .render(area, buf);
 
-        let [table, prompt] = if state.focused() {
-            Layout::vertical([Constraint::Fill(0), Constraint::Length(5)]).areas(area)
-        } else {
-            Layout::vertical([Constraint::Fill(0), Constraint::Length(1)]).areas(area)
-        };
+        state.home_page.clone().render(area, buf);
 
-        let p = SearchFilterPromptWidget::new(
-            state.focused(),
-            state.mode,
-            state.sort.clone(),
-            &state.input,
-        );
-        p.render(prompt, buf, &mut state.prompt);
-
-        let remaining_table = if state.show_crate_info {
-            state.render_crate_info(table, buf)
-        } else {
-            table
-        };
-
-        SearchResultsTableWidget::new(state.mode == Mode::Picker).render(
-            remaining_table,
-            buf,
-            &mut state.search_results,
-        );
-
-        Line::from(state.search_results_status())
-            .right_aligned()
-            .render(
-                remaining_table.inner(&Margin {
-                    horizontal: 1,
-                    vertical: 2,
-                }),
-                buf,
-            );
-
-        if let Some(err) = &state.error_message {
-            PopupMessageWidget::new("Error", err, state.popup_scroll_index).render(area, buf);
-        }
-        if let Some(info) = &state.info_message {
-            PopupMessageWidget::new("Info", info, state.popup_scroll_index).render(area, buf);
-        }
-
-        state.events_widget().render(area, buf);
+        // let [table, prompt] = if state.focused() {
+        //     Layout::vertical([Constraint::Fill(0),
+        // Constraint::Length(5)]).areas(area) } else {
+        //     Layout::vertical([Constraint::Fill(0),
+        // Constraint::Length(1)]).areas(area) };
+        //
+        // let p = SearchFilterPromptWidget::new(
+        //     state.focused(),
+        //     state.mode,
+        //     state.sort.clone(),
+        //     &state.input,
+        // );
+        // p.render(prompt, buf, &mut state.prompt);
+        //
+        // let remaining_table = if state.show_crate_info {
+        //     state.render_crate_info(table, buf)
+        // } else {
+        //     table
+        // };
+        //
+        // SearchResultsTableWidget::new(state.mode == Mode::Picker).render(
+        //     remaining_table,
+        //     buf,
+        //     &mut state.search_results,
+        // );
+        //
+        // Line::from(state.search_results_status())
+        //     .right_aligned()
+        //     .render(
+        //         remaining_table.inner(&Margin {
+        //             horizontal: 1,
+        //             vertical: 2,
+        //         }),
+        //         buf,
+        //     );
+        //
+        // if let Some(err) = &state.error_message {
+        //     PopupMessageWidget::new("Error", err,
+        // state.popup_scroll_index).render(area, buf); }
+        // if let Some(info) = &state.info_message {
+        //     PopupMessageWidget::new("Info", info,
+        // state.popup_scroll_index).render(area, buf); }
+        //
+        // state.events_widget().render(area, buf);
     }
 }
