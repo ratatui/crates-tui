@@ -107,7 +107,7 @@ impl<'a> SearchFilterPromptWidget<'a> {
         let scroll = self.input.cursor().saturating_sub(width.saturating_sub(4));
         let text = if self.mode.focused() {
             Line::from(vec![self.input.value().into()])
-        } else if self.mode.is_summary() {
+        } else if self.mode.is_summary() || self.mode.is_help() {
             Line::from(vec![])
         } else {
             Line::from(vec![
