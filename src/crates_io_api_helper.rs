@@ -22,7 +22,7 @@ pub struct SearchParameters {
 pub async fn request_crates(params: &SearchParameters) -> Result<(), String> {
     // Fetch crates using the created client with the error handling in one place.
     let client = create_client()?;
-    let query = create_query(&params);
+    let query = create_query(params);
     let (crates, versions, total) = fetch_crates_and_metadata(client, query).await?;
     update_state_with_fetched_crates(crates, versions, total, params);
     Ok(())
@@ -102,7 +102,7 @@ pub async fn request_crate_details(
     let client = create_client()?;
 
     let crate_data = client
-        .get_crate(&crate_name)
+        .get_crate(crate_name)
         .await
         .map_err(|err| format!("Error fetching crate details: {err:#?}"))?;
     *crate_info.lock().unwrap() = Some(crate_data);
@@ -117,7 +117,7 @@ pub async fn request_full_crate_details(
     let client = create_client()?;
 
     let full_crate_data = client
-        .full_crate(&crate_name, false)
+        .full_crate(crate_name, false)
         .await
         .map_err(|err| format!("Error fetching crate details: {err:#?}"))?;
     *full_crate_info.lock().unwrap() = Some(full_crate_data);

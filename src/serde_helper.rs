@@ -13,22 +13,22 @@ pub mod keybindings {
 
     impl KeyBindings {
         #[allow(dead_code)]
-        pub fn insert(&mut self, mode: &Mode, key_events: &[KeyEvent], action: Action) {
+        pub fn insert(&mut self, mode: Mode, key_events: &[KeyEvent], action: Action) {
             // Convert the slice of `KeyEvent`(s) to a `Vec`.
             let key_events_vec = key_events.to_vec();
 
             // Retrieve or create the inner `HashMap` corresponding to the mode.
-            let bindings_for_mode = self.0.entry(mode.clone()).or_insert_with(HashMap::new);
+            let bindings_for_mode = self.0.entry(mode).or_default();
 
             // Insert the `Action` into the inner `HashMap` using the key events `Vec` as
             // the key.
             bindings_for_mode.insert(key_events_vec, action);
         }
 
-        pub fn event_to_action(&self, mode: &Mode, key_events: &[KeyEvent]) -> Option<Action> {
+        pub fn event_to_action(&self, mode: Mode, key_events: &[KeyEvent]) -> Option<Action> {
             if key_events.is_empty() {
                 None
-            } else if let Some(Some(action)) = self.0.get(mode).map(|kb| kb.get(key_events)) {
+            } else if let Some(Some(action)) = self.0.get(&mode).map(|kb| kb.get(key_events)) {
                 Some(action.clone())
             } else {
                 self.event_to_action(mode, &key_events[1..])
@@ -86,7 +86,7 @@ pub mod keybindings {
     }
 
     fn parse_key_event(raw: &str) -> Result<KeyEvent, String> {
-        let (remaining, modifiers) = extract_modifiers(&raw);
+        let (remaining, modifiers) = extract_modifiers(raw);
         parse_key_code_with_modifiers(remaining, modifiers)
     }
 

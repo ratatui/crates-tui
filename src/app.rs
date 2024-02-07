@@ -33,7 +33,7 @@ use crate::{
     },
 };
 
-#[derive(Default, Debug, Display, Copy, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Default, Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Mode {
     #[default]
@@ -249,7 +249,7 @@ impl App {
         let config = config::get();
         let action = config
             .key_bindings
-            .event_to_action(&self.mode, &self.last_tick_key_events);
+            .event_to_action(self.mode, &self.last_tick_key_events);
         if action.is_some() {
             self.last_tick_key_events.drain(..);
         }
@@ -301,7 +301,7 @@ impl App {
             Action::ClosePopup => self.clear_error_and_info_flags(),
             Action::ToggleSortBy { reload, forward } => self.toggle_sort_by(reload, forward)?,
             Action::ClearTaskDetailsHandle(ref id) => {
-                self.clear_task_details_handle(uuid::Uuid::parse_str(&id)?)?
+                self.clear_task_details_handle(uuid::Uuid::parse_str(id)?)?
             }
             Action::OpenUrlInBrowser => self.open_url_in_browser()?,
             _ => {}
@@ -724,11 +724,7 @@ impl App {
     }
 
     fn focused(&self) -> bool {
-        if self.mode == Mode::Search || self.mode == Mode::Filter {
-            true
-        } else {
-            false
-        }
+        matches!(self.mode, Mode::Search | Mode::Filter)
     }
 
     fn spinner(&self) -> String {
