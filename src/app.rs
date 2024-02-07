@@ -41,6 +41,7 @@ pub enum Mode {
     Filter,
     Picker,
     Popup,
+    FullCrateDetails,
     Quit,
 }
 
@@ -85,7 +86,10 @@ pub struct App {
     /// A thread-safe shared container holding the detailed information about
     /// the currently selected crate; this can be `None` if no crate is
     /// selected.
-    crate_info: Arc<Mutex<Option<crates_io_api::CrateResponse>>>,
+    crate_response: Arc<Mutex<Option<crates_io_api::CrateResponse>>>,
+
+    /// contains table state for info popup
+    crate_info: TableState,
 
     last_task_details_handle: HashMap<uuid::Uuid, JoinHandle<()>>,
 
@@ -157,6 +161,7 @@ impl App {
             crates: Default::default(),
             versions: Default::default(),
             full_crate_info: Default::default(),
+            crate_response: Default::default(),
             crate_info: Default::default(),
             last_task_details_handle: Default::default(),
             total_num_crates: Default::default(),
@@ -262,7 +267,7 @@ impl App {
     /// action which will be to be processed in the next iteration of the main
     /// event loop.
     fn handle_action(&mut self, action: Action, tui: &mut Tui) -> Result<Option<Action>> {
-        if action != Action::Tick && action != Action::Render {
+        if action != Action::Tick && action != Action::Render && action != Action::KeyRefresh {
             info!("{action:?}");
         }
         match action {
@@ -278,6 +283,8 @@ impl App {
             Action::ScrollDown => self.search_results.scroll_next(1),
             Action::ScrollTop => self.search_results.scroll_to_top(),
             Action::ScrollBottom => self.search_results.scroll_to_bottom(),
+            Action::ScrollCrateInfoUp => self.crate_info_scroll_previous(),
+            Action::ScrollCrateInfoDown => self.crate_info_scroll_next(),
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
@@ -288,10 +295,11 @@ impl App {
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
+            Action::ShowFullCrateInfo => self.show_full_crate_details(),
             Action::ShowErrorPopup(ref err) => self.set_error_flag(err.clone()),
             Action::ShowInfoPopup(ref info) => self.set_info_flag(info.clone()),
             Action::ClosePopup => self.clear_error_and_info_flags(),
-            Action::ToggleSortBy { reload } => self.toggle_sort_by(reload)?,
+            Action::ToggleSortBy { reload, forward } => self.toggle_sort_by(reload, forward)?,
             Action::ClearTaskDetailsHandle(ref id) => {
                 self.clear_task_details_handle(uuid::Uuid::parse_str(&id)?)?
             }
@@ -400,6 +408,22 @@ impl App {
         self.popup_scroll_index = self.popup_scroll_index.saturating_add(1)
     }
 
+    fn crate_info_scroll_previous(&mut self) {
+        let i = self
+            .crate_info
+            .selected()
+            .map_or(0, |i| i.saturating_sub(1));
+        self.crate_info.select(Some(i));
+    }
+
+    fn crate_info_scroll_next(&mut self) {
+        let i = self
+            .crate_info
+            .selected()
+            .map_or(0, |i| i.saturating_add(1));
+        self.crate_info.select(Some(i));
+    }
+
     fn enter_search_insert_mode(&mut self) {
         self.mode = Mode::Search;
         self.input = self.input.clone().with_value(self.search.clone());
@@ -440,7 +464,7 @@ impl App {
         }
     }
 
-    fn toggle_sort_by(&mut self, reload: bool) -> Result<()> {
+    fn toggle_sort_by_forward(&mut self) {
         use crates_io_api::Sort as S;
         self.sort = match self.sort {
             S::Alphabetical => S::Relevance,
@@ -449,6 +473,26 @@ impl App {
             S::RecentDownloads => S::RecentUpdates,
             S::RecentUpdates => S::NewlyAdded,
             S::NewlyAdded => S::Alphabetical,
+        };
+    }
+
+    fn toggle_sort_by_backward(&mut self) {
+        use crates_io_api::Sort as S;
+        self.sort = match self.sort {
+            S::Relevance => S::Alphabetical,
+            S::Downloads => S::Relevance,
+            S::RecentDownloads => S::Downloads,
+            S::RecentUpdates => S::RecentDownloads,
+            S::NewlyAdded => S::RecentUpdates,
+            S::Alphabetical => S::NewlyAdded,
+        };
+    }
+
+    fn toggle_sort_by(&mut self, reload: bool, forward: bool) -> Result<()> {
+        if forward {
+            self.toggle_sort_by_forward()
+        } else {
+            self.toggle_sort_by_backward()
         };
         if reload {
             self.tx.send(Action::ReloadData)?;
@@ -479,13 +523,19 @@ impl App {
         self.request_crate_details();
     }
 
+    fn show_full_crate_details(&mut self) {
+        self.clear_all_previous_task_details_handles();
+        self.request_full_crate_details();
+        self.mode = Mode::FullCrateDetails;
+    }
+
     fn store_total_number_of_crates(&mut self, n: u64) {
         self.total_num_crates = Some(n)
     }
 
     fn open_url_in_browser(&self) -> Result<()> {
-        if let Some(crate_info) = self.full_crate_info.lock().unwrap().clone() {
-            let name = crate_info.name;
+        if let Some(crate_response) = self.crate_response.lock().unwrap().clone() {
+            let name = crate_response.crate_data.name;
             webbrowser::open(&format!("https://docs.rs/{name}/latest"))?;
         }
         Ok(())
@@ -508,7 +558,7 @@ impl App {
     fn prepare_reload(&mut self) {
         self.search_results.select(None);
         *self.full_crate_info.lock().unwrap() = None;
-        *self.crate_info.lock().unwrap() = None;
+        *self.crate_response.lock().unwrap() = None;
     }
 
     /// Creates the parameters required for the search task.
@@ -544,7 +594,7 @@ impl App {
         }
         if let Some(crate_name) = self.search_results.selected_crate_name() {
             let tx = self.tx.clone();
-            let crate_info = self.crate_info.clone();
+            let crate_response = self.crate_response.clone();
             let loading_status = self.loading_status.clone();
 
             // Spawn the async work to fetch crate details.
@@ -553,7 +603,7 @@ impl App {
                 info!("Requesting details for {crate_name}: {uuid}");
                 loading_status.store(true, Ordering::SeqCst);
                 if let Err(error_message) =
-                    crates_io_api_helper::request_crate_details(&crate_name, crate_info).await
+                    crates_io_api_helper::request_crate_details(&crate_name, crate_response).await
                 {
                     let _ = tx.send(Action::ShowErrorPopup(error_message));
                 };
@@ -619,14 +669,14 @@ impl App {
         }
     }
 
-    fn render_crate_info(&self, area: Rect, buf: &mut Buffer) -> Rect {
-        match self.crate_info.lock().unwrap().clone() {
+    fn render_crate_info(&mut self, area: Rect, buf: &mut Buffer) -> Rect {
+        match self.crate_response.lock().unwrap().clone() {
             Some(ci) => {
                 // split available area
                 let [table, info] =
                     Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
                         .areas(area);
-                CrateInfoTableWidget::new(ci).render(info, buf);
+                CrateInfoTableWidget::new(ci).render(info, buf, &mut self.crate_info);
                 table
             }
             _ => area,

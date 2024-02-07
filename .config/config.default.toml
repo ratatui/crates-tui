@@ -24,7 +24,10 @@ prompt_padding = 1
 "/" = "EnterFilterInsertMode"
 "j" = "ScrollDown"
 "k" = "ScrollUp"
-"TAB" = { ToggleSortBy = { reload = true } }
+"ctrl-j" = "ScrollCrateInfoDown"
+"ctrl-k" = "ScrollCrateInfoUp"
+"TAB" = { ToggleSortBy = { reload = true, forward = true } }
+"Shift-Backtab" = { ToggleSortBy = { reload = true, forward = false } }
 "Down" = "ScrollDown"
 "Up" = "ScrollUp"
 "l" = "IncrementPage"
@@ -34,9 +37,11 @@ prompt_padding = 1
 "r" = "ReloadData"
 "Enter" = "ToggleShowCrateInfo"
 "<g><b>" = "OpenUrlInBrowser"
+"<g><Enter>" = "ShowFullCrateInfo"
 
 [key_bindings.search]
-"TAB" = { ToggleSortBy = { reload = false } }
+"TAB" = { ToggleSortBy = { reload = false, forward = true } }
+"Shift-Backtab" = { ToggleSortBy = { reload = true, forward = false } }
 "ESC" = "EnterNormal"
 "Enter" = "SubmitSearch"
 

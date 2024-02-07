@@ -12,8 +12,9 @@ impl CrateInfoTableWidget {
     }
 }
 
-impl Widget for CrateInfoTableWidget {
-    fn render(self, area: Rect, buf: &mut Buffer) {
+impl StatefulWidget for CrateInfoTableWidget {
+    type State = TableState;
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let ci = self.crate_info.clone();
 
         let created_at = ci
@@ -39,6 +40,25 @@ impl Widget for CrateInfoTableWidget {
             Row::new(cells)
         })
         .collect_vec();
+        let versions = self
+            .crate_info
+            .versions
+            .iter()
+            .map(|v| v.num.clone())
+            .map(Line::from)
+            .join(", ");
+        let versions = textwrap::wrap(&versions, (area.width as f64 * 0.75) as usize)
+            .iter()
+            .map(|s| Line::from(s.to_string()))
+            .collect_vec();
+        let height = versions.len();
+        rows.push(
+            Row::new(vec![
+                Cell::from("Versions"),
+                Cell::from(Text::from(versions)),
+            ])
+            .height(height as u16),
+        );
 
         if let Some(description) = self.crate_info.crate_data.description {
             // assume description is wrapped in 75%
@@ -77,8 +97,19 @@ impl Widget for CrateInfoTableWidget {
             ]));
         }
 
+        let selected_max = rows.len().saturating_sub(1);
+
         let widths = [Constraint::Fill(1), Constraint::Fill(4)];
-        let table_widget = Table::new(rows, widths).block(Block::default().borders(Borders::ALL));
-        Widget::render(table_widget, area, buf);
+        let table_widget = Table::new(rows, widths)
+            .block(Block::default().borders(Borders::ALL))
+            .highlight_symbol("█ ")
+            .highlight_spacing(HighlightSpacing::Always);
+
+        if let Some(i) = state.selected() {
+            state.select(Some(i.min(selected_max)));
+        } else {
+            state.select(Some(0));
+        }
+        StatefulWidget::render(table_widget, area, buf, state);
     }
 }
