@@ -759,13 +759,18 @@ impl App {
         self.loading_status.load(Ordering::SeqCst)
     }
 
+    fn page_number_status(&self) -> String {
+        let max_page_size = (self.total_num_crates.unwrap_or_default() / self.page_size) + 1;
+        format!("Page: {}/{}", self.page, max_page_size)
+    }
+
     fn search_results_status(&self) -> String {
         let selected = self.selected_with_page_context();
         let ncrates = self.total_num_crates.unwrap_or_default();
         if self.loading() {
             self.spinner()
         } else {
-            format!("{}/{}", selected, ncrates)
+            format!("{}/{} Results", selected, ncrates)
         }
     }
 
@@ -791,6 +796,14 @@ impl App {
             remaining_area,
             buf,
             &mut self.search_results,
+        );
+
+        Line::from(self.page_number_status()).left_aligned().render(
+            remaining_area.inner(&Margin {
+                horizontal: 1,
+                vertical: 2,
+            }),
+            buf,
         );
 
         Line::from(self.search_results_status())
