@@ -834,7 +834,6 @@ impl StatefulWidget for AppWidget {
         );
         p.render(prompt, buf, &mut state.prompt);
 
-        debug!("{}", state.mode);
         match state.mode {
             Mode::Summary => state.render_summary(table, buf),
             _ => state.render_search_results(table, buf),

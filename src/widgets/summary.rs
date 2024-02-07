@@ -56,6 +56,39 @@ impl<'a> SummaryWidget<'a> {
             .collect_vec();
         List::new(items).block(Block::default().title("Just Updated".bold()))
     }
+
+    fn most_recently_downloaded(&self) -> impl Widget {
+        let items = std::iter::once(Text::from(Line::raw("")))
+            .chain(
+                self.most_recently_downloaded
+                    .iter()
+                    .map(|item| Text::from(vec![Line::raw(item.name.clone()), Line::raw("")])),
+            )
+            .collect_vec();
+        List::new(items).block(Block::default().title("Most Recent Downloads".bold()))
+    }
+
+    fn popular_keywords(&self) -> impl Widget {
+        let items = std::iter::once(Text::from(Line::raw("")))
+            .chain(
+                self.popular_keywords
+                    .iter()
+                    .map(|item| Text::from(vec![Line::raw(item.keyword.clone()), Line::raw("")])),
+            )
+            .collect_vec();
+        List::new(items).block(Block::default().title("Popular Keywords".bold()))
+    }
+
+    fn popular_categories(&self) -> impl Widget {
+        let items = std::iter::once(Text::from(Line::raw("")))
+            .chain(
+                self.popular_categories
+                    .iter()
+                    .map(|item| Text::from(vec![Line::raw(item.category.clone()), Line::raw("")])),
+            )
+            .collect_vec();
+        List::new(items).block(Block::default().title("Popular Categories".bold()))
+    }
 }
 
 impl Widget for &SummaryWidget<'_> {
@@ -63,16 +96,29 @@ impl Widget for &SummaryWidget<'_> {
         use Constraint::*;
 
         let [_, area] = Layout::vertical([Min(0), Percentage(90)]).areas(area);
+
         let [_, area, _] = Layout::horizontal([Min(0), Percentage(75), Min(0)]).areas(area);
+
+        let [top, bottom] = Layout::vertical([Percentage(50), Percentage(50)]).areas(area);
 
         let [new_crates, most_downloaded, just_updated] =
             Layout::horizontal([Percentage(30), Percentage(30), Percentage(30)])
                 .flex(Flex::Center)
                 .spacing(2)
-                .areas(area);
+                .areas(top);
 
         Widget::render(self.new_crates(), new_crates, buf);
         Widget::render(self.most_downloaded(), most_downloaded, buf);
         Widget::render(self.just_updated(), just_updated, buf);
+
+        let [most_recent_downloads, popular_keywords, popular_categories] =
+            Layout::horizontal([Percentage(30), Percentage(30), Percentage(30)])
+                .flex(Flex::Center)
+                .spacing(2)
+                .areas(bottom);
+
+        Widget::render(self.most_recently_downloaded(), most_recent_downloads, buf);
+        Widget::render(self.popular_keywords(), popular_keywords, buf);
+        Widget::render(self.popular_categories(), popular_categories, buf);
     }
 }
