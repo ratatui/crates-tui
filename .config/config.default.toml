@@ -38,6 +38,7 @@ prompt_padding = 1
 "Enter" = "ToggleShowCrateInfo"
 "<g><b>" = "OpenUrlInBrowser"
 "<g><Enter>" = "ShowFullCrateInfo"
+"c" = "CopyCargoAddCommandToClipboard"
 
 [key_bindings.picker_hide_crate_info]
 "q" = "Quit"
@@ -64,6 +65,7 @@ prompt_padding = 1
 "Enter" = "ToggleShowCrateInfo"
 "<g><b>" = "OpenUrlInBrowser"
 "<g><Enter>" = "ShowFullCrateInfo"
+"c" = "CopyCargoAddCommandToClipboard"
 
 [key_bindings.summary]
 "q" = "Quit"

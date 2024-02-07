@@ -19,6 +19,7 @@ cfg-if = "1.0.0"
 chrono = "0.4.31"
 clap = { version = "4.4.11", features = ["derive", "cargo", "wrap_help", "unicode", "string", "unstable-styles", "color"] }
 color-eyre = "0.6.2"
+copypasta = "0.10.1"
 crates_io_api = "0.9.0"
 crossterm = { version = "0.27.0", features = ["serde", "event-stream"] }
 derive_deref = "1.1.1"

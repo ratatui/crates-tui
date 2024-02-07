@@ -165,6 +165,10 @@ pub struct App {
     /// and commands are interpreted.
     mode: Mode,
 
+    /// The active mode of the application, which could change how user inputs
+    /// and commands are interpreted.
+    last_mode: Mode,
+
     /// A prompt displaying the current search or filter query, if any, that the
     /// user can interact with.
     prompt: SearchFilterPrompt,
@@ -187,6 +191,7 @@ impl App {
             page_size: 25,
             sort: crates_io_api::Sort::Relevance,
             mode: Mode::default(),
+            last_mode: Mode::default(),
             loading_status: Default::default(),
             search: Default::default(),
             filter: Default::default(),
@@ -346,6 +351,7 @@ impl App {
                 self.clear_task_details_handle(uuid::Uuid::parse_str(id)?)?
             }
             Action::OpenUrlInBrowser => self.open_url_in_browser()?,
+            Action::CopyCargoAddCommandToClipboard => self.copy_cargo_add_command_to_clipboard()?,
             _ => {}
         }
         let maybe_action = match action {
@@ -553,19 +559,25 @@ impl App {
     fn set_error_flag(&mut self, err: String) {
         error!("Error: {err}");
         self.error_message = Some(err);
+        self.last_mode = self.mode;
         self.mode = Mode::Popup;
     }
 
     fn set_info_flag(&mut self, info: String) {
         info!("Info: {info}");
         self.info_message = Some(info);
+        self.last_mode = self.mode;
         self.mode = Mode::Popup;
     }
 
     fn clear_error_and_info_flags(&mut self) {
         self.error_message = None;
         self.info_message = None;
-        self.mode = Mode::Search;
+        self.mode = if self.last_mode.is_popup() {
+            Mode::Search
+        } else {
+            self.last_mode
+        }
     }
 
     fn update_current_selection_crate_info(&mut self) {
@@ -587,6 +599,36 @@ impl App {
         if let Some(crate_response) = self.crate_response.lock().unwrap().clone() {
             let name = crate_response.crate_data.name;
             webbrowser::open(&format!("https://docs.rs/{name}/latest"))?;
+        }
+        Ok(())
+    }
+
+    fn copy_cargo_add_command_to_clipboard(&self) -> Result<()> {
+        use copypasta::ClipboardProvider;
+        match copypasta::ClipboardContext::new() {
+            Ok(mut ctx) => {
+                if let Some(crate_name) = self.search_results.selected_crate_name() {
+                    let msg = format!("cargo add {}", crate_name);
+                    let _ = match ctx.set_contents(msg.clone()).ok() {
+                        Some(_) => self.tx.send(Action::ShowInfoPopup(format!(
+                            "Copied to clipboard: `{msg}`"
+                        ))),
+                        None => self.tx.send(Action::ShowErrorPopup(format!(
+                            "Unable to copied to clipboard: `{msg}`"
+                        ))),
+                    };
+                } else {
+                    let _ = self
+                        .tx
+                        .send(Action::ShowErrorPopup("No selection made to copy".into()));
+                }
+            }
+            Err(err) => {
+                let _ = self.tx.send(Action::ShowErrorPopup(format!(
+                    "Unable to create ClipboardContext: {}",
+                    err
+                )));
+            }
         }
         Ok(())
     }
