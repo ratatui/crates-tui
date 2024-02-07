@@ -41,7 +41,7 @@ prompt_padding = 1
 
 [key_bindings.picker_hide_crate_info]
 "q" = "Quit"
-"ESC" = "Quit"
+"ESC" = { SwitchMode = "summary" }
 "<g><g>" = "ScrollTop"
 "G" = "ScrollBottom"
 "Home" = "ScrollTop"

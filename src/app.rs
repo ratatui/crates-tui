@@ -30,6 +30,7 @@ use crate::{
         popup_message::PopupMessageWidget,
         search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
         search_results_table::{SearchResultsTable, SearchResultsTableWidget},
+        summary::SummaryWidget,
     },
 };
 
@@ -51,6 +52,10 @@ pub enum Mode {
 }
 
 impl Mode {
+    fn focused(&self) -> bool {
+        matches!(self, Mode::Search | Mode::Filter)
+    }
+
     fn is_picker(&self) -> bool {
         self.is_picker_hide_crate_info() || self.is_picker_show_crate_info()
     }
@@ -108,6 +113,11 @@ pub struct App {
     /// the currently selected crate; this can be `None` if no crate is
     /// selected.
     crate_response: Arc<Mutex<Option<crates_io_api::CrateResponse>>>,
+
+    /// A thread-safe shared container holding the detailed information about
+    /// the currently selected crate; this can be `None` if no crate is
+    /// selected.
+    summary: Arc<Mutex<Option<crates_io_api::Summary>>>,
 
     /// contains table state for info popup
     crate_info: TableState,
@@ -180,6 +190,7 @@ impl App {
             full_crate_info: Default::default(),
             crate_response: Default::default(),
             crate_info: Default::default(),
+            summary: Default::default(),
             last_task_details_handle: Default::default(),
             total_num_crates: Default::default(),
             input: Default::default(),
@@ -198,6 +209,7 @@ impl App {
         // uncomment to test error handling
         // panic!("test panic");
         // Err(color_eyre::eyre::eyre!("Error"))?;
+        self.tx.send(Action::Init)?;
 
         loop {
             if let Some(e) = events.next().await {
@@ -290,6 +302,7 @@ impl App {
             Action::Quit => self.quit(),
             Action::Render => self.draw(tui)?,
             Action::KeyRefresh => self.key_refresh_tick(),
+            Action::Init => self.init()?,
             Action::Resize(w, h) => self.resize(tui, (w, h))?,
             Action::Tick => self.tick(),
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
@@ -309,6 +322,7 @@ impl App {
             }
             Action::SwitchMode(Mode::PickerHideCrateInfo) => self.enter_normal_mode(),
             Action::SwitchMode(Mode::PickerShowCrateInfo) => self.enter_normal_mode(),
+            Action::SwitchMode(mode) => self.switch_mode(mode),
             Action::HandleFilterPromptChange => self.handle_filter_prompt_change(),
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
@@ -334,25 +348,39 @@ impl App {
         Ok(maybe_action)
     }
 
-    fn clear_task_details_handle(&mut self, id: uuid::Uuid) -> Result<()> {
-        if let Some((_, handle)) = self.last_task_details_handle.remove_entry(&id) {
-            handle.abort()
-        }
+    // Render the `AppWidget` as a stateful widget using `self` as the `State`
+    fn draw(&mut self, tui: &mut Tui) -> Result<()> {
+        tui.draw(|frame| {
+            frame.render_stateful_widget(AppWidget, frame.size(), self);
+            self.update_frame_count(frame);
+            self.update_cursor(frame);
+        })?;
         Ok(())
-    }
-
-    fn clear_all_previous_task_details_handles(&mut self) {
-        *self.full_crate_info.lock().unwrap() = None;
-        for (_, v) in self.last_task_details_handle.iter() {
-            v.abort()
-        }
-        self.last_task_details_handle.clear()
     }
 }
 
 impl App {
     fn tick(&mut self) {
         self.update_crate_table();
+    }
+
+    fn init(&mut self) -> Result<()> {
+        self.request_summary()?;
+        Ok(())
+    }
+
+    fn request_summary(&self) -> Result<()> {
+        let tx = self.tx.clone();
+        let loading_status = self.loading_status.clone();
+        let summary = self.summary.clone();
+        tokio::spawn(async move {
+            loading_status.store(true, Ordering::SeqCst);
+            if let Err(error_message) = crates_io_api_helper::request_summary(summary).await {
+                let _ = tx.send(Action::ShowErrorPopup(error_message));
+            }
+            loading_status.store(false, Ordering::SeqCst);
+        });
+        Ok(())
     }
 
     fn update_crate_table(&mut self) {
@@ -454,6 +482,10 @@ impl App {
         }
     }
 
+    fn switch_mode(&mut self, mode: Mode) {
+        self.mode = mode;
+    }
+
     fn handle_filter_prompt_change(&mut self) {
         self.filter = self.input.value().into();
         self.search_results.select(None);
@@ -551,9 +583,22 @@ impl App {
         }
         Ok(())
     }
-}
 
-impl App {
+    fn clear_task_details_handle(&mut self, id: uuid::Uuid) -> Result<()> {
+        if let Some((_, handle)) = self.last_task_details_handle.remove_entry(&id) {
+            handle.abort()
+        }
+        Ok(())
+    }
+
+    fn clear_all_previous_task_details_handles(&mut self) {
+        *self.full_crate_info.lock().unwrap() = None;
+        for (_, v) in self.last_task_details_handle.iter() {
+            v.abort()
+        }
+        self.last_task_details_handle.clear()
+    }
+
     /// Reloads the list of crates based on the current search parameters,
     /// updating the application state accordingly. This involves fetching
     /// data asynchronously from the crates.io API and updating various parts of
@@ -658,16 +703,6 @@ impl App {
         }
     }
 
-    // Render the `AppWidget` as a stateful widget using `self` as the `State`
-    fn draw(&mut self, tui: &mut Tui) -> Result<()> {
-        tui.draw(|frame| {
-            frame.render_stateful_widget(AppWidget, frame.size(), self);
-            self.update_frame_count(frame);
-            self.update_cursor(frame);
-        })?;
-        Ok(())
-    }
-
     // Sets the frame count
     fn update_frame_count(&mut self, frame: &mut Frame<'_>) {
         self.frame_count = frame.count();
@@ -680,17 +715,9 @@ impl App {
         }
     }
 
-    fn render_crate_info(&mut self, area: Rect, buf: &mut Buffer) -> Rect {
-        match self.crate_response.lock().unwrap().clone() {
-            Some(ci) => {
-                // split available area
-                let [table, info] =
-                    Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
-                        .areas(area);
-                CrateInfoTableWidget::new(ci).render(info, buf, &mut self.crate_info);
-                table
-            }
-            _ => area,
+    fn render_crate_info(&mut self, area: Rect, buf: &mut Buffer) {
+        if let Some(ci) = self.crate_response.lock().unwrap().clone() {
+            CrateInfoTableWidget::new(ci).render(area, buf, &mut self.crate_info);
         }
     }
 
@@ -734,15 +761,54 @@ impl App {
         }
     }
 
-    fn focused(&self) -> bool {
-        matches!(self.mode, Mode::Search | Mode::Filter)
-    }
-
     fn spinner(&self) -> String {
         let spinner = ["◑", "◒", "◐", "◓"];
         let index = self.frame_count % spinner.len();
         let symbol = spinner[index];
         symbol.into()
+    }
+
+    fn render_search_results(&mut self, area: Rect, buf: &mut Buffer) {
+        let remaining_area = if self.mode.should_show_crate_info() {
+            let [area, info] =
+                Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
+                    .areas(area);
+            self.render_crate_info(info, buf);
+            area
+        } else {
+            area
+        };
+
+        SearchResultsTableWidget::new(self.mode.is_picker()).render(
+            remaining_area,
+            buf,
+            &mut self.search_results,
+        );
+
+        Line::from(self.search_results_status())
+            .right_aligned()
+            .render(
+                remaining_area.inner(&Margin {
+                    horizontal: 1,
+                    vertical: 2,
+                }),
+                buf,
+            );
+    }
+
+    fn render_summary(&mut self, area: Rect, buf: &mut Buffer) {
+        if let Some(summary) = self.summary.lock().unwrap().clone() {
+            SummaryWidget(&summary).render(area, buf);
+        }
+        if self.loading() {
+            Line::from(self.spinner()).right_aligned().render(
+                area.inner(&Margin {
+                    horizontal: 1,
+                    vertical: 2,
+                }),
+                buf,
+            );
+        }
     }
 }
 
@@ -754,41 +820,25 @@ impl StatefulWidget for AppWidget {
             .bg(config::get().style.background_color)
             .render(area, buf);
 
-        let [table, prompt] = if state.focused() {
+        let [table, prompt] = if state.mode.focused() {
             Layout::vertical([Constraint::Fill(0), Constraint::Length(5)]).areas(area)
         } else {
             Layout::vertical([Constraint::Fill(0), Constraint::Length(1)]).areas(area)
         };
 
         let p = SearchFilterPromptWidget::new(
-            state.focused(),
+            state.mode.focused(),
             state.mode,
             state.sort.clone(),
             &state.input,
         );
         p.render(prompt, buf, &mut state.prompt);
 
-        let remaining_table = if state.mode.should_show_crate_info() {
-            state.render_crate_info(table, buf)
-        } else {
-            table
-        };
-
-        SearchResultsTableWidget::new(state.mode.is_picker()).render(
-            remaining_table,
-            buf,
-            &mut state.search_results,
-        );
-
-        Line::from(state.search_results_status())
-            .right_aligned()
-            .render(
-                remaining_table.inner(&Margin {
-                    horizontal: 1,
-                    vertical: 2,
-                }),
-                buf,
-            );
+        debug!("{}", state.mode);
+        match state.mode {
+            Mode::Summary => state.render_summary(table, buf),
+            _ => state.render_search_results(table, buf),
+        }
 
         if let Some(err) = &state.error_message {
             PopupMessageWidget::new("Error", err, state.popup_scroll_index).render(area, buf);

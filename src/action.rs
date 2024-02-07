@@ -12,6 +12,7 @@ pub enum Action {
     Suspend,
     Resume,
     Quit,
+    Init,
     Refresh,
     ShowErrorPopup(String),
     ShowInfoPopup(String),

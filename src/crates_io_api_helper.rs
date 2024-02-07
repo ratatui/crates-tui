@@ -4,6 +4,7 @@ use crates_io_api::CratesQuery;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::action::Action;
+use color_eyre::Result;
 
 /// Represents the parameters needed for fetching crates asynchronously.
 pub struct SearchParameters {
@@ -120,6 +121,20 @@ pub async fn request_full_crate_details(
         .full_crate(crate_name, false)
         .await
         .map_err(|err| format!("Error fetching crate details: {err:#?}"))?;
+
     *full_crate_info.lock().unwrap() = Some(full_crate_data);
+    Ok(())
+}
+
+pub async fn request_summary(
+    summary: Arc<Mutex<Option<crates_io_api::Summary>>>,
+) -> Result<(), String> {
+    let client = create_client()?;
+
+    let summary_data = client
+        .summary()
+        .await
+        .map_err(|err| format!("Error fetching crate details: {err:#?}"))?;
+    *summary.lock().unwrap() = Some(summary_data);
     Ok(())
 }
