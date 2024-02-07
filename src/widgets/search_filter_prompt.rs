@@ -110,7 +110,7 @@ impl<'a> SearchFilterPromptWidget<'a> {
                 Line::from(vec![])
             } else {
                 Line::from(vec![
-                    "Last Search: '".into(),
+                    "Last Prompt: '".into(),
                     last_search.into(),
                     "'".into(),
                 ])
