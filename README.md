@@ -69,6 +69,10 @@ https://github.com/ratatui-org/crates-tui/assets/1813121/362d7dc3-d9ef-43df-8d2e
 
 https://github.com/ratatui-org/crates-tui/assets/1813121/9609a0f1-4da7-426d-8ce8-2c5a77c54754
 
+## Help
+
+https://github.com/ratatui-org/crates-tui/assets/1813121/4c2a3deb-f546-41e6-a48d-998831182ab6
+
 ## Print Default Configuration
 
 ```plain
