@@ -101,16 +101,11 @@ impl<'a> SummaryWidget<'a> {
             Borders::NONE
         };
         let items = std::iter::once(Text::from(Line::raw("")))
-            .chain(self.new_crates.iter().map(|item| {
-                Text::from(vec![
-                    Line::raw(item.name.clone()),
-                    Line::styled(
-                        item.max_version.clone(),
-                        Style::default().fg(Color::DarkGray),
-                    ),
-                    Line::raw(""),
-                ])
-            }))
+            .chain(
+                self.new_crates
+                    .iter()
+                    .map(|item| Text::from(vec![Line::raw(item.name.clone()), Line::raw("")])),
+            )
             .collect_vec();
         list_builder(items, "New Crates".into(), borders)
     }
@@ -140,11 +135,14 @@ impl<'a> SummaryWidget<'a> {
         let items = std::iter::once(Text::from(Line::raw("")))
             .chain(self.just_updated.iter().map(|item| {
                 Text::from(vec![
-                    Line::raw(item.name.clone()),
-                    Line::styled(
-                        item.max_version.clone(),
-                        Style::default().fg(Color::DarkGray),
-                    ),
+                    Line::from(vec![
+                        item.name.clone().into(),
+                        " ".into(),
+                        Span::styled(
+                            format!("v{}", item.max_version),
+                            Style::default().fg(Color::DarkGray),
+                        ),
+                    ]),
                     Line::raw(""),
                 ])
             }))
