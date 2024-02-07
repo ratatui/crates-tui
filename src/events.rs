@@ -50,10 +50,7 @@ impl Events {
     }
 
     pub async fn next(&mut self) -> Option<Event> {
-        match self.streams.next().await {
-            Some((_name, event)) => Some(event),
-            None => None,
-        }
+        self.streams.next().await.map(|(_name, event)| event)
     }
 }
 
