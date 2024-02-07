@@ -104,6 +104,17 @@ impl<'a> SearchFilterPromptWidget<'a> {
         let scroll = self.input.cursor().saturating_sub(width.saturating_sub(4));
         let text = if self.mode.focused() {
             Line::from(vec![self.input.value().into()])
+        } else if self.mode.is_summary() {
+            let last_search = self.input.value();
+            if last_search.is_empty() {
+                Line::from(vec![])
+            } else {
+                Line::from(vec![
+                    "Last Search: '".into(),
+                    last_search.into(),
+                    "'".into(),
+                ])
+            }
         } else {
             Line::from(vec![
                 self.input.value().into(),
