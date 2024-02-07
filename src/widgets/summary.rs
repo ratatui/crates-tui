@@ -104,7 +104,7 @@ impl<'a> SummaryWidget<'a> {
             .chain(
                 self.new_crates
                     .iter()
-                    .map(|item| Text::from(vec![Line::raw(item.name.clone()), Line::raw("")])),
+                    .map(|item| Text::from(vec![Line::raw(item.name.clone())])),
             )
             .collect_vec();
         list_builder(items, "New Crates".into(), borders)
@@ -120,7 +120,7 @@ impl<'a> SummaryWidget<'a> {
             .chain(
                 self.most_downloaded
                     .iter()
-                    .map(|item| Text::from(vec![Line::raw(item.name.clone()), Line::raw("")])),
+                    .map(|item| Text::from(vec![Line::raw(item.name.clone())])),
             )
             .collect_vec();
         list_builder(items, "Most Downloaded".into(), borders)
@@ -134,17 +134,14 @@ impl<'a> SummaryWidget<'a> {
         };
         let items = std::iter::once(Text::from(Line::raw("")))
             .chain(self.just_updated.iter().map(|item| {
-                Text::from(vec![
-                    Line::from(vec![
-                        item.name.clone().into(),
-                        " ".into(),
-                        Span::styled(
-                            format!("v{}", item.max_version),
-                            Style::default().fg(Color::DarkGray),
-                        ),
-                    ]),
-                    Line::raw(""),
-                ])
+                Text::from(vec![Line::from(vec![
+                    item.name.clone().into(),
+                    " ".into(),
+                    Span::styled(
+                        format!("v{}", item.max_version),
+                        Style::default().fg(Color::DarkGray),
+                    ),
+                ])])
             }))
             .collect_vec();
         list_builder(items, "Just Updated".into(), borders)
@@ -160,7 +157,7 @@ impl<'a> SummaryWidget<'a> {
             .chain(
                 self.most_recently_downloaded
                     .iter()
-                    .map(|item| Text::from(vec![Line::raw(item.name.clone()), Line::raw("")])),
+                    .map(|item| Text::from(vec![Line::raw(item.name.clone())])),
             )
             .collect_vec();
         list_builder(items, "Most Recently Downloaded".into(), borders)
@@ -176,7 +173,7 @@ impl<'a> SummaryWidget<'a> {
             .chain(
                 self.popular_keywords
                     .iter()
-                    .map(|item| Text::from(vec![Line::raw(item.keyword.clone()), Line::raw("")])),
+                    .map(|item| Text::from(vec![Line::raw(item.keyword.clone())])),
             )
             .collect_vec();
         list_builder(items, "Popular Keywords".into(), borders)
@@ -192,7 +189,7 @@ impl<'a> SummaryWidget<'a> {
             .chain(
                 self.popular_categories
                     .iter()
-                    .map(|item| Text::from(vec![Line::raw(item.category.clone()), Line::raw("")])),
+                    .map(|item| Text::from(vec![Line::raw(item.category.clone())])),
             )
             .collect_vec();
         list_builder(items, "Popular Categories".into(), borders)

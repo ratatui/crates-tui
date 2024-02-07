@@ -794,8 +794,7 @@ impl App {
     fn render_search_results(&mut self, area: Rect, buf: &mut Buffer) {
         let remaining_area = if self.mode.should_show_crate_info() {
             let [area, info] =
-                Layout::vertical([Constraint::Percentage(50), Constraint::Percentage(50)])
-                    .areas(area);
+                Layout::vertical([Constraint::Min(0), Constraint::Max(15)]).areas(area);
             self.render_crate_info(info, buf);
             area
         } else {
