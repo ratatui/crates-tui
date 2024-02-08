@@ -3,6 +3,7 @@ name = "crates-tui"
 version = "0.1.0"
 edition = "2021"
 description = "A TUI for crates.io"
+license = "MIT"
 repository = "https://github.com/ratatui-org/crates-tui"
 authors = ["The Ratatui Developers"]
 build = "build.rs"
