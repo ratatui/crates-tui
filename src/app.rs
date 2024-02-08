@@ -29,7 +29,7 @@ use crate::{
     widgets::{
         crate_info_table::CrateInfoTableWidget,
         help::{Help, HelpWidget},
-        popup_message::PopupMessageWidget,
+        popup_message::{Popup, PopupMessageWidget},
         search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
         search_results_table::{SearchResultsTable, SearchResultsTableWidget},
         summary::{Summary, SummaryWidget},
@@ -162,7 +162,7 @@ pub struct App {
 
     /// Current scroll index used for navigating through scrollable content in a
     /// popup.
-    popup_scroll_index: usize,
+    popup: Popup,
 
     /// The active mode of the application, which could change how user inputs
     /// and commands are interpreted.
@@ -215,7 +215,7 @@ impl App {
             search_results: Default::default(),
             error_message: Default::default(),
             info_message: Default::default(),
-            popup_scroll_index: Default::default(),
+            popup: Default::default(),
             prompt: Default::default(),
             last_tick_key_events: Default::default(),
             frame_count: Default::default(),
@@ -326,8 +326,8 @@ impl App {
             Action::Resize(w, h) => self.resize(tui, (w, h))?,
             Action::Tick => self.tick(),
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
-            Action::ScrollUp if self.mode == Mode::Popup => self.popup_scroll_previous(),
-            Action::ScrollDown if self.mode == Mode::Popup => self.popup_scroll_next(),
+            Action::ScrollUp if self.mode == Mode::Popup => self.popup.scroll_previous(),
+            Action::ScrollDown if self.mode == Mode::Popup => self.popup.scroll_next(),
             Action::ScrollUp if self.mode == Mode::Summary => self.summary.scroll_previous(),
             Action::ScrollDown if self.mode == Mode::Summary => self.summary.scroll_next(),
             Action::ScrollUp if self.mode == Mode::Help => self.help.scroll_previous(),
@@ -371,7 +371,7 @@ impl App {
         }
         let maybe_action = match action {
             Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom
-                if self.mode.is_summary() =>
+                if self.mode.is_summary() || self.mode.is_popup() =>
             {
                 None
             }
@@ -466,14 +466,6 @@ impl App {
             self.page = self.page.saturating_sub(1).max(min_page_size);
             self.reload_data();
         }
-    }
-
-    fn popup_scroll_previous(&mut self) {
-        self.popup_scroll_index = self.popup_scroll_index.saturating_sub(1)
-    }
-
-    fn popup_scroll_next(&mut self) {
-        self.popup_scroll_index = self.popup_scroll_index.saturating_add(1)
     }
 
     fn crate_info_scroll_previous(&mut self) {
@@ -600,7 +592,7 @@ impl App {
     fn clear_error_and_info_flags(&mut self) {
         self.error_message = None;
         self.info_message = None;
-        self.popup_scroll_index = 0;
+        self.popup.reset();
         self.mode = if self.last_mode.is_popup() {
             Mode::Search
         } else {
@@ -973,10 +965,10 @@ impl StatefulWidget for AppWidget {
         }
 
         if let Some(err) = &state.error_message {
-            PopupMessageWidget::new("Error", err, state.popup_scroll_index).render(area, buf);
+            PopupMessageWidget::new("Error", err).render(area, buf, &mut state.popup);
         }
         if let Some(info) = &state.info_message {
-            PopupMessageWidget::new("Info", info, state.popup_scroll_index).render(area, buf);
+            PopupMessageWidget::new("Info", info).render(area, buf, &mut state.popup);
         }
 
         state.events_widget().render(area, buf);

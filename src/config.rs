@@ -183,13 +183,14 @@ impl Default for Config {
 /// - command line arguments
 pub fn init(cli: &Cli) -> Result<()> {
     let config_file = cli.config_file.clone().unwrap_or_else(default_config_file);
-    let config = Figment::new()
+    let mut config = Figment::new()
         .merge(Serialized::defaults(Config::default()))
         .merge(Toml::string(CONFIG_DEFAULT))
         .merge(Toml::file(config_file))
         .merge(Env::prefixed("CRATES_TUI_"))
         .merge(Serialized::defaults(cli))
         .extract::<Config>()?;
+    config.theme = Theme::from_base16(config.color);
     CONFIG
         .set(config)
         .map_err(|config| eyre!("failed to set config {config:?}"))
