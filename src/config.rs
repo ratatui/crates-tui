@@ -144,41 +144,6 @@ pub struct Config {
     pub key_bindings: KeyBindings,
 
     pub color: Base16Palette,
-
-    #[serde(skip)]
-    pub theme: Theme,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Theme {
-    pub background_color: Option<Color>,
-    pub search_query_outline_color: Option<Color>,
-    pub filter_query_outline_color: Option<Color>,
-    pub sort_by_color: Option<Color>,
-    pub row_background_color_highlight: Option<Color>,
-    pub row_background_color_1: Option<Color>,
-    pub row_background_color_2: Option<Color>,
-}
-
-impl Default for Theme {
-    fn default() -> Self {
-        let rose_pine = Base16Palette::default();
-        Self::from_base16(rose_pine)
-    }
-}
-
-impl Theme {
-    fn from_base16(base: Base16Palette) -> Self {
-        Self {
-            background_color: Some(base.base00),
-            search_query_outline_color: Some(base.base0d),
-            filter_query_outline_color: Some(base.base0c),
-            row_background_color_1: Some(base.base01),
-            row_background_color_2: Some(base.base02),
-            row_background_color_highlight: Some(base.base03),
-            sort_by_color: Some(base.base08),
-        }
-    }
 }
 
 impl Default for Config {
@@ -199,7 +164,6 @@ impl Default for Config {
             prompt_padding: 1,
             key_bindings,
             color: rose_pine.clone(),
-            theme: Theme::from_base16(rose_pine),
         }
     }
 }
@@ -227,7 +191,6 @@ pub fn init(cli: &Cli) -> Result<()> {
         .merge(Yaml::file(color_file))
         .extract::<Base16Palette>()?;
     config.color = base16;
-    config.theme = Theme::from_base16(config.color);
     CONFIG
         .set(config)
         .map_err(|config| eyre!("failed to set config {config:?}"))

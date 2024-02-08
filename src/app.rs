@@ -923,7 +923,7 @@ impl StatefulWidget for AppWidget {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         Block::default()
-            .bg(config::get().theme.background_color.unwrap_or_default())
+            .bg(config::get().color.base00)
             .render(area, buf);
 
         let [tabs, table, prompt] = if state.mode.focused() {
@@ -942,7 +942,10 @@ impl StatefulWidget for AppWidget {
             .areas(area)
         };
 
+        let [tabs, events] =
+            Layout::horizontal([Constraint::Min(15), Constraint::Fill(1)]).areas(tabs);
         state.render_tabs(tabs, buf);
+        state.events_widget().render(events, buf);
 
         let p = SearchFilterPromptWidget::new(state.mode, state.sort.clone(), &state.input);
         p.render(prompt, buf, &mut state.prompt);
@@ -965,7 +968,5 @@ impl StatefulWidget for AppWidget {
         if let Some(info) = &state.info_message {
             PopupMessageWidget::new("Info", info).render(area, buf, &mut state.popup);
         }
-
-        state.events_widget().render(tabs, buf);
     }
 }
