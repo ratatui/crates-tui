@@ -16,6 +16,7 @@ prompt_padding = 1
 [key_bindings.picker_show_crate_info]
 "q" = { SwitchMode = "picker_hide_crate_info" }
 "ESC" = { SwitchMode = "picker_hide_crate_info" }
+"[" = { SwitchMode = "summary" }
 "<g><g>" = "ScrollTop"
 "G" = "ScrollBottom"
 "Home" = "ScrollTop"
@@ -43,7 +44,8 @@ prompt_padding = 1
 
 [key_bindings.picker_hide_crate_info]
 "q" = "Quit"
-"ESC" = { SwitchMode = "summary" }
+"ESC" = "Quit"
+"[" = { SwitchMode = "summary" }
 "<g><g>" = "ScrollTop"
 "G" = "ScrollBottom"
 "Home" = "ScrollTop"
@@ -71,6 +73,7 @@ prompt_padding = 1
 "c" = "CopyCargoAddCommandToClipboard"
 
 [key_bindings.summary]
+"]" = { SwitchMode = "picker_hide_crate_info" }
 "q" = "Quit"
 "ESC" = "Quit"
 "j" = "ScrollDown"
@@ -92,7 +95,11 @@ prompt_padding = 1
 "Shift-Backtab" = { ToggleSortBy = { reload = false, forward = false } }
 "ESC" = { SwitchMode = "picker_hide_crate_info" }
 "Enter" = "SubmitSearch"
+"ctrl-j" = "ScrollSearchResultsDown"
+"ctrl-k" = "ScrollSearchResultsUp"
 
 [key_bindings.filter]
 "ESC" = { SwitchMode = "picker_hide_crate_info" }
 "Enter" = { SwitchMode = "picker_hide_crate_info" }
+"ctrl-j" = "ScrollSearchResultsDown"
+"ctrl-k" = "ScrollSearchResultsUp"

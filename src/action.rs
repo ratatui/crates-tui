@@ -33,6 +33,8 @@ pub enum Action {
     ScrollUp,
     ScrollCrateInfoDown,
     ScrollCrateInfoUp,
+    ScrollSearchResultsDown,
+    ScrollSearchResultsUp,
     SubmitSearch,
     UpdateCurrentSelectionCrateInfo,
     UpdateCurrentSelectionSummary,

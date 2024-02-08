@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -32,6 +33,7 @@ use crate::{
         search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
         search_results_table::{SearchResultsTable, SearchResultsTableWidget},
         summary::{Summary, SummaryWidget},
+        tabs::SelectedTab,
     },
 };
 
@@ -182,6 +184,8 @@ pub struct App {
     frame_count: usize,
 
     help: Help,
+
+    selected_tab: SelectedTab,
 }
 
 impl App {
@@ -216,6 +220,7 @@ impl App {
             last_tick_key_events: Default::default(),
             frame_count: Default::default(),
             help: Default::default(),
+            selected_tab: Default::default(),
         }
     }
 
@@ -333,6 +338,8 @@ impl App {
             Action::ScrollBottom => self.search_results.scroll_to_bottom(),
             Action::ScrollCrateInfoUp => self.crate_info_scroll_previous(),
             Action::ScrollCrateInfoDown => self.crate_info_scroll_next(),
+            Action::ScrollSearchResultsUp => self.search_results.scroll_previous(1),
+            Action::ScrollSearchResultsDown => self.search_results.scroll_next(1),
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
@@ -506,10 +513,17 @@ impl App {
     fn switch_mode(&mut self, mode: Mode) {
         self.last_mode = self.mode;
         self.mode = mode;
+        match self.mode {
+            Mode::Search | Mode::Filter | Mode::PickerHideCrateInfo | Mode::PickerShowCrateInfo => {
+                self.selected_tab.select(SelectedTab::Search)
+            }
+            Mode::Summary => self.selected_tab.select(SelectedTab::Summary),
+            _ => self.selected_tab.select(SelectedTab::None),
+        }
     }
 
     fn switch_to_last_mode(&mut self) {
-        self.mode = self.last_mode;
+        self.switch_mode(self.last_mode);
     }
 
     fn handle_filter_prompt_change(&mut self) {
@@ -900,6 +914,21 @@ impl App {
         self.help.mode = self.mode;
         HelpWidget.render(area, buf, &mut self.help)
     }
+
+    fn render_tabs(&self, area: Rect, buf: &mut Buffer) {
+        use strum::IntoEnumIterator;
+        let titles = SelectedTab::iter().map(|tab| tab.title());
+        let highlight_style = Style::default()
+            .fg(Color::from_str("#191724").unwrap())
+            .bg(Color::from_str("#ebbcba").unwrap());
+        let selected_tab_index = self.selected_tab as usize;
+        Tabs::new(titles)
+            .highlight_style(highlight_style)
+            .select(selected_tab_index)
+            .padding("", "")
+            .divider(" ")
+            .render(area, buf);
+    }
 }
 
 impl StatefulWidget for AppWidget {
@@ -907,14 +936,26 @@ impl StatefulWidget for AppWidget {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         Block::default()
-            .bg(config::get().style.background_color)
+            .bg(config::get().style.background_color.unwrap_or_default())
             .render(area, buf);
 
-        let [table, prompt] = if state.mode.focused() {
-            Layout::vertical([Constraint::Fill(0), Constraint::Length(5)]).areas(area)
+        let [tabs, table, prompt] = if state.mode.focused() {
+            Layout::vertical([
+                Constraint::Length(3),
+                Constraint::Fill(0),
+                Constraint::Length(5),
+            ])
+            .areas(area)
         } else {
-            Layout::vertical([Constraint::Fill(0), Constraint::Length(1)]).areas(area)
+            Layout::vertical([
+                Constraint::Length(3),
+                Constraint::Fill(0),
+                Constraint::Length(1),
+            ])
+            .areas(area)
         };
+
+        state.render_tabs(tabs, buf);
 
         let p = SearchFilterPromptWidget::new(state.mode, state.sort.clone(), &state.input);
         p.render(prompt, buf, &mut state.prompt);

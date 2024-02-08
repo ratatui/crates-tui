@@ -89,8 +89,14 @@ impl<'a> SearchFilterPromptWidget<'a> {
                 }),
             )
             .border_style(match self.mode {
-                Mode::Search => Style::default().fg(config::get().style.search_query_outline_color),
-                Mode::Filter => Style::default().fg(config::get().style.filter_query_outline_color),
+                Mode::Search => Style::default().fg(config::get()
+                    .style
+                    .search_query_outline_color
+                    .unwrap_or_default()),
+                Mode::Filter => Style::default().fg(config::get()
+                    .style
+                    .filter_query_outline_color
+                    .unwrap_or_default()),
                 _ => Style::default().add_modifier(Modifier::DIM),
             })
     }

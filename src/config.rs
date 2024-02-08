@@ -1,4 +1,4 @@
-use std::{env, path::PathBuf, sync::OnceLock};
+use std::{env, path::PathBuf, str::FromStr, sync::OnceLock};
 
 use color_eyre::eyre::{eyre, Result};
 use directories::ProjectDirs;
@@ -6,7 +6,7 @@ use figment::{
     providers::{Env, Format, Serialized, Toml},
     Figment,
 };
-use ratatui::style::palette::tailwind::*;
+use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
 use tracing::level_filters::LevelFilter;
@@ -15,6 +15,66 @@ use crate::{cli::Cli, serde_helper::keybindings::KeyBindings};
 
 static CONFIG: OnceLock<Config> = OnceLock::new();
 pub const CONFIG_DEFAULT: &str = include_str!("../.config/config.default.toml");
+
+#[serde_as]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+pub struct Base16Palette {
+    #[serde_as(as = "DisplayFromStr")]
+    pub base00: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base01: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base02: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base03: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base04: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base05: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base06: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base07: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base08: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base09: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base0a: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base0b: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base0c: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base0d: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base0e: Color,
+    #[serde_as(as = "DisplayFromStr")]
+    pub base0f: Color,
+}
+
+impl Default for Base16Palette {
+    fn default() -> Self {
+        Self {
+            base00: Color::from_str("#191724").unwrap(),
+            base01: Color::from_str("#1f1d2e").unwrap(),
+            base02: Color::from_str("#26233a").unwrap(),
+            base03: Color::from_str("#6e6a86").unwrap(),
+            base04: Color::from_str("#908caa").unwrap(),
+            base05: Color::from_str("#e0def4").unwrap(),
+            base06: Color::from_str("#e0def4").unwrap(),
+            base07: Color::from_str("#524f67").unwrap(),
+            base08: Color::from_str("#eb6f92").unwrap(),
+            base09: Color::from_str("#f6c177").unwrap(),
+            base0a: Color::from_str("#ebbcba").unwrap(),
+            base0b: Color::from_str("#31748f").unwrap(),
+            base0c: Color::from_str("#9ccfd8").unwrap(),
+            base0d: Color::from_str("#c4a7e7").unwrap(),
+            base0e: Color::from_str("#f6c177").unwrap(),
+            base0f: Color::from_str("#524f67").unwrap(),
+        }
+    }
+}
 
 /// Application configuration.
 ///
@@ -50,36 +110,60 @@ pub struct Config {
 
     pub prompt_padding: u16,
 
-    pub style: Style,
-
     pub key_bindings: KeyBindings,
+
+    pub color: Base16Palette,
+
+    #[serde(skip)]
+    pub style: Style,
 }
 
 #[serde_as]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Style {
-    #[serde_as(as = "DisplayFromStr")]
-    pub background_color: ratatui::style::Color,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub background_color: Option<Color>,
 
-    #[serde_as(as = "DisplayFromStr")]
-    pub search_query_outline_color: ratatui::style::Color,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub search_query_outline_color: Option<Color>,
 
-    #[serde_as(as = "DisplayFromStr")]
-    pub filter_query_outline_color: ratatui::style::Color,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub filter_query_outline_color: Option<Color>,
 
-    #[serde_as(as = "DisplayFromStr")]
-    pub row_background_color_highlight: ratatui::style::Color,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub row_background_color_highlight: Option<Color>,
 
-    #[serde_as(as = "DisplayFromStr")]
-    pub row_background_color_1: ratatui::style::Color,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub row_background_color_1: Option<Color>,
 
-    #[serde_as(as = "DisplayFromStr")]
-    pub row_background_color_2: ratatui::style::Color,
+    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub row_background_color_2: Option<Color>,
+}
+
+impl Default for Style {
+    fn default() -> Self {
+        let rose_pine = Base16Palette::default();
+        Self::from_base16(rose_pine)
+    }
+}
+
+impl Style {
+    fn from_base16(base: Base16Palette) -> Self {
+        Self {
+            background_color: Some(base.base00),
+            search_query_outline_color: Some(base.base0c),
+            filter_query_outline_color: Some(base.base0d),
+            row_background_color_1: Some(base.base01),
+            row_background_color_2: Some(base.base02),
+            row_background_color_highlight: Some(base.base03),
+        }
+    }
 }
 
 impl Default for Config {
     fn default() -> Self {
         let key_bindings: KeyBindings = Default::default();
+        let rose_pine = Base16Palette::default();
 
         Self {
             data_home: default_data_dir(),
@@ -93,14 +177,8 @@ impl Default for Config {
             enable_paste: false,
             prompt_padding: 1,
             key_bindings,
-            style: Style {
-                background_color: GRAY.c900,
-                search_query_outline_color: GREEN.c400,
-                filter_query_outline_color: YELLOW.c400,
-                row_background_color_1: GRAY.c900,
-                row_background_color_2: GRAY.c800,
-                row_background_color_highlight: STONE.c800,
-            },
+            color: rose_pine.clone(),
+            style: Style::from_base16(rose_pine),
         }
     }
 }
