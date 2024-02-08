@@ -1,0 +1,61 @@
+name: Continuous Deployment
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  publish-github:
+    name: Publish on GitHub
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        TARGET: [x86_64-unknown-linux-gnu]
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@master
+      - name: Set the release version
+        run: echo "RELEASE_VERSION=${GITHUB_REF:11}" >> $GITHUB_ENV
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{matrix.TARGET}}
+      - name: Build
+        run: cargo build --release --locked --target ${{matrix.TARGET}}
+      - name: Prepare release assets
+        run: |
+          mkdir -p release/{man,completions}
+          cp {LICENSE,README.md} release/
+          cp target/${{matrix.TARGET}}/release/crates-tui release/ && strip -s release/crates-tui
+          mv release/ crates-tui-${{env.RELEASE_VERSION}}/
+      - name: Create release artifacts
+        run: |
+          tar -czvf crates-tui-${{env.RELEASE_VERSION}}-${{matrix.TARGET}}.tar.gz \
+            crates-tui-${{env.RELEASE_VERSION}}/
+          sha512sum crates-tui-${{env.RELEASE_VERSION}}-${{matrix.TARGET}}.tar.gz \
+            > crates-tui-${{env.RELEASE_VERSION}}-${{matrix.TARGET}}.tar.gz.sha512
+      - name: Upload the release
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: RELEASE.txt
+          files: |
+            crates-tui-${{env.RELEASE_VERSION}}-${{matrix.TARGET}}.tar.gz
+            crates-tui-${{env.RELEASE_VERSION}}-${{matrix.TARGET}}.tar.gz.sig
+            crates-tui-${{env.RELEASE_VERSION}}-${{matrix.TARGET}}.tar.gz.sha512
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+  publish-crates-io:
+    name: Publish on crates.io
+    needs: publish-github
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@master
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
+      - name: Publish
+        run: cargo publish --locked --token ${{ secrets.CARGO_TOKEN }}
