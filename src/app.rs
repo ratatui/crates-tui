@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    str::FromStr,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -908,8 +907,9 @@ impl App {
         use strum::IntoEnumIterator;
         let titles = SelectedTab::iter().map(|tab| tab.title());
         let highlight_style = Style::default()
-            .fg(Color::from_str("#191724").unwrap())
-            .bg(Color::from_str("#ebbcba").unwrap());
+            .fg(config::get().color.base07)
+            .bg(config::get().color.base0a)
+            .bold();
         let selected_tab_index = self.selected_tab as usize;
         Tabs::new(titles)
             .highlight_style(highlight_style)

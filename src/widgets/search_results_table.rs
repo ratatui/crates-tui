@@ -126,7 +126,6 @@ impl StatefulWidget for SearchResultsTableWidget {
 
         let selected = state.selected().unwrap_or_default();
         let table_widget = {
-            let selected_style = Style::default();
             let header = Row::new(
                 ["Name", "Description", "Downloads"]
                     .iter()

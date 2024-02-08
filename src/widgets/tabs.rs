@@ -32,7 +32,7 @@ impl SelectedTab {
         match self {
             SelectedTab::None => "".into(),
             _ => format!("  {self}  ")
-                .fg(config::get().color.base03)
+                .fg(config::get().color.base0d)
                 .bg(config::get().color.base00)
                 .into(),
         }
