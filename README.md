@@ -7,25 +7,6 @@ A TUI explorer for crates.io
 <img width="350" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/21fcbf12-63c1-4952-aa5e-1d926f4919a0">
 <img width="350" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/25e8eca1-68bf-4560-a55f-0a4b7fcebe81">
 
-## Background
-
-This repository contains an opinionated way of organizing a small to medium sized Ratatui TUI
-applications.
-
-It has several features, notably:
-
-- Uses `async` to fetch crate information without blocking the UI
-- Multiple custom widgets
-  - Selection tab
-  - Input prompt
-  - Search results table
-  - Summary view
-- Has configurable key chords that map to actions
-
-This repository is meant to serve as a reference for some patterns you may follow when developing
-Ratatui applications. The code will function as a reference for the tutorial material on
-https://ratatui.rs as well.
-
 ## Screenshots
 
 ### Open in browser
@@ -162,3 +143,22 @@ key_refresh_rate = 0.5
 "ctrl-j" = "ScrollSearchResultsDown"
 "ctrl-k" = "ScrollSearchResultsUp"
 ```
+
+## Background
+
+This repository contains an opinionated way of organizing a small to medium sized Ratatui TUI
+applications.
+
+It has several features, notably:
+
+- Uses `async` to fetch crate information without blocking the UI
+- Multiple custom widgets
+  - Selection tab
+  - Input prompt
+  - Search results table
+  - Summary view
+- Has configurable key chords that map to actions
+
+This repository is meant to serve as a reference for some patterns you may follow when developing
+Ratatui applications. The code will function as a reference for the tutorial material on
+https://ratatui.rs as well.
