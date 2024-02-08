@@ -69,6 +69,20 @@ https://github.com/ratatui-org/crates-tui/assets/1813121/362d7dc3-d9ef-43df-8d2e
 
 https://github.com/ratatui-org/crates-tui/assets/1813121/9609a0f1-4da7-426d-8ce8-2c5a77c54754
 
+## Base16 Theme
+
+[**Dracula**](https://github.com/dracula/base16-dracula-scheme/blob/master/dracula.yaml)
+
+<img width="750" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/0c65b9a2-cc01-4c40-bf3e-79f6522411d8">
+
+[**Rose Pine**](https://github.com/edunfelt/base16-rose-pine-scheme)
+
+<img width="750" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/5130a654-76c0-411b-8fbb-5ea9946acdd7">
+
+[**GitHub**](https://github.com/Defman21/base16-github-scheme)
+
+<img width="750" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/62daf4e9-386e-4c2a-b212-efd358736237">
+
 ## Help
 
 https://github.com/ratatui-org/crates-tui/assets/1813121/4c2a3deb-f546-41e6-a48d-998831182ab6
