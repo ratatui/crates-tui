@@ -298,9 +298,6 @@ impl App {
         let action = config
             .key_bindings
             .event_to_action(self.mode, &self.last_tick_key_events);
-        if action.is_some() {
-            self.last_tick_key_events.drain(..);
-        }
         action
     }
 
@@ -828,7 +825,7 @@ impl App {
         Some(
             Block::default()
                 .title(title)
-                .title_position(ratatui::widgets::block::Position::Bottom)
+                .title_position(ratatui::widgets::block::Position::Top)
                 .title_alignment(ratatui::layout::Alignment::Right),
         )
     }
@@ -855,7 +852,7 @@ impl App {
     }
 
     fn spinner(&self) -> String {
-        let spinner = ["◑", "◒", "◐", "◓"];
+        let spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
         let index = self.frame_count % spinner.len();
         let symbol = spinner[index];
         symbol.into()
@@ -961,7 +958,7 @@ impl StatefulWidget for AppWidget {
         if state.loading() {
             Line::from(state.spinner())
                 .right_aligned()
-                .render(area, buf);
+                .render(table, buf);
         }
 
         if let Some(err) = &state.error_message {
@@ -971,6 +968,6 @@ impl StatefulWidget for AppWidget {
             PopupMessageWidget::new("Info", info).render(area, buf, &mut state.popup);
         }
 
-        state.events_widget().render(area, buf);
+        state.events_widget().render(tabs, buf);
     }
 }
