@@ -30,10 +30,6 @@ https://ratatui.rs as well.
 
 ## Screenshots
 
-### Summary home page
-
-https://github.com/ratatui-org/crates-tui/assets/1813121/6cf5ba45-c574-456e-80fc-adecd5544f98
-
 ### Open in browser
 
 https://github.com/ratatui-org/crates-tui/assets/1813121/362d7dc3-d9ef-43df-8d2e-cc56001ef31c
