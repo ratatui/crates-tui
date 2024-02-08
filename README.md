@@ -1,75 +1,43 @@
 # crates-tui
 
-A TUI viewer for crates.io
+A TUI explorer for crates.io
 
-https://github.com/ratatui-org/crates-tui/assets/1813121/c84eaad7-4688-4ebb-91c0-683cc9a0abfe
+## Background
 
-## Widgets
+This repository contains an opinionated way of organizing a small to medium sized Ratatui TUI
+application.
 
-```plain
-                                                                                           █
-   Name                 Description                         Downloads  Last Updated        █
-                                                                                           █
-                       │                                  │          │                     █
- • ratatui             │A library that's all about cooking│ 925,193  │ 2024-02-03 00:14:47 █
-                       │up terminal user interfaces       │          │
-                       │                                  │          │
-                       │                                  │          │
-   ansi-to-tui         │A library to convert ansi         │ 82,241   │ 2023-06-23 06:08:04
-                       │color coded text into             │          │
-                       │ratatui::text::Text type from     │          │
-                       │ratatui library                   │          │
-                       │                                  │          │
-┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│Name               ratatui                                                                │
-│Created At         2023-02-08 17:11:50                                                    │
-│Updated At         2023-02-08 17:11:50                                                    │
-│Max Version        0.26.1-alpha.0                                                         │
-│Description        A library that's all about cooking up terminal user interfaces         │
-│Repository         https://github.com/ratatui-org/ratatui                                 │
-│Recent Downloads   448198                                                                 │
-│Max Stable Version 0.26.0                                                                 │
-│                                                                                          │
-│                                                                                          │
-└──────────────────────────────────────────────────────────────────────────────────────────┘
-┌Query (Press ? to search, / to filter, Enter to submit)───────────────────────────────1/93┐
-│                                                                                          │
-│ ratatui                                                                                  │
-│                                                                                          │
-└─────────────────────────────────────────────────────────────────────────────────["g", "g"]
-```
+It has several features:
 
-**Crates Table**
+- Uses `async` to fetch crate information without blocking the UI
+- Multiple custom widgets
+  - Selection tab
+  - Input prompt
+  - Search results table
+  - Summary view
+- Has configurable key chords that map to actions
 
-- Rows are of different height based on description text wrapping
-- Column spacers are filled in with a separator
-- Scrollbar on the right
+and more.
 
-**Crates Info**
+This repository is meant to serve as a reference for some patterns you may follow when developing
+Ratatui applications. The code will function as a reference for the tutorial material on
+https://ratatui.rs as well.
 
-- Crate Info shown in a table that can be toggled on and off
+## Screenshots
 
-**Prompt**
-
-- Allows user to search or filter
-- Changes color of border depending on whether query is search or filter
-- Supports readline shortcuts
-- Shows table state at the top right
-- Shows user key presses per tick in bottom right
-
-## Summary home page
+### Summary home page
 
 https://github.com/ratatui-org/crates-tui/assets/1813121/6cf5ba45-c574-456e-80fc-adecd5544f98
 
-## Open in browser
+### Open in browser
 
 https://github.com/ratatui-org/crates-tui/assets/1813121/362d7dc3-d9ef-43df-8d2e-cc56001ef31c
 
-## Logging
+### Logging
 
 https://github.com/ratatui-org/crates-tui/assets/1813121/9609a0f1-4da7-426d-8ce8-2c5a77c54754
 
-## Base16 Theme
+### Base16 Theme
 
 [**Dracula**](https://github.com/dracula/base16-dracula-scheme/blob/master/dracula.yaml)
 
@@ -83,64 +51,115 @@ https://github.com/ratatui-org/crates-tui/assets/1813121/9609a0f1-4da7-426d-8ce8
 
 <img width="748" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/8f6d5ede-b0c6-418c-9762-41964a9dcee6">
 
-## Help
+### Help
 
 https://github.com/ratatui-org/crates-tui/assets/1813121/4c2a3deb-f546-41e6-a48d-998831182ab6
 
-## Print Default Configuration
+### Key to Action configurations per mode
 
-```plain
-$ crates-tui --print-default-config
+Here's the default configuration
 
-data_home = "~/Library/Application Support/com.kdheepak.crates-tui"
-config_home = "~/Library/Application Support/com.kdheepak.crates-tui"
-config_file = "~/Library/Application Support/com.kdheepak.crates-tui/config.toml"
-log_level = ""
+```toml
 tick_rate = 1.0
 frame_rate = 15.0
-prompt_padding = 1
-
-[style]
-background_color = "#111827"
-search_query_outline_color = "#4ADE80"
-filter_query_outline_color = "#FACC15"
-row_background_color_1 = "#111827"
-row_background_color_2 = "#1F2937"
-
-[key_bindings.picker_filter_editing]
-"<esc>" = "EnterNormal"
-"<enter>" = "EnterNormal"
-
-[key_bindings.picker_search_query_editing]
-"<enter>" = "SubmitSearch"
-"<esc>" = "EnterNormal"
+key_refresh_rate = 0.5
 
 [key_bindings.popup]
-"<down>" = "ScrollDown"
-"<k>" = "ScrollUp"
-"<j>" = "ScrollDown"
-"<up>" = "ScrollUp"
-"<enter>" = "ClosePopup"
-"<esc>" = "ClosePopup"
+"j" = "ScrollDown"
+"k" = "ScrollUp"
+"Down" = "ScrollDown"
+"Up" = "ScrollUp"
+"Enter" = "ClosePopup"
+"ESC" = "ClosePopup"
 
-[key_bindings.picker]
-"<l>" = "IncrementPage"
-"<?>" = "EnterSearchQueryInsert"
-"<h>" = "DecrementPage"
-"<j>" = "ScrollDown"
-"<r>" = "ReloadData"
-"<esc>" = "Quit"
-"<end>" = "ScrollBottom"
-"<g>" = "ScrollBottom"
-"<k>" = "ScrollUp"
-"<q>" = "Quit"
-"<down>" = "ScrollDown"
-"<home>" = "ScrollTop"
-"<left>" = "DecrementPage"
+[key_bindings.picker_show_crate_info]
+"q" = { SwitchMode = "picker_hide_crate_info" }
+"ESC" = { SwitchMode = "picker_hide_crate_info" }
+"[" = { SwitchMode = "summary" }
 "<g><g>" = "ScrollTop"
-"</>" = "EnterFilterInsert"
-"<right>" = "IncrementPage"
-"<up>" = "ScrollUp"
-"<a>" = "CargoAddCrate"
-"<enter>" = "ToggleShowCrateInfo"
+"G" = "ScrollBottom"
+"Home" = "ScrollTop"
+"End" = "ScrollBottom"
+"?" = { SwitchMode = "help" }
+"/" = { SwitchMode = "search" }
+"\\" = { SwitchMode = "filter" }
+"j" = "ScrollDown"
+"k" = "ScrollUp"
+"ctrl-j" = "ScrollCrateInfoDown"
+"ctrl-k" = "ScrollCrateInfoUp"
+"TAB" = { ToggleSortBy = { reload = true, forward = true } }
+"Shift-Backtab" = { ToggleSortBy = { reload = true, forward = false } }
+"Down" = "ScrollDown"
+"Up" = "ScrollUp"
+"l" = "IncrementPage"
+"h" = "DecrementPage"
+"Left" = "DecrementPage"
+"Right" = "IncrementPage"
+"r" = "ReloadData"
+"Enter" = "ToggleShowCrateInfo"
+"<g><d>" = "OpenDocsUrlInBrowser"
+"<g><c>" = "OpenCratesIOUrlInBrowser"
+"c" = "CopyCargoAddCommandToClipboard"
+
+[key_bindings.picker_hide_crate_info]
+"q" = "Quit"
+"ESC" = "Quit"
+"[" = { SwitchMode = "summary" }
+"<g><g>" = "ScrollTop"
+"G" = "ScrollBottom"
+"Home" = "ScrollTop"
+"End" = "ScrollBottom"
+"?" = { SwitchMode = "help" }
+"/" = { SwitchMode = "search" }
+"\\" = { SwitchMode = "filter" }
+"j" = "ScrollDown"
+"k" = "ScrollUp"
+"ctrl-j" = "ScrollCrateInfoDown"
+"ctrl-k" = "ScrollCrateInfoUp"
+"TAB" = { ToggleSortBy = { reload = true, forward = true } }
+"Shift-Backtab" = { ToggleSortBy = { reload = true, forward = false } }
+"Down" = "ScrollDown"
+"Up" = "ScrollUp"
+"l" = "IncrementPage"
+"h" = "DecrementPage"
+"Left" = "DecrementPage"
+"Right" = "IncrementPage"
+"r" = "ReloadData"
+"Enter" = "ToggleShowCrateInfo"
+"<g><d>" = "OpenDocsUrlInBrowser"
+"<g><c>" = "OpenCratesIOUrlInBrowser"
+"<g><Enter>" = "ShowFullCrateInfo"
+"c" = "CopyCargoAddCommandToClipboard"
+
+[key_bindings.summary]
+"]" = { SwitchMode = "picker_hide_crate_info" }
+"q" = "Quit"
+"ESC" = "Quit"
+"j" = "ScrollDown"
+"k" = "ScrollUp"
+"h" = "PreviousSummaryMode"
+"l" = "NextSummaryMode"
+"?" = { SwitchMode = "help" }
+"/" = { SwitchMode = "search" }
+"\\" = { SwitchMode = "filter" }
+
+[key_bindings.help]
+"q" = "Quit"
+"ESC" = "SwitchToLastMode"
+"j" = "ScrollDown"
+"k" = "ScrollUp"
+
+[key_bindings.search]
+"TAB" = { ToggleSortBy = { reload = false, forward = true } }
+"Shift-Backtab" = { ToggleSortBy = { reload = false, forward = false } }
+"ESC" = { SwitchMode = "picker_hide_crate_info" }
+"Enter" = "SubmitSearch"
+"ctrl-j" = "ScrollSearchResultsDown"
+"ctrl-k" = "ScrollSearchResultsUp"
+
+[key_bindings.filter]
+"ESC" = { SwitchMode = "picker_hide_crate_info" }
+"Enter" = { SwitchMode = "picker_hide_crate_info" }
+"ctrl-j" = "ScrollSearchResultsDown"
+"ctrl-k" = "ScrollSearchResultsUp"
 ```
