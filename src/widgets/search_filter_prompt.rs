@@ -88,24 +88,18 @@ impl<'a> SearchFilterPromptWidget<'a> {
                     Alignment::Right
                 }),
             )
+            .fg(config::get().color.base05)
             .border_style(match self.mode {
-                Mode::Search => Style::default().fg(config::get()
-                    .theme
-                    .search_query_outline_color
-                    .unwrap_or_default()),
-                Mode::Filter => Style::default().fg(config::get()
-                    .theme
-                    .filter_query_outline_color
-                    .unwrap_or_default()),
-                _ => Style::default().add_modifier(Modifier::DIM),
+                Mode::Search => Style::default().fg(config::get().color.base0a),
+                Mode::Filter => Style::default().fg(config::get().color.base0b),
+                _ => Style::default().fg(config::get().color.base06),
             })
     }
 
     fn sort_by_info(&self) -> impl Widget {
         Paragraph::new(Line::from(vec![
             "Sort By: ".into(),
-            format!("{:?}", self.sort.clone())
-                .fg(config::get().theme.sort_by_color.unwrap_or_default()),
+            format!("{:?}", self.sort.clone()).fg(config::get().color.base0d),
         ]))
         .right_aligned()
     }
@@ -120,8 +114,7 @@ impl<'a> SearchFilterPromptWidget<'a> {
             Line::from(vec![
                 self.input.value().into(),
                 " (".into(),
-                format!("{:?}", self.sort.clone())
-                    .fg(config::get().theme.sort_by_color.unwrap_or_default()),
+                format!("{:?}", self.sort.clone()).fg(config::get().color.base0d),
                 ")".into(),
             ])
         };

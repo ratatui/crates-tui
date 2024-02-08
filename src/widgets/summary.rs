@@ -3,6 +3,8 @@ use itertools::Itertools;
 use ratatui::{layout::Flex, prelude::*, widgets::*};
 use strum::{Display, EnumIs, EnumIter, FromRepr};
 
+use crate::config;
+
 #[derive(Default, Debug, Clone, Copy, EnumIs, FromRepr, Display, EnumIter)]
 pub enum SummaryMode {
     #[default]
@@ -101,11 +103,12 @@ impl<'a> SummaryWidget<'a> {
             Borders::NONE
         };
         let items = std::iter::once(Text::from(Line::raw("")))
-            .chain(
-                self.new_crates
-                    .iter()
-                    .map(|item| Text::from(vec![Line::raw(item.name.clone()), Line::raw("")])),
-            )
+            .chain(self.new_crates.iter().map(|item| {
+                Text::from(vec![
+                    Line::styled(item.name.clone(), config::get().color.base05),
+                    Line::raw(""),
+                ])
+            }))
             .collect_vec();
         list_builder(items, "New Crates".into(), borders)
     }
@@ -117,11 +120,12 @@ impl<'a> SummaryWidget<'a> {
             Borders::NONE
         };
         let items = std::iter::once(Text::from(Line::raw("")))
-            .chain(
-                self.most_downloaded
-                    .iter()
-                    .map(|item| Text::from(vec![Line::raw(item.name.clone()), Line::raw("")])),
-            )
+            .chain(self.most_downloaded.iter().map(|item| {
+                Text::from(vec![
+                    Line::styled(item.name.clone(), config::get().color.base05),
+                    Line::raw(""),
+                ])
+            }))
             .collect_vec();
         list_builder(items, "Most Downloaded".into(), borders)
     }
@@ -136,11 +140,11 @@ impl<'a> SummaryWidget<'a> {
             .chain(self.just_updated.iter().map(|item| {
                 Text::from(vec![
                     Line::from(vec![
-                        item.name.clone().into(),
+                        item.name.clone().fg(config::get().color.base05),
                         " ".into(),
                         Span::styled(
                             format!("v{}", item.max_version),
-                            Style::default().fg(Color::DarkGray),
+                            Style::default().fg(config::get().color.base05),
                         ),
                     ]),
                     Line::raw(""),
@@ -157,11 +161,12 @@ impl<'a> SummaryWidget<'a> {
             Borders::NONE
         };
         let items = std::iter::once(Text::from(Line::raw("")))
-            .chain(
-                self.most_recently_downloaded
-                    .iter()
-                    .map(|item| Text::from(vec![Line::raw(item.name.clone()), Line::raw("")])),
-            )
+            .chain(self.most_recently_downloaded.iter().map(|item| {
+                Text::from(vec![
+                    Line::styled(item.name.clone(), config::get().color.base05),
+                    Line::raw(""),
+                ])
+            }))
             .collect_vec();
         list_builder(items, "Most Recently Downloaded".into(), borders)
     }
@@ -173,11 +178,12 @@ impl<'a> SummaryWidget<'a> {
             Borders::NONE
         };
         let items = std::iter::once(Text::from(Line::raw("")))
-            .chain(
-                self.popular_keywords
-                    .iter()
-                    .map(|item| Text::from(vec![Line::raw(item.keyword.clone()), Line::raw("")])),
-            )
+            .chain(self.popular_keywords.iter().map(|item| {
+                Text::from(vec![
+                    Line::styled(item.keyword.clone(), config::get().color.base05),
+                    Line::raw(""),
+                ])
+            }))
             .collect_vec();
         list_builder(items, "Popular Keywords".into(), borders)
     }
@@ -189,11 +195,12 @@ impl<'a> SummaryWidget<'a> {
             Borders::NONE
         };
         let items = std::iter::once(Text::from(Line::raw("")))
-            .chain(
-                self.popular_categories
-                    .iter()
-                    .map(|item| Text::from(vec![Line::raw(item.category.clone()), Line::raw("")])),
-            )
+            .chain(self.popular_categories.iter().map(|item| {
+                Text::from(vec![
+                    Line::styled(item.category.clone(), config::get().color.base05),
+                    Line::raw(""),
+                ])
+            }))
             .collect_vec();
         list_builder(items, "Popular Categories".into(), borders)
     }
@@ -219,10 +226,11 @@ fn list_builder(items: Vec<Text>, title: String, borders: Borders) -> List {
         .block(
             Block::default()
                 .borders(borders)
-                .title(format!("   {title}").bold())
+                .title(format!("   {title}").bold().fg(config::get().color.base05))
                 .title_alignment(Alignment::Left),
         )
         .highlight_symbol(HIGHLIGHT_SYMBOL)
+        .highlight_style(config::get().color.base05)
         .highlight_spacing(HighlightSpacing::Always)
 }
 

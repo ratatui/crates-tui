@@ -99,12 +99,13 @@ impl StatefulWidget for SearchResultsTableWidget {
     type State = SearchResultsTable;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        let [_, scrollbar_area] =
-            Layout::vertical([Constraint::Length(3), Constraint::Fill(1)]).areas(area);
+        let [area, scrollbar_area] =
+            Layout::horizontal([Constraint::Fill(1), Constraint::Length(1)]).areas(area);
         Scrollbar::default()
             .track_symbol(Some(" "))
             .begin_symbol(None)
             .end_symbol(None)
+            .track_style(config::get().color.base06)
             .render(scrollbar_area, buf, &mut state.scrollbar_state);
 
         let widths = [
@@ -131,7 +132,8 @@ impl StatefulWidget for SearchResultsTableWidget {
                     .iter()
                     .map(|h| Text::from(vec!["".into(), Line::from(h.bold()), "".into()])),
             )
-            .bg(config::get().theme.background_color.unwrap_or_default())
+            .fg(config::get().color.base05)
+            .bg(config::get().color.base00)
             .height(3);
             let highlight_symbol = if self.highlight { " █ " } else { "   " };
 
@@ -155,22 +157,15 @@ impl StatefulWidget for SearchResultsTableWidget {
                     ]),
                 ])
                 .style({
-                    let s = Style::default().bg(match i % 2 {
-                        0 => config::get()
-                            .theme
-                            .row_background_color_1
-                            .unwrap_or_default(),
-                        1 => config::get()
-                            .theme
-                            .row_background_color_2
-                            .unwrap_or_default(),
-                        _ => unreachable!("Cannot reach this line"),
-                    });
+                    let s = Style::default()
+                        .fg(config::get().color.base05)
+                        .bg(match i % 2 {
+                            0 => config::get().color.base00,
+                            1 => config::get().color.base01,
+                            _ => unreachable!("Cannot reach this line"),
+                        });
                     if i == selected {
-                        s.bg(config::get()
-                            .theme
-                            .row_background_color_highlight
-                            .unwrap_or_default())
+                        s.bg(config::get().color.base02)
                     } else {
                         s
                     }
@@ -193,6 +188,7 @@ impl StatefulWidget for SearchResultsTableWidget {
                     highlight_symbol.into(),
                     "".into(),
                 ]))
+                .highlight_style(config::get().color.base05)
                 .highlight_spacing(HighlightSpacing::Always)
         };
 
@@ -207,7 +203,8 @@ impl StatefulWidget for SearchResultsTableWidget {
                         .chain(std::iter::once(" ".into()))
                         .chain(std::iter::once(" ".into()))
                         .chain(
-                            std::iter::repeat("│".fg(Color::DarkGray)).take(space.height as usize),
+                            std::iter::repeat("│".fg(config::get().color.base0f))
+                                .take(space.height as usize),
                         )
                         .map(Line::from)
                         .collect_vec(),

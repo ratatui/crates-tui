@@ -48,6 +48,10 @@ pub struct Cli {
     #[arg(short, long, value_name = "FILE")]
     pub config_file: Option<PathBuf>,
 
+    /// A path to a base16 color file.
+    #[arg(long, value_name = "FILE")]
+    pub color_file: Option<PathBuf>,
+
     /// Frame rate, i.e. number of frames per second
     #[arg(short, long, value_name = "FLOAT", default_value_t = 15.0)]
     pub frame_rate: f64,
