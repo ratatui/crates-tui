@@ -81,7 +81,7 @@ https://github.com/ratatui-org/crates-tui/assets/1813121/9609a0f1-4da7-426d-8ce8
 
 [**GitHub**](https://github.com/Defman21/base16-github-scheme)
 
-<img width="750" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/62daf4e9-386e-4c2a-b212-efd358736237">
+<img width="748" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/8f6d5ede-b0c6-418c-9762-41964a9dcee6">
 
 ## Help
 
