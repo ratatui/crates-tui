@@ -1,11 +1,18 @@
 # crates-tui
 
-A TUI explorer for crates.io
+`crates-tui` is a simple TUI explorer for crates.io from the terminal. It support features like copy
+`cargo add` command to clipboard and open the docs or crates.io page from the terminal.
 
 <img width="350" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/62d9234f-59a8-4091-ba50-7cd050d9763a">
 <img width="350" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/e12a3320-1232-46e1-951e-14c9d20f0734">
 <img width="350" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/21fcbf12-63c1-4952-aa5e-1d926f4919a0">
 <img width="350" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/25e8eca1-68bf-4560-a55f-0a4b7fcebe81">
+
+## Install
+
+```rust
+cargo install crates-tui
+```
 
 ## Screenshots
 
