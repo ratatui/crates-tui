@@ -15,6 +15,13 @@ impl SelectedTab {
     pub fn select(&mut self, selected_tab: SelectedTab) {
         *self = selected_tab
     }
+
+    pub fn highlight_style() -> Style {
+        Style::default()
+            .fg(config::get().color.base00)
+            .bg(config::get().color.base0a)
+            .bold()
+    }
 }
 
 impl Widget for &SelectedTab {

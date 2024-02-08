@@ -906,10 +906,8 @@ impl App {
     fn render_tabs(&self, area: Rect, buf: &mut Buffer) {
         use strum::IntoEnumIterator;
         let titles = SelectedTab::iter().map(|tab| tab.title());
-        let highlight_style = Style::default()
-            .fg(config::get().color.base07)
-            .bg(config::get().color.base0a)
-            .bold();
+        let highlight_style = SelectedTab::highlight_style();
+
         let selected_tab_index = self.selected_tab as usize;
         Tabs::new(titles)
             .highlight_style(highlight_style)
