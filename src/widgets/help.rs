@@ -7,21 +7,34 @@ use crate::{action::Action, app::Mode, config};
 pub struct Help {
     pub state: TableState,
     pub mode: Mode,
+    pub skip: Vec<usize>,
+    pub max_len: usize,
 }
 
 impl Help {
     pub fn new(state: TableState, mode: Mode) -> Self {
-        Self { state, mode }
+        Self {
+            state,
+            mode,
+            skip: Default::default(),
+            max_len: Default::default(),
+        }
     }
 
     pub fn scroll_previous(&mut self) {
         let i = self.state.selected().map_or(0, |i| i.saturating_sub(1));
         self.state.select(Some(i));
+        if self.skip.contains(&i) && i != 0 {
+            self.scroll_previous();
+        }
     }
 
     pub fn scroll_next(&mut self) {
         let i = self.state.selected().map_or(0, |i| i.saturating_add(1));
         self.state.select(Some(i));
+        if self.skip.contains(&i) && i != self.max_len {
+            self.scroll_next();
+        }
     }
 }
 
@@ -46,7 +59,9 @@ impl StatefulWidget for &HelpWidget {
 
         let [_, area, _] = Layout::horizontal([Min(0), Percentage(85), Min(0)]).areas(area);
 
+        let skip = &mut state.skip;
         let rows = std::iter::once((Mode::Help, "ESC".into(), Action::SwitchToLastMode))
+            .chain(vec![(Mode::Help, "".into(), Action::SwitchToLastMode)])
             .chain(get_actions(
                 Mode::PickerShowCrateInfo,
                 Action::SwitchMode(Mode::Help),
@@ -126,6 +141,7 @@ impl StatefulWidget for &HelpWidget {
                 Mode::PickerShowCrateInfo,
                 Action::CopyCargoAddCommandToClipboard,
             ))
+            .chain(vec![(Mode::Help, "".into(), Action::SwitchToLastMode)])
             .chain(get_actions(Mode::Summary, Action::Quit))
             .chain(get_actions(Mode::Summary, Action::ScrollDown))
             .chain(get_actions(Mode::Summary, Action::ScrollUp))
@@ -134,6 +150,7 @@ impl StatefulWidget for &HelpWidget {
             .chain(get_actions(Mode::Summary, Action::SwitchMode(Mode::Help)))
             .chain(get_actions(Mode::Summary, Action::SwitchMode(Mode::Search)))
             .chain(get_actions(Mode::Summary, Action::SwitchMode(Mode::Filter)))
+            .chain(vec![(Mode::Help, "".into(), Action::SwitchToLastMode)])
             .chain(get_actions(
                 Mode::Search,
                 Action::SwitchMode(Mode::PickerHideCrateInfo),
@@ -167,16 +184,28 @@ impl StatefulWidget for &HelpWidget {
                     forward: false,
                 },
             ))
+            .chain(vec![(Mode::Help, "".into(), Action::SwitchToLastMode)])
             .chain(get_actions(Mode::Summary, Action::SwitchMode(Mode::Filter)))
-            .map(|(m, s, a)| {
-                Row::new([
-                    Text::from(vec![Line::from(format!("{} ", m).fg(Color::DarkGray))]),
-                    Text::from(vec![Line::from(format!("{} ", s))]),
-                    Text::from(vec![Line::from(format!("{:?}", a))]),
-                ])
+            .enumerate()
+            .map(|(i, (m, s, a))| {
+                if s.is_empty() {
+                    skip.push(i);
+                    Row::new([
+                        Text::from(vec!["".into()]),
+                        Text::from(vec!["".into()]),
+                        Text::from(vec!["".into()]),
+                    ])
+                } else {
+                    Row::new([
+                        Text::from(vec![Line::from(format!("{} ", m).fg(Color::DarkGray))]),
+                        Text::from(vec![Line::from(format!("{} ", s))]),
+                        Text::from(vec![Line::from(format!("{:?}", a))]),
+                    ])
+                }
             })
             .collect_vec();
 
+        state.max_len = rows.len();
         *state.state.selected_mut() = Some(
             state
                 .state
@@ -193,11 +222,6 @@ impl StatefulWidget for &HelpWidget {
                     .map(|h| Text::from(vec![Line::from(h.bold()), "".into()])),
             ))
             .column_spacing(5)
-            .block(
-                Block::default()
-                    .title("Help".bold())
-                    .title_alignment(Alignment::Left),
-            )
             .highlight_symbol(HIGHLIGHT_SYMBOL)
             .highlight_spacing(HighlightSpacing::Always);
         StatefulWidget::render(table, area, buf, &mut state.state);

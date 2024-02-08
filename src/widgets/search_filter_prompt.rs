@@ -54,7 +54,7 @@ impl<'a> SearchFilterPromptWidget<'a> {
         } else if self.mode.is_search() {
             vec!["Search: ".into(), "Enter".bold(), " to submit".into()]
         } else if self.mode.is_help() {
-            vec!["ESC".bold(), " to exit".into()]
+            vec!["ESC".bold(), " to return".into()]
         } else {
             let search = config::get()
                 .key_bindings

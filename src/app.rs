@@ -486,7 +486,7 @@ impl App {
     }
 
     fn enter_insert_mode(&mut self, mode: Mode) {
-        self.mode = mode;
+        self.switch_mode(mode);
         self.input = self.input.clone().with_value(if self.mode.is_search() {
             self.search.clone()
         } else if self.mode.is_filter() {
@@ -497,13 +497,14 @@ impl App {
     }
 
     fn enter_normal_mode(&mut self) {
-        self.mode = Mode::PickerHideCrateInfo;
+        self.switch_mode(Mode::PickerHideCrateInfo);
         if !self.search_results.crates.is_empty() && self.search_results.selected().is_none() {
             self.search_results.select(Some(0))
         }
     }
 
     fn switch_mode(&mut self, mode: Mode) {
+        self.last_mode = self.mode;
         self.mode = mode;
     }
 
@@ -518,7 +519,7 @@ impl App {
 
     fn submit_search(&mut self) {
         self.clear_all_previous_task_details_handles();
-        self.mode = Mode::PickerHideCrateInfo;
+        self.switch_mode(Mode::PickerHideCrateInfo);
         self.filter.clear();
         self.search = self.input.value().into();
     }
