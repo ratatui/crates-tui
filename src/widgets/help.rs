@@ -197,6 +197,8 @@ impl StatefulWidget for &HelpWidget {
                         Text::from(vec![Line::from(format!("{} ", s))]),
                         Text::from(vec![Line::from(format!("{:?}", a))]),
                     ])
+                    .fg(config::get().color.base05)
+                    .bg(config::get().color.base00)
                 }
             })
             .collect_vec();
@@ -211,13 +213,18 @@ impl StatefulWidget for &HelpWidget {
 
         let widths = [Constraint::Max(10), Constraint::Max(20), Constraint::Min(0)];
         let table = Table::new(rows, widths)
-            .header(Row::new(
-                ["Mode", "Key Chords", "Action"]
-                    .iter()
-                    .map(|h| Text::from(vec![Line::from(h.bold()), "".into()])),
-            ))
+            .header(
+                Row::new(
+                    ["Mode", "Key Chords", "Action"]
+                        .iter()
+                        .map(|h| Text::from(vec![Line::from(h.bold()), "".into()])),
+                )
+                .fg(config::get().color.base05)
+                .bg(config::get().color.base00),
+            )
             .column_spacing(5)
             .highlight_symbol(HIGHLIGHT_SYMBOL)
+            .highlight_style(config::get().color.base05)
             .highlight_spacing(HighlightSpacing::Always);
         StatefulWidget::render(table, area, buf, &mut state.state);
     }

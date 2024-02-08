@@ -1,6 +1,8 @@
 use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
 
+use crate::config;
+
 pub struct CrateInfoTableWidget {
     // FIXME don't abbreviate this
     crate_info: crates_io_api::CrateResponse,
@@ -101,8 +103,14 @@ impl StatefulWidget for CrateInfoTableWidget {
 
         let widths = [Constraint::Fill(1), Constraint::Fill(4)];
         let table_widget = Table::new(rows, widths)
+            .style(
+                Style::default()
+                    .fg(config::get().color.base05)
+                    .bg(config::get().color.base00),
+            )
             .block(Block::default().borders(Borders::ALL))
             .highlight_symbol("\u{2022} ")
+            .highlight_style(config::get().color.base05)
             .highlight_spacing(HighlightSpacing::Always);
 
         if let Some(i) = state.selected() {

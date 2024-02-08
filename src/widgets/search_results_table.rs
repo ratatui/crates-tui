@@ -182,7 +182,6 @@ impl StatefulWidget for SearchResultsTableWidget {
             Table::new(rows, widths)
                 .header(header)
                 .column_spacing(1)
-                .highlight_style(selected_style)
                 .highlight_symbol(Text::from(vec![
                     "".into(),
                     highlight_symbol.into(),
