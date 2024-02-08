@@ -10,10 +10,6 @@ build = "build.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
-# FIXME - this seems pretty massive for a tutorial, which suggests that there may be some missing
-# simplifications in the code.
-
 better-panic = "0.3.0"
 cfg-if = "1.0.0"
 chrono = "0.4.31"
@@ -54,7 +50,6 @@ tui-input = "0.8.0"
 unicode-width = "0.1.11"
 uuid = "1.7.0"
 webbrowser = "0.8.12"
-
 
 [build-dependencies]
 vergen = { version = "8.2.6", features = [ "build", "git", "gitoxide", "cargo" ]}

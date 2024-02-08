@@ -4,7 +4,6 @@ use ratatui::{prelude::*, widgets::*};
 use crate::config;
 
 pub struct CrateInfoTableWidget {
-    // FIXME don't abbreviate this
     crate_info: crates_io_api::CrateResponse,
 }
 

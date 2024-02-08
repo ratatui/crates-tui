@@ -34,13 +34,13 @@ pub fn init() -> Result<()> {
     Ok(())
 }
 
-// FIXME: can you explain the benefit of this macro? Why do we need it? Why is
-// it better than just using `tracing::debug!` directly?
 /// Similar to the `std::dbg!` macro, but generates `tracing` events rather
 /// than printing to stdout.
 ///
 /// By default, the verbosity level for the generated events is `DEBUG`, but
 /// this can be customized.
+///
+/// Originally from https://github.com/tokio-rs/tracing/blob/baeba47cdaac9ed32d5ef3f6f1d7b0cc71ffdbdf/tracing-macros/src/lib.rs#L27
 #[macro_export]
 macro_rules! trace_dbg {
     (target: $target:expr, level: $level:expr, $ex:expr) => {{
