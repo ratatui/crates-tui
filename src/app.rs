@@ -936,19 +936,19 @@ impl StatefulWidget for AppWidget {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         Block::default()
-            .bg(config::get().style.background_color.unwrap_or_default())
+            .bg(config::get().theme.background_color.unwrap_or_default())
             .render(area, buf);
 
         let [tabs, table, prompt] = if state.mode.focused() {
             Layout::vertical([
-                Constraint::Length(3),
+                Constraint::Length(1),
                 Constraint::Fill(0),
                 Constraint::Length(5),
             ])
             .areas(area)
         } else {
             Layout::vertical([
-                Constraint::Length(3),
+                Constraint::Length(1),
                 Constraint::Fill(0),
                 Constraint::Length(1),
             ])

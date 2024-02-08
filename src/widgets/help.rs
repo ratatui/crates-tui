@@ -8,7 +8,6 @@ pub struct Help {
     pub state: TableState,
     pub mode: Mode,
     pub skip: Vec<usize>,
-    pub max_len: usize,
 }
 
 impl Help {
@@ -17,14 +16,13 @@ impl Help {
             state,
             mode,
             skip: Default::default(),
-            max_len: Default::default(),
         }
     }
 
     pub fn scroll_previous(&mut self) {
         let i = self.state.selected().map_or(0, |i| i.saturating_sub(1));
         self.state.select(Some(i));
-        if self.skip.contains(&i) && i != 0 {
+        if self.skip.contains(&i) {
             self.scroll_previous();
         }
     }
@@ -32,7 +30,7 @@ impl Help {
     pub fn scroll_next(&mut self) {
         let i = self.state.selected().map_or(0, |i| i.saturating_add(1));
         self.state.select(Some(i));
-        if self.skip.contains(&i) && i != self.max_len {
+        if self.skip.contains(&i) {
             self.scroll_next();
         }
     }
@@ -184,8 +182,6 @@ impl StatefulWidget for &HelpWidget {
                     forward: false,
                 },
             ))
-            .chain(vec![(Mode::Help, "".into(), Action::SwitchToLastMode)])
-            .chain(get_actions(Mode::Summary, Action::SwitchMode(Mode::Filter)))
             .enumerate()
             .map(|(i, (m, s, a))| {
                 if s.is_empty() {
@@ -205,7 +201,6 @@ impl StatefulWidget for &HelpWidget {
             })
             .collect_vec();
 
-        state.max_len = rows.len();
         *state.state.selected_mut() = Some(
             state
                 .state

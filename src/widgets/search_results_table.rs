@@ -131,7 +131,7 @@ impl StatefulWidget for SearchResultsTableWidget {
                     .iter()
                     .map(|h| Text::from(vec!["".into(), Line::from(h.bold()), "".into()])),
             )
-            .bg(config::get().style.background_color.unwrap_or_default())
+            .bg(config::get().theme.background_color.unwrap_or_default())
             .height(3);
             let highlight_symbol = if self.highlight { " █ " } else { "   " };
 
@@ -157,18 +157,18 @@ impl StatefulWidget for SearchResultsTableWidget {
                 .style({
                     let s = Style::default().bg(match i % 2 {
                         0 => config::get()
-                            .style
+                            .theme
                             .row_background_color_1
                             .unwrap_or_default(),
                         1 => config::get()
-                            .style
+                            .theme
                             .row_background_color_2
                             .unwrap_or_default(),
                         _ => unreachable!("Cannot reach this line"),
                     });
                     if i == selected {
                         s.bg(config::get()
-                            .style
+                            .theme
                             .row_background_color_highlight
                             .unwrap_or_default())
                     } else {

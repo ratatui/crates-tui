@@ -115,47 +115,37 @@ pub struct Config {
     pub color: Base16Palette,
 
     #[serde(skip)]
-    pub style: Style,
+    pub theme: Theme,
 }
 
-#[serde_as]
 #[derive(Debug, Deserialize, Serialize)]
-pub struct Style {
-    #[serde_as(as = "Option<DisplayFromStr>")]
+pub struct Theme {
     pub background_color: Option<Color>,
-
-    #[serde_as(as = "Option<DisplayFromStr>")]
     pub search_query_outline_color: Option<Color>,
-
-    #[serde_as(as = "Option<DisplayFromStr>")]
     pub filter_query_outline_color: Option<Color>,
-
-    #[serde_as(as = "Option<DisplayFromStr>")]
+    pub sort_by_color: Option<Color>,
     pub row_background_color_highlight: Option<Color>,
-
-    #[serde_as(as = "Option<DisplayFromStr>")]
     pub row_background_color_1: Option<Color>,
-
-    #[serde_as(as = "Option<DisplayFromStr>")]
     pub row_background_color_2: Option<Color>,
 }
 
-impl Default for Style {
+impl Default for Theme {
     fn default() -> Self {
         let rose_pine = Base16Palette::default();
         Self::from_base16(rose_pine)
     }
 }
 
-impl Style {
+impl Theme {
     fn from_base16(base: Base16Palette) -> Self {
         Self {
             background_color: Some(base.base00),
-            search_query_outline_color: Some(base.base0c),
-            filter_query_outline_color: Some(base.base0d),
+            search_query_outline_color: Some(base.base0d),
+            filter_query_outline_color: Some(base.base0c),
             row_background_color_1: Some(base.base01),
             row_background_color_2: Some(base.base02),
             row_background_color_highlight: Some(base.base03),
+            sort_by_color: Some(base.base08),
         }
     }
 }
@@ -178,7 +168,7 @@ impl Default for Config {
             prompt_padding: 1,
             key_bindings,
             color: rose_pine.clone(),
-            style: Style::from_base16(rose_pine),
+            theme: Theme::from_base16(rose_pine),
         }
     }
 }
