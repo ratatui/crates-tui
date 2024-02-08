@@ -12,7 +12,7 @@ A TUI explorer for crates.io
 This repository contains an opinionated way of organizing a small to medium sized Ratatui TUI
 applications.
 
-It has several features:
+It has several features, notably:
 
 - Uses `async` to fetch crate information without blocking the UI
 - Multiple custom widgets
@@ -21,8 +21,6 @@ It has several features:
   - Search results table
   - Summary view
 - Has configurable key chords that map to actions
-
-and more.
 
 This repository is meant to serve as a reference for some patterns you may follow when developing
 Ratatui applications. The code will function as a reference for the tutorial material on
