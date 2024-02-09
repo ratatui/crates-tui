@@ -1,6 +1,6 @@
 # crates-tui
 
-`crates-tui` is a simple TUI explorer for crates.io from the terminal. It supports features like 
+`crates-tui` is a simple TUI explorer for crates.io from the terminal. It supports features like
 
 - copy `cargo add` command to clipboard
 - open the docs page in the browser
@@ -41,118 +41,15 @@ https://github.com/ratatui-org/crates-tui/assets/1813121/9609a0f1-4da7-426d-8ce8
 
 <img width="748" alt="image" src="https://github.com/ratatui-org/crates-tui/assets/1813121/8f6d5ede-b0c6-418c-9762-41964a9dcee6">
 
+You can find example color [configurations here](./.config/).
+
 ### Help
 
 https://github.com/ratatui-org/crates-tui/assets/1813121/4c2a3deb-f546-41e6-a48d-998831182ab6
 
 ### Key to Action configurations per mode
 
-Here's the default configuration
-
-```toml
-tick_rate = 1.0
-frame_rate = 15.0
-key_refresh_rate = 0.5
-
-[key_bindings.popup]
-"j" = "ScrollDown"
-"k" = "ScrollUp"
-"Down" = "ScrollDown"
-"Up" = "ScrollUp"
-"Enter" = "ClosePopup"
-"ESC" = "ClosePopup"
-
-[key_bindings.picker_show_crate_info]
-"q" = { SwitchMode = "picker_hide_crate_info" }
-"ESC" = { SwitchMode = "picker_hide_crate_info" }
-"[" = { SwitchMode = "summary" }
-"<g><g>" = "ScrollTop"
-"G" = "ScrollBottom"
-"Home" = "ScrollTop"
-"End" = "ScrollBottom"
-"?" = { SwitchMode = "help" }
-"/" = { SwitchMode = "search" }
-"\\" = { SwitchMode = "filter" }
-"j" = "ScrollDown"
-"k" = "ScrollUp"
-"ctrl-j" = "ScrollCrateInfoDown"
-"ctrl-k" = "ScrollCrateInfoUp"
-"TAB" = { ToggleSortBy = { reload = true, forward = true } }
-"Shift-Backtab" = { ToggleSortBy = { reload = true, forward = false } }
-"Down" = "ScrollDown"
-"Up" = "ScrollUp"
-"l" = "IncrementPage"
-"h" = "DecrementPage"
-"Left" = "DecrementPage"
-"Right" = "IncrementPage"
-"r" = "ReloadData"
-"Enter" = "ToggleShowCrateInfo"
-"<g><d>" = "OpenDocsUrlInBrowser"
-"<g><c>" = "OpenCratesIOUrlInBrowser"
-"c" = "CopyCargoAddCommandToClipboard"
-
-[key_bindings.picker_hide_crate_info]
-"q" = "Quit"
-"ESC" = "Quit"
-"[" = { SwitchMode = "summary" }
-"<g><g>" = "ScrollTop"
-"G" = "ScrollBottom"
-"Home" = "ScrollTop"
-"End" = "ScrollBottom"
-"?" = { SwitchMode = "help" }
-"/" = { SwitchMode = "search" }
-"\\" = { SwitchMode = "filter" }
-"j" = "ScrollDown"
-"k" = "ScrollUp"
-"ctrl-j" = "ScrollCrateInfoDown"
-"ctrl-k" = "ScrollCrateInfoUp"
-"TAB" = { ToggleSortBy = { reload = true, forward = true } }
-"Shift-Backtab" = { ToggleSortBy = { reload = true, forward = false } }
-"Down" = "ScrollDown"
-"Up" = "ScrollUp"
-"l" = "IncrementPage"
-"h" = "DecrementPage"
-"Left" = "DecrementPage"
-"Right" = "IncrementPage"
-"r" = "ReloadData"
-"Enter" = "ToggleShowCrateInfo"
-"<g><d>" = "OpenDocsUrlInBrowser"
-"<g><c>" = "OpenCratesIOUrlInBrowser"
-"<g><Enter>" = "ShowFullCrateInfo"
-"c" = "CopyCargoAddCommandToClipboard"
-
-[key_bindings.summary]
-"]" = { SwitchMode = "picker_hide_crate_info" }
-"q" = "Quit"
-"ESC" = "Quit"
-"j" = "ScrollDown"
-"k" = "ScrollUp"
-"h" = "PreviousSummaryMode"
-"l" = "NextSummaryMode"
-"?" = { SwitchMode = "help" }
-"/" = { SwitchMode = "search" }
-"\\" = { SwitchMode = "filter" }
-
-[key_bindings.help]
-"q" = "Quit"
-"ESC" = "SwitchToLastMode"
-"j" = "ScrollDown"
-"k" = "ScrollUp"
-
-[key_bindings.search]
-"TAB" = { ToggleSortBy = { reload = false, forward = true } }
-"Shift-Backtab" = { ToggleSortBy = { reload = false, forward = false } }
-"ESC" = { SwitchMode = "picker_hide_crate_info" }
-"Enter" = "SubmitSearch"
-"ctrl-j" = "ScrollSearchResultsDown"
-"ctrl-k" = "ScrollSearchResultsUp"
-
-[key_bindings.filter]
-"ESC" = { SwitchMode = "picker_hide_crate_info" }
-"Enter" = { SwitchMode = "picker_hide_crate_info" }
-"ctrl-j" = "ScrollSearchResultsDown"
-"ctrl-k" = "ScrollSearchResultsUp"
-```
+You can find [the default configuration here](./.config/config.default.toml).
 
 ## Background
 
