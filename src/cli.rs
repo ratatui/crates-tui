@@ -7,7 +7,7 @@ use tracing::level_filters::LevelFilter;
 
 const VERSION_MESSAGE: &str = concat!(
     env!("CARGO_PKG_VERSION"),
-    "-",
+    " ",
     env!("VERGEN_GIT_DESCRIBE"),
     " (",
     env!("VERGEN_BUILD_DATE"),
@@ -21,9 +21,7 @@ pub fn version() -> String {
         "\
 {VERSION_MESSAGE}
 
-Authors: {author}
-
-"
+Authors: {author}"
     )
 }
 
