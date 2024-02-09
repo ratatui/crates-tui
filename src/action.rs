@@ -14,6 +14,8 @@ pub enum Action {
     Quit,
     Init,
     Refresh,
+    NextTab,
+    PreviousTab,
     ShowErrorPopup(String),
     ShowInfoPopup(String),
     ClosePopup,
