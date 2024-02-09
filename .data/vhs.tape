@@ -19,9 +19,14 @@ Sleep 2s
 Type @200ms "ratatui"
 Sleep 1s
 Enter
+Sleep 5s
+Down @2 3
+Enter
 Sleep 2s
 Down @2 3
 Enter
-Down @2 3
-Enter
+Sleep 2s
 Up @2 6
+Sleep 2s
+Type "?"
+Sleep 10s
