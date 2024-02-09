@@ -1,0 +1,9 @@
+# configuration for https://github.com/MarcoIeni/release-plz
+
+[workspace]
+allow_dirty = false
+dependencies_update = true
+git_release_enable = false # handled by cargo dist
+git_tag_enable = true
+pr_labels = ["release"]
+publish_allow_dirty = false
