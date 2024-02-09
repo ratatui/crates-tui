@@ -7,7 +7,7 @@ Set Height 1200
 Hide
 Type "cargo run"
 Enter
-Sleep 2s
+Sleep 3s
 Show
 Sleep 2s
 Right @2s 3
@@ -33,4 +33,5 @@ Sleep 10s
 Enter
 Sleep 2s
 Type "?"
-Sleep 10s
+Sleep 5s
+Down @2 10
