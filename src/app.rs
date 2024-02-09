@@ -41,6 +41,7 @@ use crate::{
 )]
 #[serde(rename_all = "snake_case")]
 pub enum Mode {
+    Common,
     #[default]
     Summary,
     Search,
@@ -296,7 +297,12 @@ impl App {
         let config = config::get();
         let action = config
             .key_bindings
-            .event_to_action(self.mode, &self.last_tick_key_events);
+            .event_to_action(self.mode, &self.last_tick_key_events)
+            .or_else(|| {
+                config
+                    .key_bindings
+                    .event_to_action(Mode::Common, &self.last_tick_key_events)
+            });
         action
     }
 
@@ -341,6 +347,8 @@ impl App {
             Action::DecrementPage => self.decrement_page(),
             Action::NextSummaryMode => self.summary.next_mode(),
             Action::PreviousSummaryMode => self.summary.previous_mode(),
+            Action::NextTab => self.goto_next_tab(),
+            Action::PreviousTab => self.goto_previous_tab(),
             Action::SwitchMode(mode) if mode.is_search() || mode.is_filter() => {
                 self.enter_insert_mode(mode)
             }
@@ -512,6 +520,22 @@ impl App {
 
     fn switch_to_last_mode(&mut self) {
         self.switch_mode(self.last_mode);
+    }
+
+    fn goto_next_tab(&mut self) {
+        match self.mode {
+            Mode::Summary => self.switch_mode(Mode::Search),
+            Mode::Search => self.switch_mode(Mode::Summary),
+            _ => self.switch_mode(Mode::Summary),
+        }
+    }
+
+    fn goto_previous_tab(&mut self) {
+        match self.mode {
+            Mode::Summary => self.switch_mode(Mode::Search),
+            Mode::Search => self.switch_mode(Mode::Summary),
+            _ => self.switch_mode(Mode::Summary),
+        }
     }
 
     fn handle_filter_prompt_change(&mut self) {
