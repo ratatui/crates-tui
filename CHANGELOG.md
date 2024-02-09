@@ -7,6 +7,28 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.5](https://github.com/ratatui-org/crates-tui/compare/v0.1.4...v0.1.5) - 2024-02-09
+
+### Added
+- Show cargo copy in demo
+- Show help in demo
+- Add vhs tape
+- Better help menu with offset and UX for new users
+- Add Action::Ignore
+
+### Fixed
+- Don't update crate info when scrolling help
+- Change resolution in tape
+- Missing enter in vhs tape
+
+### Other
+- Update gitignore to only ignore log files
+- Update README.md with new demo
+- more tweaks to the demo by scrolling help
+- Tweak resolution and timing of the demo
+- Increase resolution of demo
+- Change demo to move up faster at the end
+
 ## [0.1.4](https://github.com/ratatui-org/crates-tui/compare/v0.1.3...v0.1.4) - 2024-02-09
 
 ### Fixed
