@@ -26,7 +26,7 @@ Sleep 2s
 Down @2 3
 Enter
 Sleep 2s
-Up @2 6
+Up @0.5 6
 Sleep 2s
 Type "c"
 Sleep 10s
