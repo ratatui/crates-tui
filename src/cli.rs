@@ -21,9 +21,7 @@ pub fn version() -> String {
         "\
 {VERSION_MESSAGE}
 
-Authors: {author}
-
-"
+Authors: {author}"
     )
 }
 

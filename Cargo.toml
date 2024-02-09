@@ -59,7 +59,7 @@ uuid = "1.7.0"
 webbrowser = "0.8.12"
 
 [build-dependencies]
-vergen = { version = "8.2.6", features = [ "build", "git", "gitoxide", "cargo" ]}
+vergen = { version = "8.2.6", features = [ "build", "git", "git2", "cargo" ]}
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
