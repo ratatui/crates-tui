@@ -363,7 +363,7 @@ impl App {
         }
         let maybe_action = match action {
             Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom
-                if self.mode.is_summary() || self.mode.is_popup() =>
+                if self.mode.is_summary() || self.mode.is_popup() || self.mode.is_help() =>
             {
                 None
             }
