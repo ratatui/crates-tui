@@ -2,8 +2,8 @@
 # To run this script, install vhs and run `vhs ./.data/vhs.tape`
 Output "target/crates-tui.mov"
 Set Theme "Rose Pine"
-Set Width 1200
-Set Height 1400
+Set Width 1400
+Set Height 1200
 Hide
 Type "cargo run"
 Enter
