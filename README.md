@@ -1,6 +1,10 @@
 # crates-tui
 
-`crates-tui` is a simple TUI explorer for crates.io from the terminal. It supports features like:
+`crates-tui` is a simple terminal user interface explorer for crates.io based on [Ratatui](https://ratatui.rs/).
+
+https://github.com/ratatui-org/crates-tui/assets/1813121/ecbb6fcb-8dd9-4997-aaa2-2a60b0c4a004
+
+It supports features like:
 
 - copy `cargo add` command to clipboard
 - open the docs page in the browser
