@@ -10,13 +10,13 @@ Esc = "Quit"
 Tab = "NextTab"
 Shift-Tab = "PreviousTab"
 Shift-Backtab = "PreviousTab"
-"?" = { SwitchMode = "help" }
 Down = "ScrollDown"
 Up = "ScrollUp"
 Home= "ScrollTop"
 End= "ScrollBottom"
 
 [key_bindings.popup]
+"?" = { SwitchMode = "help" }
 Enter = "ClosePopup"
 Esc = "ClosePopup"
 q = "ClosePopup"
@@ -24,9 +24,9 @@ j = "ScrollDown"
 k = "ScrollUp"
 
 [key_bindings.picker_show_crate_info]
+"?" = { SwitchMode = "help" }
 q = { SwitchMode = "picker_hide_crate_info" }
 Esc= { SwitchMode = "picker_hide_crate_info" }
-"?" = { SwitchMode = "help" }
 "/" = { SwitchMode = "search" }
 "f" = { SwitchMode = "filter" }
 
@@ -45,7 +45,7 @@ ctrl-j = "ScrollCrateInfoDown"
 ctrl-k = "ScrollCrateInfoUp"
 
 ctrl-s = { ToggleSortBy = { reload = true, forward = true } }
-ctrl-S = { ToggleSortBy = { reload = true, forward = false } }
+alt-s = { ToggleSortBy = { reload = true, forward = false } }
 
 r = "ReloadData"
 Enter = "ToggleShowCrateInfo"
@@ -74,20 +74,22 @@ ctrl-j = "ScrollCrateInfoDown"
 ctrl-k = "ScrollCrateInfoUp"
 
 ctrl-s = { ToggleSortBy = { reload = true, forward = true } }
-ctrl-S = { ToggleSortBy = { reload = true, forward = false } }
+alt-s = { ToggleSortBy = { reload = true, forward = false } }
 
 r = "ReloadData"
 Enter = "ToggleShowCrateInfo"
 "<g><d>" = "OpenDocsUrlInBrowser"
 "<g><c>" = "OpenCratesIOUrlInBrowser"
-"<g><Enter>" = "ShowFullCrateInfo"
 c = "CopyCargoAddCommandToClipboard"
 
 
 [key_bindings.summary]
+"?" = { SwitchMode = "help" }
 q = "Quit"
 j = "ScrollDown"
 k = "ScrollUp"
+Down = "ScrollDown"
+Up = "ScrollUp"
 h = "PreviousSummaryMode"
 Left = "PreviousSummaryMode"
 l = "NextSummaryMode"
@@ -102,14 +104,16 @@ k = "ScrollUp"
 
 
 [key_bindings.search]
+"F1" = { SwitchMode = "help" }
 ctrl-s = { ToggleSortBy = { reload = false, forward = true } }
-ctrl-S = { ToggleSortBy = { reload = false, forward = false } }
+alt-s = { ToggleSortBy = { reload = false, forward = false } }
 Esc = { SwitchMode = "picker_hide_crate_info" }
 Enter = "SubmitSearch"
 ctrl-j = "ScrollSearchResultsDown"
 ctrl-k = "ScrollSearchResultsUp"
 
 [key_bindings.filter]
+"F1" = { SwitchMode = "help" }
 Esc = { SwitchMode = "picker_hide_crate_info" }
 Enter = { SwitchMode = "picker_hide_crate_info" }
 ctrl-j = "ScrollSearchResultsDown"

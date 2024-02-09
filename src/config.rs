@@ -252,7 +252,7 @@ mod tests {
         c.key_bindings.insert(
             crate::app::Mode::PickerShowCrateInfo,
             &parse_key_sequence("q").unwrap(),
-            crate::action::Action::Quit,
+            crate::command::Command::Quit,
         );
 
         println!("{}", toml::to_string_pretty(&c).unwrap());

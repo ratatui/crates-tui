@@ -1,17 +1,17 @@
 use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
 
-use crate::{action::Action, app::Mode, config};
+use crate::{app::Mode, command::Command, config};
 
 #[derive(Default, Debug, Clone)]
 pub struct Help {
     pub state: TableState,
-    pub mode: Mode,
+    pub mode: Option<Mode>,
     pub skip: Vec<usize>,
 }
 
 impl Help {
-    pub fn new(state: TableState, mode: Mode) -> Self {
+    pub fn new(state: TableState, mode: Option<Mode>) -> Self {
         Self {
             state,
             mode,
@@ -40,12 +40,12 @@ pub struct HelpWidget;
 
 const HIGHLIGHT_SYMBOL: &str = "█ ";
 
-fn get_actions(mode: Mode, action: Action) -> impl Iterator<Item = (Mode, String, Action)> {
+fn get_commands(mode: Mode, command: Command) -> impl Iterator<Item = (Mode, String, Command)> {
     config::get()
         .key_bindings
-        .get_config_for_action(mode, action.clone())
+        .get_config_for_command(mode, command.clone())
         .into_iter()
-        .map(move |s| (mode, s, action.clone()))
+        .map(move |s| (mode, s, command.clone()))
 }
 
 impl StatefulWidget for &HelpWidget {
@@ -58,130 +58,160 @@ impl StatefulWidget for &HelpWidget {
         let [_, area, _] = Layout::horizontal([Min(0), Percentage(85), Min(0)]).areas(area);
 
         let skip = &mut state.skip;
-        let rows = std::iter::once((Mode::Help, "ESC".into(), Action::SwitchToLastMode))
-            .chain(vec![(Mode::Help, "".into(), Action::SwitchToLastMode)])
-            .chain(get_actions(
+        let rows = std::iter::once((Mode::Help, "ESC".into(), Command::SwitchToLastMode))
+            .chain(vec![(Mode::Help, "".into(), Command::SwitchToLastMode)])
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::SwitchMode(Mode::Help),
+                Command::SwitchMode(Mode::Help),
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::SwitchMode(Mode::Summary),
+                Command::SwitchMode(Mode::Summary),
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::SwitchMode(Mode::Search),
+                Command::SwitchMode(Mode::Search),
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::SwitchMode(Mode::Filter),
+                Command::SwitchMode(Mode::Filter),
             ))
-            .chain(get_actions(Mode::PickerShowCrateInfo, Action::ScrollDown))
-            .chain(get_actions(Mode::PickerShowCrateInfo, Action::ScrollUp))
-            .chain(get_actions(
+            .chain(get_commands(Mode::PickerShowCrateInfo, Command::ScrollDown))
+            .chain(get_commands(Mode::PickerShowCrateInfo, Command::ScrollUp))
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::ScrollCrateInfoUp,
+                Command::ScrollCrateInfoUp,
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::ScrollCrateInfoDown,
+                Command::ScrollCrateInfoDown,
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::ToggleSortBy {
+                Command::ToggleSortBy {
                     reload: true,
                     forward: true,
                 },
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::ToggleSortBy {
+                Command::ToggleSortBy {
                     reload: true,
                     forward: false,
                 },
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::ToggleSortBy {
+                Command::ToggleSortBy {
                     reload: false,
                     forward: true,
                 },
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::ToggleSortBy {
+                Command::ToggleSortBy {
                     reload: false,
                     forward: false,
                 },
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::IncrementPage,
+                Command::IncrementPage,
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::DecrementPage,
+                Command::DecrementPage,
             ))
-            .chain(get_actions(Mode::PickerShowCrateInfo, Action::ReloadData))
-            .chain(get_actions(
+            .chain(get_commands(Mode::PickerShowCrateInfo, Command::ReloadData))
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::ToggleShowCrateInfo,
+                Command::ToggleShowCrateInfo,
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::OpenDocsUrlInBrowser,
+                Command::OpenDocsUrlInBrowser,
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::OpenCratesIOUrlInBrowser,
+                Command::OpenCratesIOUrlInBrowser,
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::PickerShowCrateInfo,
-                Action::CopyCargoAddCommandToClipboard,
+                Command::CopyCargoAddCommandToClipboard,
             ))
-            .chain(vec![(Mode::Help, "".into(), Action::SwitchToLastMode)])
-            .chain(get_actions(Mode::Summary, Action::Quit))
-            .chain(get_actions(Mode::Summary, Action::ScrollDown))
-            .chain(get_actions(Mode::Summary, Action::ScrollUp))
-            .chain(get_actions(Mode::Summary, Action::PreviousSummaryMode))
-            .chain(get_actions(Mode::Summary, Action::NextSummaryMode))
-            .chain(get_actions(Mode::Summary, Action::SwitchMode(Mode::Help)))
-            .chain(get_actions(Mode::Summary, Action::SwitchMode(Mode::Search)))
-            .chain(get_actions(Mode::Summary, Action::SwitchMode(Mode::Filter)))
-            .chain(vec![(Mode::Help, "".into(), Action::SwitchToLastMode)])
-            .chain(get_actions(
+            .chain(vec![(Mode::Help, "".into(), Command::SwitchToLastMode)])
+            .chain(get_commands(Mode::Summary, Command::Quit))
+            .chain(get_commands(Mode::Summary, Command::ScrollDown))
+            .chain(get_commands(Mode::Summary, Command::ScrollUp))
+            .chain(get_commands(Mode::Summary, Command::PreviousSummaryMode))
+            .chain(get_commands(Mode::Summary, Command::NextSummaryMode))
+            .chain(get_commands(Mode::Summary, Command::SwitchMode(Mode::Help)))
+            .chain(get_commands(
+                Mode::Summary,
+                Command::SwitchMode(Mode::Search),
+            ))
+            .chain(get_commands(
+                Mode::Summary,
+                Command::SwitchMode(Mode::Filter),
+            ))
+            .chain(vec![(Mode::Help, "".into(), Command::SwitchToLastMode)])
+            .chain(get_commands(
                 Mode::Search,
-                Action::SwitchMode(Mode::PickerHideCrateInfo),
+                Command::SwitchMode(Mode::PickerHideCrateInfo),
             ))
-            .chain(get_actions(Mode::Search, Action::SubmitSearch))
-            .chain(get_actions(
+            .chain(get_commands(Mode::Search, Command::SubmitSearch))
+            .chain(get_commands(
                 Mode::Search,
-                Action::ToggleSortBy {
+                Command::ToggleSortBy {
                     reload: false,
                     forward: true,
                 },
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::Search,
-                Action::ToggleSortBy {
+                Command::ToggleSortBy {
                     reload: false,
                     forward: false,
                 },
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::Search,
-                Action::ToggleSortBy {
+                Command::ToggleSortBy {
                     reload: true,
                     forward: true,
                 },
             ))
-            .chain(get_actions(
+            .chain(get_commands(
                 Mode::Search,
-                Action::ToggleSortBy {
+                Command::ToggleSortBy {
                     reload: true,
                     forward: false,
                 },
             ))
+            .chain(get_commands(Mode::Search, Command::ScrollSearchResultsUp))
+            .chain(get_commands(Mode::Search, Command::ScrollSearchResultsDown))
+            .chain(get_commands(
+                Mode::Filter,
+                Command::SwitchMode(Mode::PickerHideCrateInfo),
+            ))
+            .chain(get_commands(Mode::Filter, Command::ScrollSearchResultsUp))
+            .chain(get_commands(Mode::Filter, Command::ScrollSearchResultsDown))
+            .collect_vec();
+
+        if let Some(mode) = state.mode {
+            tracing::debug!("{:?}", mode);
+            let select = rows
+                .iter()
+                .find_position(|(m, _, _)| mode == *m)
+                .map(|(i, _)| i)
+                .unwrap_or_default();
+            *state.state.selected_mut() = Some(select);
+            *state.state.offset_mut() = select.saturating_sub(2);
+            state.mode = None;
+        };
+
+        let rows = rows
+            .iter()
             .enumerate()
             .map(|(i, (m, s, a))| {
                 if s.is_empty() {
@@ -215,7 +245,7 @@ impl StatefulWidget for &HelpWidget {
         let table = Table::new(rows, widths)
             .header(
                 Row::new(
-                    ["Mode", "Key Chords", "Action"]
+                    ["Mode", "Key Chords", "Command"]
                         .iter()
                         .map(|h| Text::from(vec![Line::from(h.bold()), "".into()])),
                 )

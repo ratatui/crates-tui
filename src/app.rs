@@ -286,12 +286,13 @@ impl App {
         let config = config::get();
         config
             .key_bindings
-            .event_to_action(self.mode, &self.last_tick_key_events)
+            .event_to_command(self.mode, &self.last_tick_key_events)
             .or_else(|| {
                 config
                     .key_bindings
-                    .event_to_action(Mode::Common, &self.last_tick_key_events)
+                    .event_to_command(Mode::Common, &self.last_tick_key_events)
             })
+            .map(|command| config.key_bindings.command_to_action(command))
     }
 
     /// Performs the `Action` by calling on a respective app method.
@@ -519,6 +520,10 @@ impl App {
                 self.selected_tab.select(SelectedTab::Search)
             }
             Mode::Summary => self.selected_tab.select(SelectedTab::Summary),
+            Mode::Help => {
+                self.help.mode = Some(self.last_mode);
+                self.selected_tab.select(SelectedTab::None)
+            }
             _ => self.selected_tab.select(SelectedTab::None),
         }
     }
@@ -936,7 +941,6 @@ impl App {
     }
 
     fn render_help(&mut self, area: Rect, buf: &mut Buffer) {
-        self.help.mode = self.mode;
         HelpWidget.render(area, buf, &mut self.help)
     }
 

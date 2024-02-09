@@ -7,46 +7,83 @@ pub mod keybindings {
     use itertools::Itertools;
     use serde::{de::Deserializer, Deserialize, Serialize, Serializer};
 
-    use crate::{action::Action, app::Mode};
+    use crate::{action::Action, app::Mode, command::Command};
 
     #[derive(Clone, Debug, Default, Deref, DerefMut)]
-    pub struct KeyBindings(pub HashMap<Mode, HashMap<Vec<KeyEvent>, Action>>);
+    pub struct KeyBindings(pub HashMap<Mode, HashMap<Vec<KeyEvent>, Command>>);
 
     impl KeyBindings {
+        pub fn command_to_action(&self, command: Command) -> Action {
+            match command {
+                Command::Ignore => Action::Ignore,
+                Command::Quit => Action::Quit,
+                Command::NextTab => Action::NextTab,
+                Command::PreviousTab => Action::PreviousTab,
+                Command::ClosePopup => Action::ClosePopup,
+                Command::SwitchMode(m) => Action::SwitchMode(m),
+                Command::SwitchToLastMode => Action::SwitchToLastMode,
+                Command::IncrementPage => Action::IncrementPage,
+                Command::DecrementPage => Action::DecrementPage,
+                Command::NextSummaryMode => Action::NextSummaryMode,
+                Command::PreviousSummaryMode => Action::PreviousSummaryMode,
+                Command::ToggleSortBy { reload, forward } => {
+                    Action::ToggleSortBy { reload, forward }
+                }
+                Command::ScrollBottom => Action::ScrollBottom,
+                Command::ScrollTop => Action::ScrollTop,
+                Command::ScrollDown => Action::ScrollDown,
+                Command::ScrollUp => Action::ScrollUp,
+                Command::ScrollCrateInfoDown => Action::ScrollCrateInfoDown,
+                Command::ScrollCrateInfoUp => Action::ScrollCrateInfoUp,
+                Command::ScrollSearchResultsDown => Action::ScrollSearchResultsDown,
+                Command::ScrollSearchResultsUp => Action::ScrollSearchResultsUp,
+                Command::SubmitSearch => Action::SubmitSearch,
+                Command::ReloadData => Action::ReloadData,
+                Command::ToggleShowCrateInfo => Action::ToggleShowCrateInfo,
+                Command::CopyCargoAddCommandToClipboard => Action::CopyCargoAddCommandToClipboard,
+                Command::OpenDocsUrlInBrowser => Action::OpenDocsUrlInBrowser,
+                Command::OpenCratesIOUrlInBrowser => Action::OpenCratesIOUrlInBrowser,
+            }
+        }
+
         #[allow(dead_code)]
-        pub fn insert(&mut self, mode: Mode, key_events: &[KeyEvent], action: Action) {
+        pub fn insert(&mut self, mode: Mode, key_events: &[KeyEvent], command: Command) {
             // Convert the slice of `KeyEvent`(s) to a `Vec`.
             let key_events_vec = key_events.to_vec();
 
             // Retrieve or create the inner `HashMap` corresponding to the mode.
             let bindings_for_mode = self.0.entry(mode).or_default();
 
-            // Insert the `Action` into the inner `HashMap` using the key events `Vec` as
+            // Insert the `Command` into the inner `HashMap` using the key events `Vec` as
             // the key.
-            bindings_for_mode.insert(key_events_vec, action);
+            bindings_for_mode.insert(key_events_vec, command);
         }
 
-        pub fn event_to_action(&self, mode: Mode, key_events: &[KeyEvent]) -> Option<Action> {
+        pub fn event_to_command(&self, mode: Mode, key_events: &[KeyEvent]) -> Option<Command> {
             if key_events.is_empty() {
                 None
-            } else if let Some(Some(action)) = self.0.get(&mode).map(|kb| kb.get(key_events)) {
-                Some(action.clone())
+            } else if let Some(Some(command)) = self.0.get(&mode).map(|kb| kb.get(key_events)) {
+                Some(command.clone())
             } else {
-                self.event_to_action(mode, &key_events[1..])
+                self.event_to_command(mode, &key_events[1..])
             }
         }
 
-        pub fn get_keybindings_for_action(&self, mode: Mode, action: Action) -> Vec<Vec<KeyEvent>> {
+        pub fn get_keybindings_for_command(
+            &self,
+            mode: Mode,
+            command: Command,
+        ) -> Vec<Vec<KeyEvent>> {
             let bindings_for_mode = self.0.get(&mode).cloned().unwrap_or_default();
             bindings_for_mode
                 .into_iter()
-                .filter(|(_, v)| *v == action)
+                .filter(|(_, v)| *v == command)
                 .map(|(k, _)| k)
                 .collect_vec()
         }
 
-        pub fn get_config_for_action(&self, mode: Mode, action: Action) -> Vec<String> {
-            self.get_keybindings_for_action(mode, action)
+        pub fn get_config_for_command(&self, mode: Mode, command: Command) -> Vec<String> {
+            self.get_keybindings_for_command(mode, command)
                 .iter()
                 .map(|key_events| {
                     key_events
@@ -64,7 +101,7 @@ pub mod keybindings {
         where
             D: Deserializer<'de>,
         {
-            let parsed_map = HashMap::<Mode, HashMap<String, Action>>::deserialize(deserializer)?;
+            let parsed_map = HashMap::<Mode, HashMap<String, Command>>::deserialize(deserializer)?;
 
             let keybindings = parsed_map
                 .into_iter()
@@ -86,19 +123,19 @@ pub mod keybindings {
         where
             S: Serializer,
         {
-            let mut serialized_map: HashMap<Mode, HashMap<String, Action>> = HashMap::new();
+            let mut serialized_map: HashMap<Mode, HashMap<String, Command>> = HashMap::new();
 
             for (mode, key_event_map) in self.0.iter() {
                 let mut string_event_map = HashMap::new();
 
-                for (key_events, action) in key_event_map {
+                for (key_events, command) in key_event_map {
                     let key_string = key_events
                         .iter()
                         .map(|key_event| format!("<{}>", key_event_to_string(key_event)))
                         .collect::<Vec<String>>()
                         .join("");
 
-                    string_event_map.insert(key_string, action.clone());
+                    string_event_map.insert(key_string, command.clone());
                 }
 
                 serialized_map.insert(*mode, string_event_map);
@@ -192,30 +229,30 @@ pub mod keybindings {
     pub fn key_event_to_string(key_event: &KeyEvent) -> String {
         let char;
         let key_code = match key_event.code {
-            KeyCode::Backspace => "backspace",
-            KeyCode::Enter => "enter",
-            KeyCode::Left => "left",
-            KeyCode::Right => "right",
-            KeyCode::Up => "up",
-            KeyCode::Down => "down",
-            KeyCode::Home => "home",
-            KeyCode::End => "end",
-            KeyCode::PageUp => "pageup",
-            KeyCode::PageDown => "pagedown",
-            KeyCode::Tab => "tab",
-            KeyCode::BackTab => "backtab",
-            KeyCode::Delete => "delete",
-            KeyCode::Insert => "insert",
+            KeyCode::Backspace => "Backspace",
+            KeyCode::Enter => "Enter",
+            KeyCode::Left => "Left",
+            KeyCode::Right => "Right",
+            KeyCode::Up => "Up",
+            KeyCode::Down => "Down",
+            KeyCode::Home => "Home",
+            KeyCode::End => "End",
+            KeyCode::PageUp => "PageUp",
+            KeyCode::PageDown => "PageDown",
+            KeyCode::Tab => "Tab",
+            KeyCode::BackTab => "Backtab",
+            KeyCode::Delete => "Delete",
+            KeyCode::Insert => "Insert",
             KeyCode::F(c) => {
-                char = format!("f({c})");
+                char = format!("F({c})");
                 &char
             }
-            KeyCode::Char(' ') => "space",
+            KeyCode::Char(' ') => "Space",
             KeyCode::Char(c) => {
                 char = c.to_string();
                 &char
             }
-            KeyCode::Esc => "esc",
+            KeyCode::Esc => "Esc",
             KeyCode::Null => "",
             KeyCode::CapsLock => "",
             KeyCode::Menu => "",
@@ -231,15 +268,15 @@ pub mod keybindings {
         let mut modifiers = Vec::with_capacity(3);
 
         if key_event.modifiers.intersects(KeyModifiers::CONTROL) {
-            modifiers.push("ctrl");
+            modifiers.push("Ctrl");
         }
 
         if key_event.modifiers.intersects(KeyModifiers::SHIFT) {
-            modifiers.push("shift");
+            modifiers.push("Shift");
         }
 
         if key_event.modifiers.intersects(KeyModifiers::ALT) {
-            modifiers.push("alt");
+            modifiers.push("Alt");
         }
 
         let mut key = modifiers.join("-");

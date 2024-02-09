@@ -134,7 +134,11 @@ impl StatefulWidget for SearchResultsTableWidget {
             .fg(config::get().color.base05)
             .bg(config::get().color.base00)
             .height(3);
-            let highlight_symbol = if self.highlight { " █ " } else { "   " };
+            let highlight_symbol = if self.highlight {
+                " █ "
+            } else {
+                " \u{2022} "
+            };
 
             let rows = state.crates.iter().enumerate().map(|(i, item)| {
                 let mut desc = textwrap::wrap(
