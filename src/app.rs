@@ -136,9 +136,7 @@ pub struct App {
     /// known initially and can be used for UI elements like pagination.
     total_num_crates: Option<u64>,
 
-    /// A string for the current search input by the user, submitted to
-    /// crates.io as a query
-    search: String,
+    search: Search,
 
     /// A string for the current filter input by the user, used only locally
     /// for filtering for the list of crates in the current view.
@@ -179,9 +177,19 @@ pub struct App {
     selected_tab: SelectedTab,
 }
 
+#[derive(Debug)]
+struct Search {
+    /// A string for the current search input by the user, submitted to
+    /// crates.io as a query
+    search: String,
+}
+
 impl App {
     pub fn new() -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
+        let search = Search {
+            search: Default::default(),
+        };
         Self {
             rx,
             tx,
@@ -191,7 +199,7 @@ impl App {
             mode: Mode::default(),
             last_mode: Mode::default(),
             loading_status: Default::default(),
-            search: Default::default(),
+            search,
             filter: Default::default(),
             crates: Default::default(),
             versions: Default::default(),
@@ -497,7 +505,7 @@ impl App {
     fn enter_insert_mode(&mut self, mode: Mode) {
         self.switch_mode(mode);
         self.input = self.input.clone().with_value(if self.mode.is_search() {
-            self.search.clone()
+            self.search.search.clone()
         } else if self.mode.is_filter() {
             self.filter.clone()
         } else {
@@ -557,7 +565,7 @@ impl App {
         self.clear_all_previous_task_details_handles();
         self.switch_mode(Mode::PickerHideCrateInfo);
         self.filter.clear();
-        self.search = self.input.value().into();
+        self.search.search = self.input.value().into();
     }
 
     fn toggle_show_crate_info(&mut self) {
@@ -742,7 +750,7 @@ impl App {
     /// Creates the parameters required for the search task.
     fn create_search_parameters(&self) -> crates_io_api_helper::SearchParameters {
         crates_io_api_helper::SearchParameters {
-            search: self.search.clone(),
+            search: self.search.search.clone(),
             page: self.page.clamp(1, u64::MAX),
             page_size: self.page_size,
             crates: self.crates.clone(),
