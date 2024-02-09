@@ -1,9 +1,27 @@
 # configuration for https://github.com/MarcoIeni/release-plz
 
 [workspace]
-allow_dirty = false
+
+# enable changelog updates
+changelog_update = true
+
+# update dependencies with `cargo update`
 dependencies_update = true
-git_release_enable = false # handled by cargo dist
+
+# create tags for the releases
 git_tag_enable = true
+
+# disable GitHub releases
+git_release_enable = false
+
+# labels for the release PR
 pr_labels = ["release"]
+
+# disallow updating repositories with uncommitted changes
+allow_dirty = false
+
+# disallow packaging with uncommitted changes
 publish_allow_dirty = false
+
+# disable running `cargo-semver-checks`
+semver_check = false
