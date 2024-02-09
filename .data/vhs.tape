@@ -6,6 +6,7 @@ Set Width 1200
 Set Height 1400
 Hide
 Type "cargo run"
+Enter
 Sleep 2s
 Show
 Sleep 2s
