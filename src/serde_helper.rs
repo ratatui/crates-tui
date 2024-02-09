@@ -51,7 +51,7 @@ pub mod keybindings {
                 .map(|key_events| {
                     key_events
                         .iter()
-                        .map(|k| key_event_to_string(k))
+                        .map(key_event_to_string)
                         .collect_vec()
                         .join("")
                 })

@@ -41,7 +41,7 @@ pub struct Summary {
 
 impl Summary {
     pub fn mode(&self) -> SummaryMode {
-        self.mode.clone()
+        self.mode
     }
 
     pub fn get_state_mut(&mut self, mode: SummaryMode) -> &mut ListState {
@@ -96,12 +96,12 @@ pub struct SummaryWidget<'a>(pub &'a crates_io_api::Summary);
 const HIGHLIGHT_SYMBOL: &str = "█";
 
 impl<'a> SummaryWidget<'a> {
+    fn borders(&self, _selected: bool) -> Borders {
+        Borders::NONE
+    }
+
     fn new_crates(&self, selected: bool) -> List {
-        let borders = if selected {
-            Borders::NONE
-        } else {
-            Borders::NONE
-        };
+        let borders = self.borders(selected);
         let items = std::iter::once(Text::from(Line::raw("")))
             .chain(self.new_crates.iter().map(|item| {
                 Text::from(vec![
@@ -114,11 +114,7 @@ impl<'a> SummaryWidget<'a> {
     }
 
     fn most_downloaded(&self, selected: bool) -> List {
-        let borders = if selected {
-            Borders::NONE
-        } else {
-            Borders::NONE
-        };
+        let borders = self.borders(selected);
         let items = std::iter::once(Text::from(Line::raw("")))
             .chain(self.most_downloaded.iter().map(|item| {
                 Text::from(vec![
@@ -131,11 +127,7 @@ impl<'a> SummaryWidget<'a> {
     }
 
     fn just_updated(&self, selected: bool) -> List {
-        let borders = if selected {
-            Borders::NONE
-        } else {
-            Borders::NONE
-        };
+        let borders = self.borders(selected);
         let items = std::iter::once(Text::from(Line::raw("")))
             .chain(self.just_updated.iter().map(|item| {
                 Text::from(vec![
@@ -155,11 +147,7 @@ impl<'a> SummaryWidget<'a> {
     }
 
     fn most_recently_downloaded(&self, selected: bool) -> List {
-        let borders = if selected {
-            Borders::NONE
-        } else {
-            Borders::NONE
-        };
+        let borders = self.borders(selected);
         let items = std::iter::once(Text::from(Line::raw("")))
             .chain(self.most_recently_downloaded.iter().map(|item| {
                 Text::from(vec![
@@ -172,11 +160,7 @@ impl<'a> SummaryWidget<'a> {
     }
 
     fn popular_keywords(&self, selected: bool) -> List {
-        let borders = if selected {
-            Borders::NONE
-        } else {
-            Borders::NONE
-        };
+        let borders = self.borders(selected);
         let items = std::iter::once(Text::from(Line::raw("")))
             .chain(self.popular_keywords.iter().map(|item| {
                 Text::from(vec![
@@ -189,11 +173,7 @@ impl<'a> SummaryWidget<'a> {
     }
 
     fn popular_categories(&self, selected: bool) -> List {
-        let borders = if selected {
-            Borders::NONE
-        } else {
-            Borders::NONE
-        };
+        let borders = self.borders(selected);
         let items = std::iter::once(Text::from(Line::raw("")))
             .chain(self.popular_categories.iter().map(|item| {
                 Text::from(vec![

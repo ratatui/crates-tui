@@ -163,7 +163,7 @@ impl Default for Config {
             enable_paste: false,
             prompt_padding: 1,
             key_bindings,
-            color: rose_pine.clone(),
+            color: rose_pine,
         }
     }
 }

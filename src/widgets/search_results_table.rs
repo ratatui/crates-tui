@@ -169,12 +169,7 @@ impl StatefulWidget for SearchResultsTableWidget {
                         s
                     }
                 })
-                .height(if i == selected {
-                    height.saturating_add(1) as u16
-                } else {
-                    // TODO: make this `3` when partial rendering is implemented
-                    height.saturating_add(1) as u16
-                })
+                .height(height.saturating_add(1) as u16)
             });
 
             let widths = [Constraint::Max(20), Constraint::Min(0), Constraint::Max(10)];

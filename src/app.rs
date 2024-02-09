@@ -67,7 +67,7 @@ impl Mode {
         *self = match self {
             Mode::PickerShowCrateInfo => Mode::PickerHideCrateInfo,
             Mode::PickerHideCrateInfo => Mode::PickerShowCrateInfo,
-            _ => self.clone(),
+            _ => *self,
         };
     }
 
@@ -295,15 +295,14 @@ impl App {
     fn handle_key_events_from_config(&mut self, key: KeyEvent) -> Option<Action> {
         self.last_tick_key_events.push(key);
         let config = config::get();
-        let action = config
+        config
             .key_bindings
             .event_to_action(self.mode, &self.last_tick_key_events)
             .or_else(|| {
                 config
                     .key_bindings
                     .event_to_action(Mode::Common, &self.last_tick_key_events)
-            });
-        action
+            })
     }
 
     /// Performs the `Action` by calling on a respective app method.

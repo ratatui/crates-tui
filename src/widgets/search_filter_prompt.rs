@@ -69,9 +69,9 @@ impl<'a> SearchFilterPromptWidget<'a> {
                 .next()
                 .unwrap_or_default();
             vec![
-                format!("{}", search).bold(),
+                search.bold(),
                 " to search, ".into(),
-                format!("{}", filter).bold(),
+                filter.bold(),
                 " to filter".into(),
             ]
         };
