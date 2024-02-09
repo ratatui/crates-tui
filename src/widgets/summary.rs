@@ -110,7 +110,7 @@ impl<'a> SummaryWidget<'a> {
                 ])
             }))
             .collect_vec();
-        list_builder(items, "New Crates".into(), borders)
+        list_builder(items, "New Crates", selected, borders)
     }
 
     fn most_downloaded(&self, selected: bool) -> List {
@@ -123,7 +123,7 @@ impl<'a> SummaryWidget<'a> {
                 ])
             }))
             .collect_vec();
-        list_builder(items, "Most Downloaded".into(), borders)
+        list_builder(items, "Most Downloaded", selected, borders)
     }
 
     fn just_updated(&self, selected: bool) -> List {
@@ -143,7 +143,7 @@ impl<'a> SummaryWidget<'a> {
                 ])
             }))
             .collect_vec();
-        list_builder(items, "Just Updated".into(), borders)
+        list_builder(items, "Just Updated", selected, borders)
     }
 
     fn most_recently_downloaded(&self, selected: bool) -> List {
@@ -156,7 +156,7 @@ impl<'a> SummaryWidget<'a> {
                 ])
             }))
             .collect_vec();
-        list_builder(items, "Most Recently Downloaded".into(), borders)
+        list_builder(items, "Most Recently Downloaded", selected, borders)
     }
 
     fn popular_keywords(&self, selected: bool) -> List {
@@ -169,7 +169,7 @@ impl<'a> SummaryWidget<'a> {
                 ])
             }))
             .collect_vec();
-        list_builder(items, "Popular Keywords".into(), borders)
+        list_builder(items, "Popular Keywords", selected, borders)
     }
 
     fn popular_categories(&self, selected: bool) -> List {
@@ -182,7 +182,7 @@ impl<'a> SummaryWidget<'a> {
                 ])
             }))
             .collect_vec();
-        list_builder(items, "Popular Categories".into(), borders)
+        list_builder(items, "Popular Categories", selected, borders)
     }
 
     fn render_list(
@@ -201,12 +201,26 @@ impl<'a> SummaryWidget<'a> {
     }
 }
 
-fn list_builder(items: Vec<Text>, title: String, borders: Borders) -> List {
+fn list_builder<'a>(
+    items: Vec<Text<'a>>,
+    title: &'a str,
+    selected: bool,
+    borders: Borders,
+) -> List<'a> {
+    let title_style = if selected {
+        Style::default()
+            .fg(config::get().color.base00)
+            .bg(config::get().color.base0a)
+            .bold()
+    } else {
+        Style::default().fg(config::get().color.base0d).bold()
+    };
     List::new(items)
         .block(
             Block::default()
                 .borders(borders)
-                .title(format!("   {title}").bold().fg(config::get().color.base05))
+                .title(Line::from(vec![" ".into(), title.into(), " ".into()]))
+                .title_style(title_style)
                 .title_alignment(Alignment::Left),
         )
         .highlight_symbol(HIGHLIGHT_SYMBOL)

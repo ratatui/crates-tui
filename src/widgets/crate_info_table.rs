@@ -3,6 +3,29 @@ use ratatui::{prelude::*, widgets::*};
 
 use crate::config;
 
+#[derive(Debug, Default)]
+pub struct CrateInfo {
+    crate_info: TableState,
+}
+
+impl CrateInfo {
+    pub fn scroll_previous(&mut self) {
+        let i = self
+            .crate_info
+            .selected()
+            .map_or(0, |i| i.saturating_sub(1));
+        self.crate_info.select(Some(i));
+    }
+
+    pub fn scroll_next(&mut self) {
+        let i = self
+            .crate_info
+            .selected()
+            .map_or(0, |i| i.saturating_add(1));
+        self.crate_info.select(Some(i));
+    }
+}
+
 pub struct CrateInfoTableWidget {
     crate_info: crates_io_api::CrateResponse,
 }
@@ -14,7 +37,7 @@ impl CrateInfoTableWidget {
 }
 
 impl StatefulWidget for CrateInfoTableWidget {
-    type State = TableState;
+    type State = CrateInfo;
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let ci = self.crate_info.clone();
 
@@ -112,11 +135,11 @@ impl StatefulWidget for CrateInfoTableWidget {
             .highlight_style(config::get().color.base05)
             .highlight_spacing(HighlightSpacing::Always);
 
-        if let Some(i) = state.selected() {
-            state.select(Some(i.min(selected_max)));
+        if let Some(i) = state.crate_info.selected() {
+            state.crate_info.select(Some(i.min(selected_max)));
         } else {
-            state.select(Some(0));
+            state.crate_info.select(Some(0));
         }
-        StatefulWidget::render(table_widget, area, buf, state);
+        StatefulWidget::render(table_widget, area, buf, &mut state.crate_info);
     }
 }

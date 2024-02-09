@@ -26,7 +26,7 @@ use crate::{
     serde_helper::keybindings::key_event_to_string,
     tui::Tui,
     widgets::{
-        crate_info_table::CrateInfoTableWidget,
+        crate_info_table::{CrateInfo, CrateInfoTableWidget},
         help::{Help, HelpWidget},
         popup_message::{Popup, PopupMessageWidget},
         search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
@@ -128,7 +128,7 @@ pub struct App {
     summary: Summary,
 
     /// contains table state for info popup
-    crate_info: TableState,
+    crate_info: CrateInfo,
 
     last_task_details_handle: HashMap<uuid::Uuid, JoinHandle<()>>,
 
@@ -337,8 +337,8 @@ impl App {
             Action::ScrollDown => self.search_results.scroll_next(1),
             Action::ScrollTop => self.search_results.scroll_to_top(),
             Action::ScrollBottom => self.search_results.scroll_to_bottom(),
-            Action::ScrollCrateInfoUp => self.crate_info_scroll_previous(),
-            Action::ScrollCrateInfoDown => self.crate_info_scroll_next(),
+            Action::ScrollCrateInfoUp => self.crate_info.scroll_previous(),
+            Action::ScrollCrateInfoDown => self.crate_info.scroll_next(),
             Action::ScrollSearchResultsUp => self.search_results.scroll_previous(1),
             Action::ScrollSearchResultsDown => self.search_results.scroll_next(1),
             Action::ReloadData => self.reload_data(),
@@ -469,22 +469,6 @@ impl App {
             self.page = self.page.saturating_sub(1).max(min_page_size);
             self.reload_data();
         }
-    }
-
-    fn crate_info_scroll_previous(&mut self) {
-        let i = self
-            .crate_info
-            .selected()
-            .map_or(0, |i| i.saturating_sub(1));
-        self.crate_info.select(Some(i));
-    }
-
-    fn crate_info_scroll_next(&mut self) {
-        let i = self
-            .crate_info
-            .selected()
-            .map_or(0, |i| i.saturating_add(1));
-        self.crate_info.select(Some(i));
     }
 
     fn enter_insert_mode(&mut self, mode: Mode) {
