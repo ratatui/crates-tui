@@ -28,7 +28,7 @@ use crate::{
     widgets::{
         crate_info_table::{CrateInfo, CrateInfoTableWidget},
         help::{Help, HelpWidget},
-        popup_message::{Popup, PopupMessageWidget},
+        popup_message::{PopupMessageState, PopupMessageWidget},
         search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
         search_results_table::{SearchResultsTable, SearchResultsTableWidget},
         summary::{Summary, SummaryWidget},
@@ -152,17 +152,8 @@ pub struct App {
     /// within the terminal UI.
     search_results: SearchResultsTable,
 
-    /// An optional error message that, when set, should be shown to the user,
-    /// in the form of a popup.
-    error_message: Option<String>,
-
-    /// An optional info message that, when set, should be shown to the user, in
-    /// the form of a popup.
-    info_message: Option<String>,
-
-    /// Current scroll index used for navigating through scrollable content in a
-    /// popup.
-    popup: Popup,
+    /// A popupt to show info / error messages
+    popup: Option<(PopupMessageWidget, PopupMessageState)>,
 
     /// The active mode of the application, which could change how user inputs
     /// and commands are interpreted.
@@ -213,8 +204,6 @@ impl App {
             total_num_crates: Default::default(),
             input: Default::default(),
             search_results: Default::default(),
-            error_message: Default::default(),
-            info_message: Default::default(),
             popup: Default::default(),
             prompt: Default::default(),
             last_tick_key_events: Default::default(),
@@ -327,14 +316,8 @@ impl App {
             Action::Resize(w, h) => self.resize(tui, (w, h))?,
             Action::Tick => self.tick(),
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
-            Action::ScrollUp if self.mode == Mode::Popup => self.popup.scroll_previous(),
-            Action::ScrollDown if self.mode == Mode::Popup => self.popup.scroll_next(),
-            Action::ScrollUp if self.mode == Mode::Summary => self.summary.scroll_previous(),
-            Action::ScrollDown if self.mode == Mode::Summary => self.summary.scroll_next(),
-            Action::ScrollUp if self.mode == Mode::Help => self.help.scroll_previous(),
-            Action::ScrollDown if self.mode == Mode::Help => self.help.scroll_next(),
-            Action::ScrollUp => self.search_results.scroll_previous(1),
-            Action::ScrollDown => self.search_results.scroll_next(1),
+            Action::ScrollUp => self.scroll_up(),
+            Action::ScrollDown => self.scroll_down(),
             Action::ScrollTop => self.search_results.scroll_to_top(),
             Action::ScrollBottom => self.search_results.scroll_to_bottom(),
             Action::ScrollCrateInfoUp => self.crate_info.scroll_previous(),
@@ -362,9 +345,9 @@ impl App {
             Action::UpdateSearchTableResults => self.update_search_table_results(),
             Action::UpdateSummary => self.update_summary(),
             Action::ShowFullCrateInfo => self.show_full_crate_details(),
-            Action::ShowErrorPopup(ref err) => self.set_error_flag(err.clone()),
-            Action::ShowInfoPopup(ref info) => self.set_info_flag(info.clone()),
-            Action::ClosePopup => self.clear_error_and_info_flags(),
+            Action::ShowErrorPopup(ref err) => self.show_error_popup(err.clone()),
+            Action::ShowInfoPopup(ref info) => self.show_info_popup(info.clone()),
+            Action::ClosePopup => self.close_popup(),
             Action::ToggleSortBy { reload, forward } => self.toggle_sort_by(reload, forward)?,
             Action::ClearTaskDetailsHandle(ref id) => {
                 self.clear_task_details_handle(uuid::Uuid::parse_str(id)?)?
@@ -464,6 +447,32 @@ impl App {
 
     fn quit(&mut self) {
         self.mode = Mode::Quit
+    }
+
+    fn scroll_up(&mut self) {
+        match self.mode {
+            Mode::Popup => {
+                if let Some((_, popup_state)) = &mut self.popup {
+                    popup_state.scroll_up();
+                }
+            }
+            Mode::Summary => self.summary.scroll_previous(),
+            Mode::Help => self.help.scroll_previous(),
+            _ => self.search_results.scroll_previous(1),
+        }
+    }
+
+    fn scroll_down(&mut self) {
+        match self.mode {
+            Mode::Popup => {
+                if let Some((_, popup_state)) = &mut self.popup {
+                    popup_state.scroll_down();
+                }
+            }
+            Mode::Summary => self.summary.scroll_next(),
+            Mode::Help => self.help.scroll_next(),
+            _ => self.search_results.scroll_next(1),
+        }
     }
 
     fn increment_page(&mut self) {
@@ -591,24 +600,28 @@ impl App {
         Ok(())
     }
 
-    fn set_error_flag(&mut self, err: String) {
-        error!("Error: {err}");
-        self.error_message = Some(err);
+    fn show_error_popup(&mut self, message: String) {
+        error!("Error: {message}");
+        self.popup = Some((
+            PopupMessageWidget::new("Error".into(), message),
+            PopupMessageState::default(),
+        ));
         self.last_mode = self.mode;
         self.mode = Mode::Popup;
     }
 
-    fn set_info_flag(&mut self, info: String) {
+    fn show_info_popup(&mut self, info: String) {
         info!("Info: {info}");
-        self.info_message = Some(info);
+        self.popup = Some((
+            PopupMessageWidget::new("Info".into(), info),
+            PopupMessageState::default(),
+        ));
         self.last_mode = self.mode;
         self.mode = Mode::Popup;
     }
 
-    fn clear_error_and_info_flags(&mut self) {
-        self.error_message = None;
-        self.info_message = None;
-        self.popup.reset();
+    fn close_popup(&mut self) {
+        self.popup = None;
         self.mode = if self.last_mode.is_popup() {
             Mode::Search
         } else {
@@ -1001,11 +1014,8 @@ impl StatefulWidget for AppWidget {
                 .render(table, buf);
         }
 
-        if let Some(err) = &state.error_message {
-            PopupMessageWidget::new("Error", err).render(area, buf, &mut state.popup);
-        }
-        if let Some(info) = &state.info_message {
-            PopupMessageWidget::new("Info", info).render(area, buf, &mut state.popup);
+        if let Some((popup, popup_state)) = &mut state.popup {
+            popup.render(area, buf, popup_state);
         }
     }
 }
