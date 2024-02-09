@@ -1,0 +1,197 @@
+# Changelog
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.1.1](https://github.com/ratatui-org/crates-tui/compare/v0.1.0...v0.1.1) - 2024-02-09
+
+### Added
+- Setup cargo dist
+- Use release-plz
+- Open crates io pages from summary view
+- Better UX for scrollbar, fixed summary prompt
+- better styles
+- clippy
+- Add ci.yml and cd.yml
+- Update README.md
+- Resolve several fixmes
+- Better tabs
+- better tab
+- more color theme support
+- more color theme support
+- color theme support
+- Persistent key presses
+- Better popup scroll
+- More configurable colors
+- Configurable colors and add tab
+- Better help and last mode behavior
+- Add help widget
+- Add help widget
+- Better popup messages
+- Add copy cargo add command to clipboard
+- better spacing
+- consistent highlight symbol
+- better spacing
+- Better spacing
+- Align title and content
+- always highlight space in summary
+- Simplify list navigation
+- Make list navigable
+- Make background color stone c800
+- Add background color for row highlight
+- Always show spinner in top right
+- selected line table
+- Add page number
+- Better prompt message
+- Better prompt message
+- Better prompt
+- Fix bug in insert mode
+- Add summary screen with useful information
+- Add summary screen
+- comment
+- Better Mode with SwitchMode
+- Only show keywords instead of versions
+- Better info table view
+- Faster UX by default using CrateResponse
+- ToggleSortBy with named payload for reload in configuration
+- Remove updated time
+- Better prompt behavior
+- Bigger Refactor
+- Make requests for full crates
+- Remove versions
+- Refactor
+- Remove widget for PromptWidget
+- Add toggle sort by
+- Rename some functions
+- Add more comments
+- Refactor fetch crate details
+- Refactor reload data
+- Clippy
+- More refactoring and comments
+- Minor refactor and cleanup
+- refactor
+- Combine root and app
+- Rename f to frame
+- Make root widget separate from app
+- Rename app.rs to root.rs
+- Make App a widget
+- Reorder App methods
+- Rename CrateTableState to CratesTableState
+- Move filtered_crates to crates in CrateTableState
+- Remove unused last_key_events
+- Make cursor_position part of new PromptState and make Prompt a StatefulWidget
+- Remove cargo add feature to keep project scope contained
+- Refactor async
+- Split run to handle_tui_event and handle_action
+- Refactor crate table state into separate struct
+- Minor refactor based on comments
+- minor abstraction of key event from config
+- Change background block
+- Add more defaults
+- Move config file
+- Rename some modes and actions
+- Make Tui configurable
+- Remove unused import
+- Generic key configuration handler
+- Set up configuration from file
+- Initial key configuration set up
+- Better configuration file
+- Persistent search info
+- Add spinner
+- Update info
+- Simplify with clippy changes
+- Simplify
+- Combine root and app
+- Update popup behavior
+- Split Error into separate widget
+- Split CrateInfo into separate widget
+- Split CrateTable into separate widgets
+- Add crate to Cargo.toml using 'a'
+- Update config
+- Add docs
+- Minor refactor
+- Minor refactor
+- Minor refactor
+- Minor refactor
+- Rename fields
+- Use app and root
+- Use runner and app
+- Don't show crate info if it is not available
+- Add key events at the bottom
+- Better logging and cli configuration
+- Better logging and cli configuration
+- Error message
+- Refactor action_tx
+- Better text input
+- Remove mode.rs
+- Simplify mode
+- Better query builder
+- Better text wrapping
+- refactoring colors
+- refactoring and clean up
+- faster refresh
+- Add lots of features
+
+### Fixed
+- release-plz github action
+- crates.io link
+- Popup scroll bug
+- clippy lints ([#10](https://github.com/ratatui-org/crates-tui/pull/10))
+
+### Other
+- Update files
+- Add release plz configuration
+- *(deps)* bump actions/cache from 3 to 4 ([#13](https://github.com/ratatui-org/crates-tui/pull/13))
+- Move dependabot.ymk to the right location
+- Create dependabot.yml
+- Update cd.yml
+- simplify popup ([#12](https://github.com/ratatui-org/crates-tui/pull/12))
+- Update README.md
+- Remove keybindings from README with link to file instead
+- Update README.md
+- jm/keybinds ([#11](https://github.com/ratatui-org/crates-tui/pull/11))
+- Update ci.yml
+- Update license in README
+- Better README
+- Better README
+- Better README
+- Update README.md
+- Better README
+- Update README.md
+- Update README.md
+- Update README.md
+- Update README.md
+- Update README.md
+- use cfg_if crate for better cfg checks ([#9](https://github.com/ratatui-org/crates-tui/pull/9))
+- Update README.md
+- Add todo note
+- move events from tui to events module ([#8](https://github.com/ratatui-org/crates-tui/pull/8))
+- simplify tui, events, errors ([#7](https://github.com/ratatui-org/crates-tui/pull/7))
+- cleanup config.rs ([#6](https://github.com/ratatui-org/crates-tui/pull/6))
+- simplify initialization functions names
+- simplify channel
+- make fixme comments
+- comments for app,logging,main,serde,crateinfo
+- comments for main and tui
+- comments on envrc, cargo toml cli.rs
+- errors comments
+- remove remaining unstable
+- normalize_comments = true and normalize_doc_attributes = true
+- imports_granularity = Crate
+- remove format_code_in_doc_comments
+- remove match_block_trailing_comma = true
+- remove force_multiline_blocks = true
+- remove empty_item_single_line = false
+- remove use_small_heuristics = "Max"
+- remove tab_spaces = 2
+- remove max_width = 120
+- Update README.md
+- Update README.md
+- Update README.md
+- Update README.md
+- Update README
+- remove .github
+- Initial commit
