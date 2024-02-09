@@ -327,7 +327,9 @@ impl StatefulWidget for &SummaryWidget {
 
         let [_, area, _] = Layout::horizontal([Min(0), Percentage(85), Min(0)]).areas(area);
 
-        let [top, bottom] = Layout::vertical([Percentage(50), Percentage(50)]).areas(area);
+        let [top, bottom] = Layout::vertical([Percentage(50), Percentage(50)])
+            .spacing(1)
+            .areas(area);
 
         let [new_crates, most_downloaded, just_updated] =
             Layout::horizontal([Percentage(30), Percentage(30), Percentage(30)])
