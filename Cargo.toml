@@ -8,6 +8,12 @@ repository = "https://github.com/ratatui-org/crates-tui"
 authors = ["The Ratatui Developers"]
 build = "build.rs"
 
+[package.metadata.wix]
+upgrade-guid = "75B519B6-FF67-49E6-A6D3-5D5794A5A6AA"
+path-guid = "C3C0C045-C8A0-4585-A888-BE5C46534B7D"
+license = false
+eula = false
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -54,3 +60,21 @@ webbrowser = "0.8.12"
 
 [build-dependencies]
 vergen = { version = "8.2.6", features = [ "build", "git", "gitoxide", "cargo" ]}
+
+# The profile that 'cargo dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
+
+# Config for 'cargo dist'
+[workspace.metadata.dist]
+# The preferred cargo-dist version to use in CI (Cargo.toml SemVer syntax)
+cargo-dist-version = "0.9.0"
+# CI backends to support
+ci = ["github"]
+# The installers to generate for each app
+installers = ["shell", "powershell"]
+# Target platforms to build apps for (Rust target-triple syntax)
+targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-unknown-linux-musl", "x86_64-pc-windows-msvc"]
+# Publish jobs to run in CI
+pr-run-mode = "plan"
