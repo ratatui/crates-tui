@@ -360,6 +360,7 @@ impl App {
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
             Action::UpdateSearchTableResults => self.update_search_table_results(),
+            Action::UpdateSummary => self.update_summary(),
             Action::ShowFullCrateInfo => self.show_full_crate_details(),
             Action::ShowErrorPopup(ref err) => self.set_error_flag(err.clone()),
             Action::ShowInfoPopup(ref info) => self.set_info_flag(info.clone()),
@@ -369,6 +370,9 @@ impl App {
                 self.clear_task_details_handle(uuid::Uuid::parse_str(id)?)?
             }
             Action::OpenDocsUrlInBrowser => self.open_docs_url_in_browser()?,
+            Action::OpenCratesIOUrlInBrowser if self.mode.is_summary() => {
+                self.open_summary_url_in_browser()?
+            }
             Action::OpenCratesIOUrlInBrowser => self.open_crates_io_url_in_browser()?,
             Action::CopyCargoAddCommandToClipboard => self.copy_cargo_add_command_to_clipboard()?,
             _ => {}
@@ -407,6 +411,14 @@ impl App {
     fn init(&mut self) -> Result<()> {
         self.request_summary()?;
         Ok(())
+    }
+
+    fn update_summary(&mut self) {
+        if let Some(summary) = self.summary_data.lock().unwrap().clone() {
+            self.summary.summary_data = Some(summary);
+        } else {
+            self.summary.summary_data = None;
+        }
     }
 
     fn update_search_table_results(&mut self) {
@@ -627,6 +639,17 @@ impl App {
         Ok(())
     }
 
+    fn open_summary_url_in_browser(&self) -> Result<()> {
+        if let Some(url) = self.summary.url() {
+            webbrowser::open(&url)?;
+        } else {
+            let _ = self.tx.send(Action::ShowErrorPopup(
+                "Unable to open URL in browser: No summary data loaded".into(),
+            ));
+        }
+        Ok(())
+    }
+
     fn open_crates_io_url_in_browser(&self) -> Result<()> {
         if let Some(crate_response) = self.crate_response.lock().unwrap().clone() {
             let name = crate_response.crate_data.name;
@@ -796,6 +819,7 @@ impl App {
                 let _ = tx.send(Action::ShowErrorPopup(error_message));
             }
             loading_status.store(false, Ordering::SeqCst);
+            let _ = tx.send(Action::UpdateSummary);
             let _ = tx.send(Action::ScrollDown);
         });
         Ok(())
@@ -895,9 +919,7 @@ impl App {
     }
 
     fn render_summary(&mut self, area: Rect, buf: &mut Buffer) {
-        if let Some(summary) = self.summary_data.lock().unwrap().clone() {
-            SummaryWidget(&summary).render(area, buf, &mut self.summary);
-        }
+        SummaryWidget.render(area, buf, &mut self.summary);
     }
 
     fn render_help(&mut self, area: Rect, buf: &mut Buffer) {
@@ -917,6 +939,25 @@ impl App {
             .padding("", "")
             .divider(" ")
             .render(area, buf);
+    }
+
+    fn render_main(&mut self, area: Rect, buf: &mut Buffer, mode: Mode) {
+        match mode {
+            Mode::Summary => self.render_summary(area, buf),
+            Mode::Help => self.render_help(area, buf),
+            Mode::PickerShowCrateInfo => {
+                let [area, info] =
+                    Layout::vertical([Constraint::Min(0), Constraint::Max(15)]).areas(area);
+                self.render_search_results(area, buf);
+                self.render_crate_info(info, buf);
+            }
+            Mode::PickerHideCrateInfo => self.render_search_results(area, buf),
+            Mode::Common => self.render_search_results(area, buf),
+            Mode::Search => self.render_search_results(area, buf),
+            Mode::Filter => self.render_search_results(area, buf),
+            Mode::Popup => self.render_main(area, buf, self.last_mode),
+            Mode::Quit => self.render_main(area, buf, self.last_mode),
+        }
     }
 }
 
@@ -952,17 +993,7 @@ impl StatefulWidget for AppWidget {
         let p = SearchFilterPromptWidget::new(state.mode, state.sort.clone(), &state.input);
         p.render(prompt, buf, &mut state.prompt);
 
-        match state.mode {
-            Mode::Summary => state.render_summary(table, buf),
-            Mode::Help => state.render_help(table, buf),
-            _ if state.mode.should_show_crate_info() => {
-                let [table, info] =
-                    Layout::vertical([Constraint::Min(0), Constraint::Max(15)]).areas(table);
-                state.render_search_results(table, buf);
-                state.render_crate_info(info, buf);
-            }
-            _ => state.render_search_results(table, buf),
-        }
+        state.render_main(table, buf, state.mode);
 
         if state.loading() {
             Line::from(state.spinner())

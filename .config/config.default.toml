@@ -92,6 +92,7 @@ h = "PreviousSummaryMode"
 Left = "PreviousSummaryMode"
 l = "NextSummaryMode"
 Right = "NextSummaryMode"
+"Enter" = "OpenCratesIOUrlInBrowser"
 
 [key_bindings.help]
 Esc = "SwitchToLastMode"

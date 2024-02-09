@@ -39,6 +39,7 @@ pub enum Action {
     ScrollSearchResultsUp,
     SubmitSearch,
     UpdateSearchTableResults,
+    UpdateSummary,
     UpdateCurrentSelectionCrateInfo,
     UpdateCurrentSelectionSummary,
     ReloadData,
