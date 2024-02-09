@@ -20,7 +20,7 @@ pub struct SearchParameters {
 
 /// Performs the actual search, and sends the result back through the
 /// sender.
-pub async fn request_crates(params: &SearchParameters) -> Result<(), String> {
+pub async fn request_search_results(params: &SearchParameters) -> Result<(), String> {
     // Fetch crates using the created client with the error handling in one place.
     let client = create_client()?;
     let query = create_query(params);

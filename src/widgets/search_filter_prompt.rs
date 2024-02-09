@@ -53,6 +53,8 @@ impl<'a> SearchFilterPromptWidget<'a> {
             vec!["Filter: ".into(), "Enter".bold(), " to submit".into()]
         } else if self.mode.is_search() {
             vec!["Search: ".into(), "Enter".bold(), " to submit".into()]
+        } else if self.mode.is_summary() {
+            vec!["TAB".bold(), " to search".into()]
         } else if self.mode.is_help() {
             vec!["ESC".bold(), " to return".into()]
         } else {

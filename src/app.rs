@@ -359,6 +359,7 @@ impl App {
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
+            Action::UpdateSearchTableResults => self.update_search_table_results(),
             Action::ShowFullCrateInfo => self.show_full_crate_details(),
             Action::ShowErrorPopup(ref err) => self.set_error_flag(err.clone()),
             Action::ShowInfoPopup(ref info) => self.set_info_flag(info.clone()),
@@ -400,7 +401,7 @@ impl App {
 
 impl App {
     fn tick(&mut self) {
-        self.update_crate_table();
+        self.update_search_table_results();
     }
 
     fn init(&mut self) -> Result<()> {
@@ -408,7 +409,7 @@ impl App {
         Ok(())
     }
 
-    fn update_crate_table(&mut self) {
+    fn update_search_table_results(&mut self) {
         self.search_results
             .content_length(self.search_results.crates.len());
 
@@ -687,7 +688,7 @@ impl App {
     fn reload_data(&mut self) {
         self.prepare_reload();
         let search_params = self.create_search_parameters();
-        self.request_crates(search_params);
+        self.request_search_results(search_params);
     }
 
     /// Clears current search results and resets the UI to prepare for new data.
@@ -712,12 +713,14 @@ impl App {
     }
 
     /// Spawns an asynchronous task to fetch crate data from crates.io.
-    fn request_crates(&self, params: crates_io_api_helper::SearchParameters) {
+    fn request_search_results(&self, params: crates_io_api_helper::SearchParameters) {
         tokio::spawn(async move {
             params.loading_status.store(true, Ordering::SeqCst);
-            if let Err(error_message) = crates_io_api_helper::request_crates(&params).await {
+            if let Err(error_message) = crates_io_api_helper::request_search_results(&params).await
+            {
                 let _ = params.tx.send(Action::ShowErrorPopup(error_message));
             }
+            let _ = params.tx.send(Action::UpdateSearchTableResults);
             params.loading_status.store(false, Ordering::SeqCst);
         });
     }
@@ -812,6 +815,7 @@ impl App {
 
     fn render_crate_info(&mut self, area: Rect, buf: &mut Buffer) {
         if let Some(ci) = self.crate_response.lock().unwrap().clone() {
+            Clear.render(area, buf);
             CrateInfoTableWidget::new(ci).render(area, buf, &mut self.crate_info);
         }
     }
@@ -865,23 +869,14 @@ impl App {
     }
 
     fn render_search_results(&mut self, area: Rect, buf: &mut Buffer) {
-        let remaining_area = if self.mode.should_show_crate_info() {
-            let [area, info] =
-                Layout::vertical([Constraint::Min(0), Constraint::Max(15)]).areas(area);
-            self.render_crate_info(info, buf);
-            area
-        } else {
-            area
-        };
-
         SearchResultsTableWidget::new(self.mode.is_picker()).render(
-            remaining_area,
+            area,
             buf,
             &mut self.search_results,
         );
 
         Line::from(self.page_number_status()).left_aligned().render(
-            remaining_area.inner(&Margin {
+            area.inner(&Margin {
                 horizontal: 1,
                 vertical: 2,
             }),
@@ -891,7 +886,7 @@ impl App {
         Line::from(self.search_results_status())
             .right_aligned()
             .render(
-                remaining_area.inner(&Margin {
+                area.inner(&Margin {
                     horizontal: 1,
                     vertical: 2,
                 }),
@@ -960,6 +955,12 @@ impl StatefulWidget for AppWidget {
         match state.mode {
             Mode::Summary => state.render_summary(table, buf),
             Mode::Help => state.render_help(table, buf),
+            _ if state.mode.should_show_crate_info() => {
+                let [table, info] =
+                    Layout::vertical([Constraint::Min(0), Constraint::Max(15)]).areas(table);
+                state.render_search_results(table, buf);
+                state.render_crate_info(info, buf);
+            }
             _ => state.render_search_results(table, buf),
         }
 
