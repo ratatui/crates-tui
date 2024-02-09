@@ -1,6 +1,6 @@
 # crates-tui
 
-`crates-tui` is a simple TUI explorer for crates.io from the terminal. It supports features like
+`crates-tui` is a simple TUI explorer for crates.io from the terminal. It supports features like:
 
 - copy `cargo add` command to clipboard
 - open the docs page in the browser
