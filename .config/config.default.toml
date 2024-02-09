@@ -6,100 +6,100 @@ enable_paste = false
 prompt_padding = 1
 
 [key_bindings.popup]
-"j" = "ScrollDown"
-"k" = "ScrollUp"
-"Down" = "ScrollDown"
-"Up" = "ScrollUp"
-"Enter" = "ClosePopup"
-"ESC" = "ClosePopup"
+j = "ScrollDown"
+k = "ScrollUp"
+Down = "ScrollDown"
+Up = "ScrollUp"
+Enter = "ClosePopup"
+ESC = "ClosePopup"
 
 [key_bindings.picker_show_crate_info]
-"q" = { SwitchMode = "picker_hide_crate_info" }
-"ESC" = { SwitchMode = "picker_hide_crate_info" }
+q = { SwitchMode = "picker_hide_crate_info" }
+ESC= { SwitchMode = "picker_hide_crate_info" }
 "[" = { SwitchMode = "summary" }
 "<g><g>" = "ScrollTop"
-"G" = "ScrollBottom"
-"Home" = "ScrollTop"
-"End" = "ScrollBottom"
+G= "ScrollBottom"
+Home= "ScrollTop"
+End= "ScrollBottom"
 "?" = { SwitchMode = "help" }
 "/" = { SwitchMode = "search" }
 "\\" = { SwitchMode = "filter" }
-"j" = "ScrollDown"
-"k" = "ScrollUp"
-"ctrl-j" = "ScrollCrateInfoDown"
-"ctrl-k" = "ScrollCrateInfoUp"
-"TAB" = { ToggleSortBy = { reload = true, forward = true } }
-"Shift-Backtab" = { ToggleSortBy = { reload = true, forward = false } }
-"Down" = "ScrollDown"
-"Up" = "ScrollUp"
-"l" = "IncrementPage"
-"h" = "DecrementPage"
-"Left" = "DecrementPage"
-"Right" = "IncrementPage"
-"r" = "ReloadData"
-"Enter" = "ToggleShowCrateInfo"
+j = "ScrollDown"
+k = "ScrollUp"
+ctrl-j = "ScrollCrateInfoDown"
+ctrl-k = "ScrollCrateInfoUp"
+TAB = { ToggleSortBy = { reload = true, forward = true } }
+Shift-Backtab = { ToggleSortBy = { reload = true, forward = false } }
+Down = "ScrollDown"
+Up = "ScrollUp"
+l = "IncrementPage"
+h = "DecrementPage"
+Left = "DecrementPage"
+Right = "IncrementPage"
+r = "ReloadData"
+Enter = "ToggleShowCrateInfo"
 "<g><d>" = "OpenDocsUrlInBrowser"
 "<g><c>" = "OpenCratesIOUrlInBrowser"
-"c" = "CopyCargoAddCommandToClipboard"
+c = "CopyCargoAddCommandToClipboard"
 
 [key_bindings.picker_hide_crate_info]
-"q" = "Quit"
-"ESC" = "Quit"
+q = "Quit"
+ESC = "Quit"
 "[" = { SwitchMode = "summary" }
 "<g><g>" = "ScrollTop"
-"G" = "ScrollBottom"
-"Home" = "ScrollTop"
-"End" = "ScrollBottom"
+G = "ScrollBottom"
+Home = "ScrollTop"
+End = "ScrollBottom"
 "?" = { SwitchMode = "help" }
 "/" = { SwitchMode = "search" }
 "\\" = { SwitchMode = "filter" }
-"j" = "ScrollDown"
-"k" = "ScrollUp"
-"ctrl-j" = "ScrollCrateInfoDown"
-"ctrl-k" = "ScrollCrateInfoUp"
-"TAB" = { ToggleSortBy = { reload = true, forward = true } }
-"Shift-Backtab" = { ToggleSortBy = { reload = true, forward = false } }
-"Down" = "ScrollDown"
-"Up" = "ScrollUp"
-"l" = "IncrementPage"
-"h" = "DecrementPage"
-"Left" = "DecrementPage"
-"Right" = "IncrementPage"
-"r" = "ReloadData"
-"Enter" = "ToggleShowCrateInfo"
+j = "ScrollDown"
+k = "ScrollUp"
+ctrl-j = "ScrollCrateInfoDown"
+ctrl-k = "ScrollCrateInfoUp"
+TAB = { ToggleSortBy = { reload = true, forward = true } }
+Shift-Backtab = { ToggleSortBy = { reload = true, forward = false } }
+Down = "ScrollDown"
+Up = "ScrollUp"
+l = "IncrementPage"
+h = "DecrementPage"
+Left = "DecrementPage"
+Right = "IncrementPage"
+r = "ReloadData"
+Enter = "ToggleShowCrateInfo"
 "<g><d>" = "OpenDocsUrlInBrowser"
 "<g><c>" = "OpenCratesIOUrlInBrowser"
 "<g><Enter>" = "ShowFullCrateInfo"
-"c" = "CopyCargoAddCommandToClipboard"
+c = "CopyCargoAddCommandToClipboard"
 
 [key_bindings.summary]
 "]" = { SwitchMode = "picker_hide_crate_info" }
-"q" = "Quit"
-"ESC" = "Quit"
-"j" = "ScrollDown"
-"k" = "ScrollUp"
-"h" = "PreviousSummaryMode"
-"l" = "NextSummaryMode"
+q = "Quit"
+ESC = "Quit"
+j = "ScrollDown"
+k = "ScrollUp"
+h = "PreviousSummaryMode"
+l = "NextSummaryMode"
 "?" = { SwitchMode = "help" }
 "/" = { SwitchMode = "search" }
 "\\" = { SwitchMode = "filter" }
 
 [key_bindings.help]
-"q" = "Quit"
-"ESC" = "SwitchToLastMode"
-"j" = "ScrollDown"
-"k" = "ScrollUp"
+q = "Quit"
+ESC = "SwitchToLastMode"
+j = "ScrollDown"
+k = "ScrollUp"
 
 [key_bindings.search]
-"TAB" = { ToggleSortBy = { reload = false, forward = true } }
-"Shift-Backtab" = { ToggleSortBy = { reload = false, forward = false } }
-"ESC" = { SwitchMode = "picker_hide_crate_info" }
-"Enter" = "SubmitSearch"
-"ctrl-j" = "ScrollSearchResultsDown"
-"ctrl-k" = "ScrollSearchResultsUp"
+TAB = { ToggleSortBy = { reload = false, forward = true } }
+Shift-Backtab = { ToggleSortBy = { reload = false, forward = false } }
+ESC = { SwitchMode = "picker_hide_crate_info" }
+Enter = "SubmitSearch"
+ctrl-j = "ScrollSearchResultsDown"
+ctrl-k = "ScrollSearchResultsUp"
 
 [key_bindings.filter]
-"ESC" = { SwitchMode = "picker_hide_crate_info" }
-"Enter" = { SwitchMode = "picker_hide_crate_info" }
-"ctrl-j" = "ScrollSearchResultsDown"
-"ctrl-k" = "ScrollSearchResultsUp"
+ESC = { SwitchMode = "picker_hide_crate_info" }
+Enter = { SwitchMode = "picker_hide_crate_info" }
+ctrl-j = "ScrollSearchResultsDown"
+ctrl-k = "ScrollSearchResultsUp"
