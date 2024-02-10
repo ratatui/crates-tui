@@ -34,8 +34,8 @@ use crate::{
     },
 };
 
-mod search;
-use search::Search;
+mod search_page;
+use search_page::SearchPage;
 
 #[derive(
     Default, Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIs,
@@ -137,7 +137,7 @@ pub struct App {
     /// known initially and can be used for UI elements like pagination.
     total_num_crates: Option<u64>,
 
-    search: Search,
+    search: SearchPage,
 
     /// A popupt to show info / error messages
     popup: Option<(PopupMessageWidget, PopupMessageState)>,
@@ -169,7 +169,7 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
-        let search = Search::new();
+        let search = SearchPage::new();
         Self {
             rx,
             tx,

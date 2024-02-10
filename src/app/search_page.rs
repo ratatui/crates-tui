@@ -7,7 +7,7 @@ use tui_input::{backend::crossterm::EventHandler, Input};
 use crate::{action::Action, widgets::search_results_table::SearchResultsTable};
 
 #[derive(Debug)]
-pub struct Search {
+pub struct SearchPage {
     /// A string for the current search input by the user, submitted to
     /// crates.io as a query
     pub search: String,
@@ -25,7 +25,7 @@ pub struct Search {
     pub input: tui_input::Input,
 }
 
-impl Search {
+impl SearchPage {
     pub fn new() -> Self {
         Self {
             search: String::new(),
