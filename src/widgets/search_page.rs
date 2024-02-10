@@ -23,12 +23,43 @@ use crate::{
     widgets::{search_filter_prompt::SearchFilterPrompt, search_results_table::SearchResultsTable},
 };
 
-use super::search_results_table::SearchResultsTableWidget;
+use super::{
+    crate_info_table::{CrateInfo, CrateInfoTableWidget},
+    search_results_table::SearchResultsTableWidget,
+};
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, EnumIs)]
+pub enum SearchMode {
+    #[default]
+    Search,
+    Filter,
+    ResultsHideCrate,
+    ResultsShowCrate,
+}
+
+impl SearchMode {
+    pub fn is_focused(&self) -> bool {
+        matches!(self, SearchMode::Search | SearchMode::Filter)
+    }
+
+    pub fn toggle_show_crate_info(&mut self) {
+        *self = match self {
+            SearchMode::ResultsShowCrate => SearchMode::ResultsHideCrate,
+            SearchMode::ResultsHideCrate => SearchMode::ResultsShowCrate,
+            _ => *self,
+        };
+    }
+
+    pub fn should_show_crate_info(&self) -> bool {
+        matches!(self, SearchMode::ResultsShowCrate)
+    }
+}
 
 #[derive(Debug)]
 pub struct SearchPage {
     pub mode: Mode,
     pub search_mode: SearchMode,
+    pub crate_info: CrateInfo,
 
     /// A string for the current search input by the user, submitted to
     /// crates.io as a query
@@ -92,33 +123,6 @@ pub struct SearchPage {
     loading_status: Arc<AtomicBool>,
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, EnumIs)]
-pub enum SearchMode {
-    #[default]
-    Search,
-    Filter,
-    ResultsHideCrate,
-    ResultsShowCrate,
-}
-
-impl SearchMode {
-    pub fn is_focused(&self) -> bool {
-        matches!(self, SearchMode::Search | SearchMode::Filter)
-    }
-
-    pub fn toggle_show_crate_info(&mut self) {
-        *self = match self {
-            SearchMode::ResultsShowCrate => SearchMode::ResultsHideCrate,
-            SearchMode::ResultsHideCrate => SearchMode::ResultsShowCrate,
-            _ => *self,
-        };
-    }
-
-    pub fn should_show_crate_info(&self) -> bool {
-        matches!(self, SearchMode::ResultsShowCrate)
-    }
-}
-
 impl SearchPage {
     pub fn new(tx: UnboundedSender<Action>, loading_status: Arc<AtomicBool>) -> Self {
         Self {
@@ -136,6 +140,7 @@ impl SearchPage {
             crates: Default::default(),
             versions: Default::default(),
             full_crate_info: Default::default(),
+            crate_info: Default::default(),
             crate_response: Default::default(),
             last_task_details_handle: Default::default(),
             tx,
@@ -442,6 +447,12 @@ impl SearchPageWidget {
     pub fn new(mode: Mode) -> Self {
         Self { mode }
     }
+
+    fn render_crate_info(&self, area: Rect, buf: &mut Buffer, state: &mut SearchPage) {
+        if let Some(ci) = state.crate_response.lock().unwrap().clone() {
+            CrateInfoTableWidget::new(ci).render(area, buf, &mut state.crate_info);
+        }
+    }
 }
 
 impl StatefulWidget for SearchPageWidget {
@@ -453,6 +464,15 @@ impl StatefulWidget for SearchPageWidget {
         buf: &mut ratatui::prelude::Buffer,
         state: &mut Self::State,
     ) {
+        let area = if state.search_mode.is_results_show_crate() {
+            let [area, info] =
+                Layout::vertical([Constraint::Min(0), Constraint::Max(15)]).areas(area);
+            self.render_crate_info(info, buf, state);
+            area
+        } else {
+            area
+        };
+
         SearchResultsTableWidget::new(!state.is_prompt() && state.is_focused()).render(
             area,
             buf,

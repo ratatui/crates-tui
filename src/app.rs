@@ -18,7 +18,6 @@ use crate::{
     serde_helper::keybindings::key_event_to_string,
     tui::Tui,
     widgets::{
-        crate_info_table::{CrateInfo, CrateInfoTableWidget},
         help::{Help, HelpWidget},
         popup_message::{PopupMessageState, PopupMessageWidget},
         search_filter_prompt::SearchFilterPromptWidget,
@@ -89,7 +88,6 @@ pub struct App {
     frame_count: usize,
 
     summary: Summary,
-    crate_info: CrateInfo,
     search: SearchPage,
     popup: Option<(PopupMessageWidget, PopupMessageState)>,
     help: Help,
@@ -110,7 +108,6 @@ impl App {
             loading_status,
             search,
             summary,
-            crate_info: Default::default(),
             popup: Default::default(),
             last_tick_key_events: Default::default(),
             frame_count: Default::default(),
@@ -225,8 +222,8 @@ impl App {
             | Action::ScrollSearchResultsUp
             | Action::ScrollSearchResultsDown => self.search.handle_action(action.clone()),
 
-            Action::ScrollCrateInfoUp => self.crate_info.scroll_previous(),
-            Action::ScrollCrateInfoDown => self.crate_info.scroll_next(),
+            Action::ScrollCrateInfoUp => self.search.crate_info.scroll_previous(),
+            Action::ScrollCrateInfoDown => self.search.crate_info.scroll_next(),
             Action::ReloadData => self.search.reload_data(),
             Action::IncrementPage => self.search.increment_page(),
             Action::DecrementPage => self.search.decrement_page(),
@@ -500,13 +497,6 @@ impl App {
         }
     }
 
-    fn render_crate_info(&mut self, area: Rect, buf: &mut Buffer) {
-        if let Some(ci) = self.search.crate_response.lock().unwrap().clone() {
-            Clear.render(area, buf);
-            CrateInfoTableWidget::new(ci).render(area, buf, &mut self.crate_info);
-        }
-    }
-
     fn events_widget(&self) -> Option<Block> {
         if self.last_tick_key_events.is_empty() {
             return None;
@@ -559,7 +549,7 @@ impl StatefulWidget for AppWidget {
 
             Mode::Search => state.render_search(main, buf),
             Mode::Filter => state.render_search(main, buf),
-            Mode::PickerShowCrateInfo => state.render_search_with_crate(main, buf),
+            Mode::PickerShowCrateInfo => state.render_search(main, buf),
             Mode::PickerHideCrateInfo => state.render_search(main, buf),
 
             Mode::Common => {}
@@ -592,12 +582,6 @@ impl App {
             .padding("", "")
             .divider(" ")
             .render(area, buf);
-    }
-
-    fn render_search_with_crate(&mut self, area: Rect, buf: &mut Buffer) {
-        let [area, info] = Layout::vertical([Constraint::Min(0), Constraint::Max(15)]).areas(area);
-        self.render_search(area, buf);
-        self.render_crate_info(info, buf);
     }
 
     fn render_summary(&mut self, area: Rect, buf: &mut Buffer) {
