@@ -1,4 +1,4 @@
-use ratatui::{layout::Position, prelude::*, widgets::*};
+use ratatui::{layout::Constraint::*, layout::Position, prelude::*, widgets::*};
 
 use crate::{app::Mode, command::Command, config};
 
@@ -31,23 +31,26 @@ impl<'a> SearchFilterPromptWidget<'a> {
             horizontal_margin: 2,
         }
     }
+}
 
-    fn horizontal_margin(&self) -> u16 {
+impl StatefulWidget for SearchFilterPromptWidget<'_> {
+    type State = SearchFilterPrompt;
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        let [input, meta] = Layout::horizontal([Percentage(75), Fill(0)]).areas(area);
+
+        self.input_block().render(area, buf);
+
         if self.mode.focused() {
-            self.horizontal_margin
-        } else {
-            0
+            self.sort_by_info().render(meta.inner(&self.margin()), buf);
         }
-    }
+        self.input_text(input.width as usize)
+            .render(input.inner(&self.margin()), buf);
 
-    fn vertical_margin(&self) -> u16 {
-        if self.mode.focused() {
-            self.vertical_margin
-        } else {
-            0
-        }
+        self.update_cursor_state(area, state);
     }
+}
 
+impl SearchFilterPromptWidget<'_> {
     fn input_block(&self) -> Block {
         let line = if self.mode.is_filter() {
             vec!["Filter: ".into(), "Enter".bold(), " to submit".into()]
@@ -110,25 +113,26 @@ impl<'a> SearchFilterPromptWidget<'a> {
                 " for help".into(),
             ]
         };
+        let borders = if self.mode.focused() {
+            Borders::ALL
+        } else {
+            Borders::NONE
+        };
+        let alignment = if self.mode.focused() {
+            Alignment::Left
+        } else {
+            Alignment::Right
+        };
+        let border_color = match self.mode {
+            Mode::Search => config::get().color.base0a,
+            Mode::Filter => config::get().color.base0b,
+            _ => config::get().color.base06,
+        };
         let input_block = Block::default()
-            .borders(if self.mode.focused() {
-                Borders::ALL
-            } else {
-                Borders::NONE
-            })
-            .title(
-                block::Title::from(Line::from(line)).alignment(if self.mode.focused() {
-                    Alignment::Left
-                } else {
-                    Alignment::Right
-                }),
-            )
+            .borders(borders)
+            .title(block::Title::from(Line::from(line)).alignment(alignment))
             .fg(config::get().color.base05)
-            .border_style(match self.mode {
-                Mode::Search => Style::default().fg(config::get().color.base0a),
-                Mode::Filter => Style::default().fg(config::get().color.base0b),
-                _ => Style::default().fg(config::get().color.base06),
-            });
+            .border_style(border_color);
         if self.mode.is_search() {
             let help = config::get()
                 .key_bindings
@@ -192,40 +196,21 @@ impl<'a> SearchFilterPromptWidget<'a> {
     fn update_cursor_state(&self, area: Rect, state: &mut SearchFilterPrompt) {
         let width = ((area.width as f64 * 0.75) as u16).saturating_sub(2);
         if self.mode.focused() {
+            let margin = self.margin();
             state.cursor_position = Some(Position::new(
-                (area.x + self.horizontal_margin() + self.input.cursor() as u16).min(width),
-                area.y + self.vertical_margin(),
+                (area.x + margin.horizontal + self.input.cursor() as u16).min(width),
+                area.y + margin.vertical,
             ));
         } else {
             state.cursor_position = None
         }
     }
-}
 
-impl StatefulWidget for SearchFilterPromptWidget<'_> {
-    type State = SearchFilterPrompt;
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        self.input_block().render(area, buf);
-        let [input, meta] =
-            Layout::horizontal([Constraint::Percentage(75), Constraint::Fill(0)]).areas(area);
-
+    fn margin(&self) -> Margin {
         if self.mode.focused() {
-            self.sort_by_info().render(
-                meta.inner(&Margin {
-                    horizontal: self.horizontal_margin(),
-                    vertical: self.vertical_margin(),
-                }),
-                buf,
-            );
+            Margin::new(self.horizontal_margin, self.vertical_margin)
+        } else {
+            Margin::default()
         }
-        self.input_text(input.width as usize).render(
-            input.inner(&Margin {
-                horizontal: self.horizontal_margin(),
-                vertical: self.vertical_margin(),
-            }),
-            buf,
-        );
-
-        self.update_cursor_state(area, state);
     }
 }

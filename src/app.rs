@@ -867,48 +867,56 @@ impl App {
         let ncrates = self.total_num_crates.unwrap_or_default();
         format!("{}/{} Results", selected, ncrates)
     }
+}
 
-    fn spinner(&self) -> String {
-        let spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-        let index = self.frame_count % spinner.len();
-        let symbol = spinner[index];
-        symbol.into()
+impl StatefulWidget for AppWidget {
+    type State = App;
+
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        // Background color
+        Block::default()
+            .bg(config::get().color.base00)
+            .render(area, buf);
+
+        use Constraint::*;
+        let [header, main] = Layout::vertical([Length(1), Fill(1)]).areas(area);
+        let [tabs, events] = Layout::horizontal([Min(15), Fill(1)]).areas(header);
+
+        state.render_tabs(tabs, buf);
+        state.events_widget().render(events, buf);
+
+        let mode = if matches!(state.mode, Mode::Popup | Mode::Quit) {
+            state.last_mode
+        } else {
+            state.mode
+        };
+        match mode {
+            Mode::Summary => state.render_summary(main, buf),
+            Mode::Help => state.render_help(main, buf),
+
+            Mode::Search => state.render_search(main, buf),
+            Mode::Filter => state.render_search(main, buf),
+            Mode::PickerShowCrateInfo => state.render_search_with_crate(main, buf),
+            Mode::PickerHideCrateInfo => state.render_search(main, buf),
+
+            Mode::Common => {}
+            Mode::Popup => {}
+            Mode::Quit => {}
+        };
+
+        if state.loading() {
+            Line::from(state.spinner())
+                .right_aligned()
+                .render(main, buf);
+        }
+
+        if let Some((popup, popup_state)) = &mut state.popup {
+            popup.render(area, buf, popup_state);
+        }
     }
+}
 
-    fn render_search_results(&mut self, area: Rect, buf: &mut Buffer) {
-        SearchResultsTableWidget::new(self.mode.is_picker()).render(
-            area,
-            buf,
-            &mut self.search.search_results,
-        );
-
-        Line::from(self.page_number_status()).left_aligned().render(
-            area.inner(&Margin {
-                horizontal: 1,
-                vertical: 2,
-            }),
-            buf,
-        );
-
-        Line::from(self.search_results_status())
-            .right_aligned()
-            .render(
-                area.inner(&Margin {
-                    horizontal: 1,
-                    vertical: 2,
-                }),
-                buf,
-            );
-    }
-
-    fn render_summary(&mut self, area: Rect, buf: &mut Buffer) {
-        SummaryWidget.render(area, buf, &mut self.summary);
-    }
-
-    fn render_help(&mut self, area: Rect, buf: &mut Buffer) {
-        HelpWidget.render(area, buf, &mut self.help)
-    }
-
+impl App {
     fn render_tabs(&self, area: Rect, buf: &mut Buffer) {
         use strum::IntoEnumIterator;
         let titles = SelectedTab::iter().map(|tab| tab.title());
@@ -923,68 +931,67 @@ impl App {
             .render(area, buf);
     }
 
-    fn render_main(&mut self, area: Rect, buf: &mut Buffer, mode: Mode) {
-        match mode {
-            Mode::Summary => self.render_summary(area, buf),
-            Mode::Help => self.render_help(area, buf),
-            Mode::PickerShowCrateInfo => {
-                let [area, info] =
-                    Layout::vertical([Constraint::Min(0), Constraint::Max(15)]).areas(area);
-                self.render_search_results(area, buf);
-                self.render_crate_info(info, buf);
-            }
-            Mode::PickerHideCrateInfo => self.render_search_results(area, buf),
-            Mode::Common => self.render_search_results(area, buf),
-            Mode::Search => self.render_search_results(area, buf),
-            Mode::Filter => self.render_search_results(area, buf),
-            Mode::Popup => self.render_main(area, buf, self.last_mode),
-            Mode::Quit => self.render_main(area, buf, self.last_mode),
-        }
+    fn render_search_with_crate(&mut self, area: Rect, buf: &mut Buffer) {
+        let [area, info] = Layout::vertical([Constraint::Min(0), Constraint::Max(15)]).areas(area);
+        self.render_search(area, buf);
+        self.render_crate_info(info, buf);
     }
-}
 
-impl StatefulWidget for AppWidget {
-    type State = App;
+    fn render_summary(&mut self, area: Rect, buf: &mut Buffer) {
+        let [main, prompt] =
+            Layout::vertical([Constraint::Fill(0), Constraint::Length(1)]).areas(area);
+        SummaryWidget.render(main, buf, &mut self.summary);
+        self.render_prompt(prompt, buf);
+    }
 
-    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        Block::default()
-            .bg(config::get().color.base00)
-            .render(area, buf);
+    fn render_help(&mut self, area: Rect, buf: &mut Buffer) {
+        let [main, prompt] =
+            Layout::vertical([Constraint::Fill(0), Constraint::Length(1)]).areas(area);
+        HelpWidget.render(main, buf, &mut self.help);
+        self.render_prompt(prompt, buf);
+    }
 
-        let [tabs, table, prompt] = if state.mode.focused() {
-            Layout::vertical([
-                Constraint::Length(1),
-                Constraint::Fill(0),
-                Constraint::Length(5),
-            ])
-            .areas(area)
-        } else {
-            Layout::vertical([
-                Constraint::Length(1),
-                Constraint::Fill(0),
-                Constraint::Length(1),
-            ])
-            .areas(area)
-        };
+    fn render_search(&mut self, area: Rect, buf: &mut Buffer) {
+        let prompt_height = if self.mode.is_picker() { 1 } else { 5 };
+        let [main, prompt] =
+            Layout::vertical([Constraint::Min(0), Constraint::Length(prompt_height)]).areas(area);
 
-        let [tabs, events] =
-            Layout::horizontal([Constraint::Min(15), Constraint::Fill(1)]).areas(tabs);
-        state.render_tabs(tabs, buf);
-        state.events_widget().render(events, buf);
+        SearchResultsTableWidget::new(self.mode.is_picker()).render(
+            main,
+            buf,
+            &mut self.search.search_results,
+        );
 
-        let p = SearchFilterPromptWidget::new(state.mode, state.sort.clone(), &state.search.input);
-        p.render(prompt, buf, &mut state.search.prompt);
+        Line::from(self.page_number_status()).left_aligned().render(
+            main.inner(&Margin {
+                horizontal: 1,
+                vertical: 2,
+            }),
+            buf,
+        );
 
-        state.render_main(table, buf, state.mode);
+        Line::from(self.search_results_status())
+            .right_aligned()
+            .render(
+                main.inner(&Margin {
+                    horizontal: 1,
+                    vertical: 2,
+                }),
+                buf,
+            );
 
-        if state.loading() {
-            Line::from(state.spinner())
-                .right_aligned()
-                .render(table, buf);
-        }
+        self.render_prompt(prompt, buf);
+    }
 
-        if let Some((popup, popup_state)) = &mut state.popup {
-            popup.render(area, buf, popup_state);
-        }
+    fn render_prompt(&mut self, area: Rect, buf: &mut Buffer) {
+        let p = SearchFilterPromptWidget::new(self.mode, self.sort.clone(), &self.search.input);
+        p.render(area, buf, &mut self.search.prompt);
+    }
+
+    fn spinner(&self) -> String {
+        let spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+        let index = self.frame_count % spinner.len();
+        let symbol = spinner[index];
+        symbol.into()
     }
 }
