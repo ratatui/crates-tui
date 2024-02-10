@@ -6,6 +6,7 @@ use std::{
         Arc, Mutex,
     },
 };
+use strum::EnumIs;
 use tracing::info;
 
 use crossterm::event::{Event as CrosstermEvent, KeyEvent};
@@ -22,7 +23,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct SearchPage {
-    pub search_mode: SearchMode,
+    pub mode: SearchMode,
 
     /// A string for the current search input by the user, submitted to
     /// crates.io as a query
@@ -34,7 +35,7 @@ pub struct SearchPage {
 
     /// A table component designed to handle the listing and selection of crates
     /// within the terminal UI.
-    pub search_results: SearchResultsTable,
+    pub results: SearchResultsTable,
 
     /// An input handler component for managing raw user input into textual
     /// form.
@@ -86,7 +87,7 @@ pub struct SearchPage {
     loading_status: Arc<AtomicBool>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, EnumIs)]
 pub enum SearchMode {
     #[default]
     Search,
@@ -95,13 +96,31 @@ pub enum SearchMode {
     ResultsShowCrate,
 }
 
+impl SearchMode {
+    pub fn is_focused(&self) -> bool {
+        matches!(self, SearchMode::Search | SearchMode::Filter)
+    }
+
+    pub fn toggle_show_crate_info(&mut self) {
+        *self = match self {
+            SearchMode::ResultsShowCrate => SearchMode::ResultsHideCrate,
+            SearchMode::ResultsHideCrate => SearchMode::ResultsShowCrate,
+            _ => *self,
+        };
+    }
+
+    pub fn should_show_crate_info(&self) -> bool {
+        matches!(self, SearchMode::ResultsShowCrate)
+    }
+}
+
 impl SearchPage {
     pub fn new(tx: UnboundedSender<Action>, loading_status: Arc<AtomicBool>) -> Self {
         Self {
-            search_mode: Default::default(),
+            mode: Default::default(),
             search: String::new(),
             filter: String::new(),
-            search_results: SearchResultsTable::default(),
+            results: SearchResultsTable::default(),
             input: Input::default(),
             prompt: SearchFilterPrompt::default(),
             page: 1,
@@ -120,8 +139,8 @@ impl SearchPage {
 
     pub fn handle_action(&mut self, action: Action) {
         match action {
-            Action::ScrollTop => self.search_results.scroll_to_top(),
-            Action::ScrollBottom => self.search_results.scroll_to_bottom(),
+            Action::ScrollTop => self.results.scroll_to_top(),
+            Action::ScrollBottom => self.results.scroll_to_bottom(),
             Action::ScrollSearchResultsUp => self.scroll_up(),
             Action::ScrollSearchResultsDown => self.scroll_down(),
             _ => {}
@@ -129,8 +148,7 @@ impl SearchPage {
     }
 
     pub fn update_search_table_results(&mut self) {
-        self.search_results
-            .content_length(self.search_results.crates.len());
+        self.results.content_length(self.results.crates.len());
 
         let filter = self.filter.clone();
         let filter_words = filter.split_whitespace().collect::<Vec<_>>();
@@ -152,15 +170,15 @@ impl SearchPage {
             })
             .cloned()
             .collect_vec();
-        self.search_results.crates = crates;
+        self.results.crates = crates;
     }
 
     pub fn scroll_up(&mut self) {
-        self.search_results.scroll_previous(1);
+        self.results.scroll_previous(1);
     }
 
     pub fn scroll_down(&mut self) {
-        self.search_results.scroll_next(1);
+        self.results.scroll_next(1);
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) {
@@ -169,7 +187,7 @@ impl SearchPage {
 
     pub fn handle_filter_prompt_change(&mut self) {
         self.filter = self.input.value().into();
-        self.search_results.select(None);
+        self.results.select(None);
     }
 
     pub fn cursor_position(&self) -> Option<Position> {
@@ -201,12 +219,22 @@ impl SearchPage {
         Ok(())
     }
 
+    pub fn is_focused(&self) -> bool {
+        self.mode.is_focused()
+    }
+
     pub fn clear_all_previous_task_details_handles(&mut self) {
         *self.full_crate_info.lock().unwrap() = None;
         for (_, v) in self.last_task_details_handle.iter() {
             v.abort()
         }
         self.last_task_details_handle.clear()
+    }
+
+    pub fn submit_query(&mut self) {
+        self.clear_all_previous_task_details_handles();
+        self.filter.clear();
+        self.search = self.input.value().into();
     }
 
     /// Reloads the list of crates based on the current search parameters,
@@ -222,7 +250,7 @@ impl SearchPage {
 
     /// Clears current search results and resets the UI to prepare for new data.
     pub fn prepare_reload(&mut self) {
-        self.search_results.select(None);
+        self.results.select(None);
         *self.full_crate_info.lock().unwrap() = None;
         *self.crate_response.lock().unwrap() = None;
     }
@@ -257,10 +285,10 @@ impl SearchPage {
     /// Spawns an asynchronous task to fetch crate details from crates.io based
     /// on currently selected crate
     pub fn request_crate_details(&mut self) {
-        if self.search_results.crates.is_empty() {
+        if self.results.crates.is_empty() {
             return;
         }
-        if let Some(crate_name) = self.search_results.selected_crate_name() {
+        if let Some(crate_name) = self.results.selected_crate_name() {
             let tx = self.tx.clone();
             let crate_response = self.crate_response.clone();
             let loading_status = self.loading_status.clone();
@@ -287,10 +315,10 @@ impl SearchPage {
     /// Spawns an asynchronous task to fetch crate details from crates.io based
     /// on currently selected crate
     pub fn request_full_crate_details(&mut self) {
-        if self.search_results.crates.is_empty() {
+        if self.results.crates.is_empty() {
             return;
         }
-        if let Some(crate_name) = self.search_results.selected_crate_name() {
+        if let Some(crate_name) = self.results.selected_crate_name() {
             let tx = self.tx.clone();
             let full_crate_info = self.full_crate_info.clone();
             let loading_status = self.loading_status.clone();
@@ -322,7 +350,7 @@ impl SearchPage {
     }
 
     pub fn selected_with_page_context(&self) -> u64 {
-        self.search_results.selected().map_or(0, |n| {
+        self.results.selected().map_or(0, |n| {
             (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1
         })
     }
@@ -330,5 +358,66 @@ impl SearchPage {
     pub fn page_number_status(&self) -> String {
         let max_page_size = (self.total_num_crates.unwrap_or_default() / self.page_size) + 1;
         format!("Page: {}/{}", self.page, max_page_size)
+    }
+
+    pub fn enter_normal_mode(&mut self) {
+        if !self.results.crates.is_empty() && self.results.selected().is_none() {
+            self.results.select(Some(0))
+        }
+    }
+
+    pub fn enter_insert_mode(&mut self) {
+        self.input = self.input.clone().with_value(if self.mode.is_search() {
+            self.search.clone()
+        } else if self.mode.is_filter() {
+            self.filter.clone()
+        } else {
+            unreachable!("Cannot enter insert mode when mode is {:?}", self.mode)
+        });
+    }
+
+    pub fn toggle_show_crate_info(&mut self) {
+        self.mode.toggle_show_crate_info();
+        if self.mode.should_show_crate_info() {
+            self.request_crate_details()
+        } else {
+            self.clear_all_previous_task_details_handles();
+        }
+    }
+
+    fn toggle_sort_by_forward(&mut self) {
+        use crates_io_api::Sort as S;
+        self.sort = match self.sort {
+            S::Alphabetical => S::Relevance,
+            S::Relevance => S::Downloads,
+            S::Downloads => S::RecentDownloads,
+            S::RecentDownloads => S::RecentUpdates,
+            S::RecentUpdates => S::NewlyAdded,
+            S::NewlyAdded => S::Alphabetical,
+        };
+    }
+
+    fn toggle_sort_by_backward(&mut self) {
+        use crates_io_api::Sort as S;
+        self.sort = match self.sort {
+            S::Relevance => S::Alphabetical,
+            S::Downloads => S::Relevance,
+            S::RecentDownloads => S::Downloads,
+            S::RecentUpdates => S::RecentDownloads,
+            S::NewlyAdded => S::RecentUpdates,
+            S::Alphabetical => S::NewlyAdded,
+        };
+    }
+
+    pub fn toggle_sort_by(&mut self, reload: bool, forward: bool) -> Result<()> {
+        if forward {
+            self.toggle_sort_by_forward()
+        } else {
+            self.toggle_sort_by_backward()
+        };
+        if reload {
+            self.tx.send(Action::ReloadData)?;
+        }
+        Ok(())
     }
 }

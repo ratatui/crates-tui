@@ -2,6 +2,8 @@ use ratatui::{layout::Constraint::*, layout::Position, prelude::*, widgets::*};
 
 use crate::{app::Mode, command::Command, config};
 
+use super::search_page::SearchMode;
+
 #[derive(Default, Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct SearchFilterPrompt {
     cursor_position: Option<Position>,
@@ -19,17 +21,30 @@ pub struct SearchFilterPromptWidget<'a> {
     input: &'a tui_input::Input,
     vertical_margin: u16,
     horizontal_margin: u16,
+    search_mode: SearchMode,
 }
 
 impl<'a> SearchFilterPromptWidget<'a> {
-    pub fn new(mode: Mode, sort: crates_io_api::Sort, input: &'a tui_input::Input) -> Self {
+    pub fn new(
+        mode: Mode,
+        sort: crates_io_api::Sort,
+        input: &'a tui_input::Input,
+        search_mode: SearchMode,
+    ) -> Self {
         Self {
             mode,
             sort,
             input,
             vertical_margin: 2,
             horizontal_margin: 2,
+            search_mode,
         }
+    }
+}
+
+impl<'a> SearchFilterPromptWidget<'a> {
+    fn is_focused(&self) -> bool {
+        self.mode.is_prompt() && self.search_mode.is_focused()
     }
 }
 
@@ -40,7 +55,7 @@ impl StatefulWidget for SearchFilterPromptWidget<'_> {
 
         self.input_block().render(area, buf);
 
-        if self.mode.focused() {
+        if self.is_focused() {
             self.sort_by_info().render(meta.inner(&self.margin()), buf);
         }
         self.input_text(input.width as usize)
@@ -113,12 +128,12 @@ impl SearchFilterPromptWidget<'_> {
                 " for help".into(),
             ]
         };
-        let borders = if self.mode.focused() {
+        let borders = if self.is_focused() {
             Borders::ALL
         } else {
             Borders::NONE
         };
-        let alignment = if self.mode.focused() {
+        let alignment = if self.is_focused() {
             Alignment::Left
         } else {
             Alignment::Right
@@ -178,7 +193,7 @@ impl SearchFilterPromptWidget<'_> {
 
     fn input_text(&self, width: usize) -> impl Widget + '_ {
         let scroll = self.input.cursor().saturating_sub(width.saturating_sub(4));
-        let text = if self.mode.focused() {
+        let text = if self.is_focused() {
             Line::from(vec![self.input.value().into()])
         } else if self.mode.is_summary() || self.mode.is_help() {
             Line::from(vec![])
@@ -195,7 +210,7 @@ impl SearchFilterPromptWidget<'_> {
 
     fn update_cursor_state(&self, area: Rect, state: &mut SearchFilterPrompt) {
         let width = ((area.width as f64 * 0.75) as u16).saturating_sub(2);
-        if self.mode.focused() {
+        if self.is_focused() {
             let margin = self.margin();
             state.cursor_position = Some(Position::new(
                 (area.x + margin.horizontal + self.input.cursor() as u16).min(width),
@@ -207,7 +222,7 @@ impl SearchFilterPromptWidget<'_> {
     }
 
     fn margin(&self) -> Margin {
-        if self.mode.focused() {
+        if self.is_focused() {
             Margin::new(self.horizontal_margin, self.vertical_margin)
         } else {
             Margin::default()

@@ -28,11 +28,8 @@ use crate::{
     },
 };
 
-mod search_page;
-use search_page::SearchPage;
-mod search_prompt;
-
-use self::search_page::SearchMode;
+use crate::widgets::search_page::SearchMode;
+use crate::widgets::search_page::SearchPage;
 
 #[derive(
     Default, Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIs,
@@ -42,35 +39,18 @@ pub enum Mode {
     Common,
     #[default]
     Summary,
-    Search,
-    Filter,
-    // Picker(CrateInfo), unable to make configuration file work with this
     PickerShowCrateInfo,
     PickerHideCrateInfo,
+    Search,
+    Filter,
     Popup,
     Help,
     Quit,
 }
 
 impl Mode {
-    pub fn focused(&self) -> bool {
-        matches!(self, Mode::Search | Mode::Filter)
-    }
-
-    pub fn is_picker(&self) -> bool {
-        self.is_picker_hide_crate_info() || self.is_picker_show_crate_info()
-    }
-
-    pub fn toggle_crate_info(&mut self) {
-        *self = match self {
-            Mode::PickerShowCrateInfo => Mode::PickerHideCrateInfo,
-            Mode::PickerHideCrateInfo => Mode::PickerShowCrateInfo,
-            _ => *self,
-        };
-    }
-
-    pub fn should_show_crate_info(&self) -> bool {
-        matches!(self, Mode::PickerShowCrateInfo)
+    pub fn is_prompt(&self) -> bool {
+        self.is_search() || self.is_filter()
     }
 }
 
@@ -264,15 +244,10 @@ impl App {
             Action::PreviousSummaryMode => self.summary.previous_mode(),
             Action::NextTab => self.goto_next_tab(),
             Action::PreviousTab => self.goto_previous_tab(),
-            Action::SwitchMode(mode) if mode.is_search() || mode.is_filter() => {
-                self.enter_insert_mode(mode)
-            }
-            Action::SwitchMode(Mode::PickerHideCrateInfo) => self.enter_normal_mode(),
-            Action::SwitchMode(Mode::PickerShowCrateInfo) => self.enter_normal_mode(),
             Action::SwitchMode(mode) => self.switch_mode(mode),
             Action::SwitchToLastMode => self.switch_to_last_mode(),
-            Action::SubmitSearch => self.submit_search(),
-            Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
+            Action::SubmitSearch => self.search.submit_query(),
+            Action::ToggleShowCrateInfo => self.search.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
             Action::UpdateSearchTableResults => self.search.update_search_table_results(),
             Action::UpdateSummary => self.update_summary(),
@@ -280,7 +255,9 @@ impl App {
             Action::ShowErrorPopup(ref err) => self.show_error_popup(err.clone()),
             Action::ShowInfoPopup(ref info) => self.show_info_popup(info.clone()),
             Action::ClosePopup => self.close_popup(),
-            Action::ToggleSortBy { reload, forward } => self.toggle_sort_by(reload, forward)?,
+            Action::ToggleSortBy { reload, forward } => {
+                self.search.toggle_sort_by(reload, forward)?
+            }
             Action::ClearTaskDetailsHandle(ref id) => self
                 .search
                 .clear_task_details_handle(uuid::Uuid::parse_str(id)?)?,
@@ -372,56 +349,33 @@ impl App {
         }
     }
 
-    fn enter_insert_mode(&mut self, mode: Mode) {
-        self.switch_mode(mode);
-        self.search.input = self
-            .search
-            .input
-            .clone()
-            .with_value(if self.mode.is_search() {
-                self.search.search.clone()
-            } else if self.mode.is_filter() {
-                self.search.filter.clone()
-            } else {
-                unreachable!("Cannot enter insert mode when mode is {:?}", self.mode)
-            });
-    }
-
-    fn enter_normal_mode(&mut self) {
-        self.switch_mode(Mode::PickerHideCrateInfo);
-        if !self.search.search_results.crates.is_empty()
-            && self.search.search_results.selected().is_none()
-        {
-            self.search.search_results.select(Some(0))
-        }
-    }
-
     fn switch_mode(&mut self, mode: Mode) {
         self.last_mode = self.mode;
         self.mode = mode;
         match self.mode {
             Mode::Search => {
                 self.selected_tab.select(SelectedTab::Search);
-                self.search.search_mode = SearchMode::Search;
+                self.search.mode = SearchMode::Search;
+                self.search.enter_insert_mode();
             }
             Mode::Filter => {
                 self.selected_tab.select(SelectedTab::Search);
-                self.search.search_mode = SearchMode::Filter;
+                self.search.mode = SearchMode::Filter;
+                self.search.enter_insert_mode();
             }
-            Mode::PickerHideCrateInfo => {
-                self.selected_tab.select(SelectedTab::Search);
-                self.search.search_mode = SearchMode::ResultsHideCrate;
+            Mode::Summary => {
+                self.search.enter_normal_mode();
+                self.selected_tab.select(SelectedTab::Summary);
             }
-            Mode::PickerShowCrateInfo => {
-                self.selected_tab.select(SelectedTab::Search);
-                self.search.search_mode = SearchMode::ResultsShowCrate;
-            }
-            Mode::Summary => self.selected_tab.select(SelectedTab::Summary),
             Mode::Help => {
+                self.search.enter_normal_mode();
                 self.help.mode = Some(self.last_mode);
                 self.selected_tab.select(SelectedTab::None)
             }
-            _ => self.selected_tab.select(SelectedTab::None),
+            _ => {
+                self.search.enter_normal_mode();
+                self.selected_tab.select(SelectedTab::None)
+            }
         }
     }
 
@@ -443,58 +397,6 @@ impl App {
             Mode::Search => self.switch_mode(Mode::Summary),
             _ => self.switch_mode(Mode::Summary),
         }
-    }
-
-    fn submit_search(&mut self) {
-        self.search.clear_all_previous_task_details_handles();
-        self.switch_mode(Mode::PickerHideCrateInfo);
-        self.search.filter.clear();
-        self.search.search = self.search.input.value().into();
-    }
-
-    fn toggle_show_crate_info(&mut self) {
-        self.mode.toggle_crate_info();
-        if self.mode.should_show_crate_info() {
-            self.search.request_crate_details()
-        } else {
-            self.search.clear_all_previous_task_details_handles();
-        }
-    }
-
-    fn toggle_sort_by_forward(&mut self) {
-        use crates_io_api::Sort as S;
-        self.search.sort = match self.search.sort {
-            S::Alphabetical => S::Relevance,
-            S::Relevance => S::Downloads,
-            S::Downloads => S::RecentDownloads,
-            S::RecentDownloads => S::RecentUpdates,
-            S::RecentUpdates => S::NewlyAdded,
-            S::NewlyAdded => S::Alphabetical,
-        };
-    }
-
-    fn toggle_sort_by_backward(&mut self) {
-        use crates_io_api::Sort as S;
-        self.search.sort = match self.search.sort {
-            S::Relevance => S::Alphabetical,
-            S::Downloads => S::Relevance,
-            S::RecentDownloads => S::Downloads,
-            S::RecentUpdates => S::RecentDownloads,
-            S::NewlyAdded => S::RecentUpdates,
-            S::Alphabetical => S::NewlyAdded,
-        };
-    }
-
-    fn toggle_sort_by(&mut self, reload: bool, forward: bool) -> Result<()> {
-        if forward {
-            self.toggle_sort_by_forward()
-        } else {
-            self.toggle_sort_by_backward()
-        };
-        if reload {
-            self.tx.send(Action::ReloadData)?;
-        }
-        Ok(())
     }
 
     fn show_error_popup(&mut self, message: String) {
@@ -748,14 +650,18 @@ impl App {
     }
 
     fn render_search(&mut self, area: Rect, buf: &mut Buffer) {
-        let prompt_height = if self.mode.is_picker() { 1 } else { 5 };
+        let prompt_height = if self.mode.is_prompt() && self.search.is_focused() {
+            5
+        } else {
+            1
+        };
         let [main, prompt] =
             Layout::vertical([Constraint::Min(0), Constraint::Length(prompt_height)]).areas(area);
 
-        SearchResultsTableWidget::new(self.mode.is_picker()).render(
+        SearchResultsTableWidget::new(self.search.is_focused()).render(
             main,
             buf,
-            &mut self.search.search_results,
+            &mut self.search.results,
         );
 
         Line::from(self.search.page_number_status())
@@ -782,8 +688,12 @@ impl App {
     }
 
     fn render_prompt(&mut self, area: Rect, buf: &mut Buffer) {
-        let p =
-            SearchFilterPromptWidget::new(self.mode, self.search.sort.clone(), &self.search.input);
+        let p = SearchFilterPromptWidget::new(
+            self.mode,
+            self.search.sort.clone(),
+            &self.search.input,
+            self.search.mode,
+        );
         p.render(area, buf, &mut self.search.prompt);
     }
 
