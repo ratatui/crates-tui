@@ -20,12 +20,12 @@ use crate::{
     action::Action,
     app::Mode,
     crates_io_api_helper,
-    widgets::{search_filter_prompt::SearchFilterPrompt, search_results_table::SearchResultsTable},
+    widgets::{search_filter_prompt::SearchFilterPrompt, search_results::SearchResults},
 };
 
 use super::{
     crate_info_table::{CrateInfo, CrateInfoTableWidget},
-    search_results_table::SearchResultsTableWidget,
+    search_results::SearchResultsWidget,
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash, EnumIs)]
@@ -71,7 +71,7 @@ pub struct SearchPage {
 
     /// A table component designed to handle the listing and selection of crates
     /// within the terminal UI.
-    pub results: SearchResultsTable,
+    pub results: SearchResults,
 
     /// An input handler component for managing raw user input into textual
     /// form.
@@ -130,7 +130,7 @@ impl SearchPage {
             search_mode: Default::default(),
             search: String::new(),
             filter: String::new(),
-            results: SearchResultsTable::default(),
+            results: SearchResults::default(),
             input: Input::default(),
             prompt: SearchFilterPrompt::default(),
             page: 1,
@@ -185,11 +185,11 @@ impl SearchPage {
     }
 
     pub fn scroll_up(&mut self) {
-        self.results.scroll_previous(1);
+        self.results.scroll_previous();
     }
 
     pub fn scroll_down(&mut self) {
-        self.results.scroll_next(1);
+        self.results.scroll_next();
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) {
@@ -473,7 +473,7 @@ impl StatefulWidget for SearchPageWidget {
             area
         };
 
-        SearchResultsTableWidget::new(!state.is_prompt() && state.is_focused()).render(
+        SearchResultsWidget::new(!state.is_prompt() && state.is_focused()).render(
             area,
             buf,
             &mut state.results,

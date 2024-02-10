@@ -5,19 +5,23 @@ use ratatui::{prelude::*, widgets::*};
 use crate::config;
 
 #[derive(Debug, Default)]
-pub struct SearchResultsTable {
+pub struct SearchResults {
     pub crates: Vec<crates_io_api::Crate>,
     pub versions: Vec<crates_io_api::Version>,
     pub table_state: TableState,
     pub scrollbar_state: ScrollbarState,
 }
 
-impl SearchResultsTable {
+impl SearchResults {
     pub fn selected_crate_name(&self) -> Option<String> {
         self.selected()
             .and_then(|index| self.crates.get(index))
-            .filter(|crate_| !crate_.name.is_empty())
-            .map(|crate_| crate_.name.clone())
+            .filter(|krate| !krate.name.is_empty())
+            .map(|krate| krate.name.clone())
+    }
+
+    pub fn selected(&self) -> Option<usize> {
+        self.table_state.selected()
     }
 
     pub fn content_length(&mut self, content_length: usize) {
@@ -28,75 +32,56 @@ impl SearchResultsTable {
         self.table_state.select(index)
     }
 
-    pub fn selected(&self) -> Option<usize> {
-        self.table_state.selected()
+    pub fn scroll_next(&mut self) {
+        let wrap_index = self.crates.len().max(1);
+        let next = self
+            .table_state
+            .selected()
+            .map_or(0, |i| (i + 1) % wrap_index);
+        self.scroll_to(next);
     }
 
-    pub fn scroll_next(&mut self, count: usize) {
-        if self.crates.is_empty() {
-            self.table_state.select(None)
-        } else {
-            // wrapping behavior
-            let i = self
-                .table_state
-                .selected()
-                .map_or(0, |i| (i + count) % self.crates.len());
-            self.table_state.select(Some(i));
-            self.scrollbar_state = self.scrollbar_state.position(i);
-        }
-    }
-
-    pub fn scroll_previous(&mut self, count: usize) {
-        if self.crates.is_empty() {
-            self.table_state.select(None)
-        } else {
-            // wrapping behavior
-            let i = self
-                .table_state
-                .selected()
-                .map_or(self.crates.len().saturating_sub(1), |i| {
-                    if i == 0 {
-                        self.crates.len().saturating_sub(1)
-                    } else {
-                        i.saturating_sub(count)
-                    }
-                });
-            self.table_state.select(Some(i));
-            self.scrollbar_state = self.scrollbar_state.position(i);
-        }
+    pub fn scroll_previous(&mut self) {
+        let last = self.crates.len().saturating_sub(1);
+        let wrap_index = self.crates.len().max(1);
+        let previous = self
+            .table_state
+            .selected()
+            .map_or(last, |i| (i + last) % wrap_index);
+        self.scroll_to(previous);
     }
 
     pub fn scroll_to_top(&mut self) {
-        if self.crates.is_empty() {
-            self.table_state.select(None)
-        } else {
-            self.table_state.select(Some(0));
-            self.scrollbar_state = self.scrollbar_state.position(0);
-        }
+        self.scroll_to(0);
     }
 
     pub fn scroll_to_bottom(&mut self) {
+        let bottom = self.crates.len().saturating_sub(1);
+        self.scroll_to(bottom);
+    }
+
+    fn scroll_to(&mut self, index: usize) {
         if self.crates.is_empty() {
             self.table_state.select(None)
         } else {
-            self.table_state.select(Some(self.crates.len() - 1));
-            self.scrollbar_state = self.scrollbar_state.position(self.crates.len() - 1);
+            self.table_state.select(Some(index));
+            self.scrollbar_state = self.scrollbar_state.position(index);
         }
     }
 }
 
-pub struct SearchResultsTableWidget {
+pub struct SearchResultsWidget {
     highlight: bool,
 }
 
-impl SearchResultsTableWidget {
+impl SearchResultsWidget {
     pub fn new(highlight: bool) -> Self {
         Self { highlight }
     }
 }
 
-impl StatefulWidget for SearchResultsTableWidget {
-    type State = SearchResultsTable;
+impl StatefulWidget for SearchResultsWidget {
+    type State = SearchResults;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let [area, scrollbar_area] =
