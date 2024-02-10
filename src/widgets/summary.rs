@@ -1,8 +1,15 @@
+use color_eyre::Result;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
+
 use itertools::Itertools;
 use ratatui::{layout::Flex, prelude::*, widgets::*};
 use strum::{Display, EnumIs, EnumIter, FromRepr};
+use tokio::sync::mpsc::UnboundedSender;
 
-use crate::config;
+use crate::{action::Action, config, crates_io_api_helper};
 
 #[derive(Default, Debug, Clone, Copy, EnumIs, FromRepr, Display, EnumIter)]
 pub enum SummaryMode {
@@ -45,15 +52,39 @@ impl SummaryMode {
     }
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Summary {
     pub state: [ListState; 6],
     pub last_selection: [usize; 6],
     pub mode: SummaryMode,
     pub summary_data: Option<crates_io_api::Summary>,
+
+    /// A thread-safe shared container holding the detailed information about
+    /// the currently selected crate; this can be `None` if no crate is
+    /// selected.
+    pub data: Arc<Mutex<Option<crates_io_api::Summary>>>,
+
+    /// Sender end of an asynchronous channel for dispatching actions from
+    /// various parts of the app to be handled by the event loop.
+    tx: UnboundedSender<Action>,
+
+    /// A thread-safe indicator of whether data is currently being loaded,
+    /// allowing different parts of the app to know if it's in a loading state.
+    loading_status: Arc<AtomicBool>,
 }
 
 impl Summary {
+    pub fn new(tx: UnboundedSender<Action>, loading_status: Arc<AtomicBool>) -> Self {
+        Self {
+            tx,
+            loading_status,
+            state: Default::default(),
+            last_selection: Default::default(),
+            mode: Default::default(),
+            summary_data: Default::default(),
+            data: Default::default(),
+        }
+    }
     pub fn mode(&self) -> SummaryMode {
         self.mode
     }
@@ -128,6 +159,30 @@ impl Summary {
         let i = self.last_selection[self.mode as usize];
         let new_state = self.get_state_mut(self.mode);
         *new_state.selected_mut() = Some(i);
+    }
+
+    pub fn request(&self) -> Result<()> {
+        let tx = self.tx.clone();
+        let loading_status = self.loading_status.clone();
+        let summary = self.data.clone();
+        tokio::spawn(async move {
+            loading_status.store(true, Ordering::SeqCst);
+            if let Err(error_message) = crates_io_api_helper::request_summary(summary).await {
+                let _ = tx.send(Action::ShowErrorPopup(error_message));
+            }
+            loading_status.store(false, Ordering::SeqCst);
+            let _ = tx.send(Action::UpdateSummary);
+            let _ = tx.send(Action::ScrollDown);
+        });
+        Ok(())
+    }
+
+    pub fn update(&mut self) {
+        if let Some(summary) = self.data.lock().unwrap().clone() {
+            self.summary_data = Some(summary);
+        } else {
+            self.summary_data = None;
+        }
     }
 }
 

@@ -1,6 +1,6 @@
 use std::sync::{
     atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
+    Arc,
 };
 
 use color_eyre::eyre::Result;
@@ -13,7 +13,7 @@ use tracing::{debug, error, info};
 
 use crate::{
     action::Action,
-    config, crates_io_api_helper,
+    config,
     events::{Event, Events},
     serde_helper::keybindings::key_event_to_string,
     tui::Tui,
@@ -73,11 +73,6 @@ pub struct App {
     /// allowing different parts of the app to know if it's in a loading state.
     loading_status: Arc<AtomicBool>,
 
-    /// A thread-safe shared container holding the detailed information about
-    /// the currently selected crate; this can be `None` if no crate is
-    /// selected.
-    summary_data: Arc<Mutex<Option<crates_io_api::Summary>>>,
-
     /// contains list state for summary
     summary: Summary,
 
@@ -114,6 +109,7 @@ impl App {
         let (tx, rx) = mpsc::unbounded_channel();
         let loading_status = Arc::new(AtomicBool::default());
         let search = SearchPage::new(tx.clone(), loading_status.clone());
+        let summary = Summary::new(tx.clone(), loading_status.clone());
         Self {
             rx,
             tx,
@@ -121,9 +117,8 @@ impl App {
             last_mode: Mode::default(),
             loading_status,
             search,
+            summary,
             crate_info: Default::default(),
-            summary_data: Default::default(),
-            summary: Default::default(),
             popup: Default::default(),
             last_tick_key_events: Default::default(),
             frame_count: Default::default(),
@@ -253,7 +248,7 @@ impl App {
             Action::ToggleShowCrateInfo => self.search.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
             Action::UpdateSearchTableResults => self.search.update_search_table_results(),
-            Action::UpdateSummary => self.update_summary(),
+            Action::UpdateSummary => self.summary.update(),
             Action::ShowFullCrateInfo => self.show_full_crate_details(),
             Action::ShowErrorPopup(ref err) => self.show_error_popup(err.clone()),
             Action::ShowInfoPopup(ref info) => self.show_info_popup(info.clone()),
@@ -304,7 +299,7 @@ impl App {
     }
 
     fn init(&mut self) -> Result<()> {
-        self.request_summary()?;
+        self.summary.request()?;
         Ok(())
     }
 
@@ -499,22 +494,6 @@ impl App {
         Ok(())
     }
 
-    fn request_summary(&self) -> Result<()> {
-        let tx = self.tx.clone();
-        let loading_status = self.loading_status.clone();
-        let summary = self.summary_data.clone();
-        tokio::spawn(async move {
-            loading_status.store(true, Ordering::SeqCst);
-            if let Err(error_message) = crates_io_api_helper::request_summary(summary).await {
-                let _ = tx.send(Action::ShowErrorPopup(error_message));
-            }
-            loading_status.store(false, Ordering::SeqCst);
-            let _ = tx.send(Action::UpdateSummary);
-            let _ = tx.send(Action::ScrollDown);
-        });
-        Ok(())
-    }
-
     // Sets the frame count
     fn update_frame_count(&mut self, frame: &mut Frame<'_>) {
         self.frame_count = frame.count();
@@ -526,14 +505,6 @@ impl App {
             if let Some(cursor_position) = self.search.cursor_position() {
                 frame.set_cursor(cursor_position.x, cursor_position.y)
             }
-        }
-    }
-
-    fn update_summary(&mut self) {
-        if let Some(summary) = self.summary_data.lock().unwrap().clone() {
-            self.summary.summary_data = Some(summary);
-        } else {
-            self.summary.summary_data = None;
         }
     }
 
