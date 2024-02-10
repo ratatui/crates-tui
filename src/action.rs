@@ -24,7 +24,6 @@ pub enum Action {
     GetCrates,
     SwitchMode(Mode),
     SwitchToLastMode,
-    HandleFilterPromptChange,
     IncrementPage,
     DecrementPage,
     NextSummaryMode,

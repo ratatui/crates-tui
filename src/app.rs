@@ -320,7 +320,6 @@ impl App {
             Action::SwitchMode(Mode::PickerShowCrateInfo) => self.enter_normal_mode(),
             Action::SwitchMode(mode) => self.switch_mode(mode),
             Action::SwitchToLastMode => self.switch_to_last_mode(),
-            Action::HandleFilterPromptChange => self.search.handle_filter_prompt_change(),
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
