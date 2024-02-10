@@ -1,9 +1,6 @@
-use std::{
-    collections::HashMap,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
 };
 
 use color_eyre::eyre::Result;
@@ -11,10 +8,7 @@ use crossterm::event::KeyEvent;
 use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIs};
-use tokio::{
-    sync::mpsc::{self, UnboundedReceiver, UnboundedSender},
-    task::JoinHandle,
-};
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use tracing::{debug, error, info};
 
 use crate::{
@@ -107,8 +101,6 @@ pub struct App {
     /// contains table state for info popup
     crate_info: CrateInfo,
 
-    last_task_details_handle: HashMap<uuid::Uuid, JoinHandle<()>>,
-
     search: SearchPage,
 
     /// A popupt to show info / error messages
@@ -148,7 +140,6 @@ impl App {
             crate_info: Default::default(),
             summary_data: Default::default(),
             summary: Default::default(),
-            last_task_details_handle: Default::default(),
             popup: Default::default(),
             last_tick_key_events: Default::default(),
             frame_count: Default::default(),
@@ -627,7 +618,7 @@ impl App {
     }
 
     fn clear_task_details_handle(&mut self, id: uuid::Uuid) -> Result<()> {
-        if let Some((_, handle)) = self.last_task_details_handle.remove_entry(&id) {
+        if let Some((_, handle)) = self.search.last_task_details_handle.remove_entry(&id) {
             handle.abort()
         }
         Ok(())
@@ -635,10 +626,10 @@ impl App {
 
     fn clear_all_previous_task_details_handles(&mut self) {
         *self.search.full_crate_info.lock().unwrap() = None;
-        for (_, v) in self.last_task_details_handle.iter() {
+        for (_, v) in self.search.last_task_details_handle.iter() {
             v.abort()
         }
-        self.last_task_details_handle.clear()
+        self.search.last_task_details_handle.clear()
     }
 
     /// Reloads the list of crates based on the current search parameters,
@@ -711,7 +702,8 @@ impl App {
                 info!("Retrieved details for {crate_name}: {uuid}");
                 let _ = tx.send(Action::ClearTaskDetailsHandle(uuid.to_string()));
             });
-            self.last_task_details_handle
+            self.search
+                .last_task_details_handle
                 .insert(uuid, last_task_details_handle);
         }
     }
@@ -742,7 +734,8 @@ impl App {
                 info!("Retrieved details for {crate_name}: {uuid}");
                 let _ = tx.send(Action::ClearTaskDetailsHandle(uuid.to_string()));
             });
-            self.last_task_details_handle
+            self.search
+                .last_task_details_handle
                 .insert(uuid, last_task_details_handle);
         }
     }

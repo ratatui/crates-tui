@@ -1,8 +1,12 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use crossterm::event::{Event as CrosstermEvent, KeyEvent};
 use itertools::Itertools;
 use ratatui::layout::Position;
+use tokio::task::JoinHandle;
 use tui_input::{backend::crossterm::EventHandler, Input};
 
 use crate::{
@@ -64,6 +68,8 @@ pub struct SearchPage {
     /// the currently selected crate; this can be `None` if no crate is
     /// selected.
     pub crate_response: Arc<Mutex<Option<crates_io_api::CrateResponse>>>,
+
+    pub last_task_details_handle: HashMap<uuid::Uuid, JoinHandle<()>>,
 }
 
 #[derive(Debug, Default)]
@@ -92,6 +98,7 @@ impl SearchPage {
             versions: Default::default(),
             full_crate_info: Default::default(),
             crate_response: Default::default(),
+            last_task_details_handle: Default::default(),
         }
     }
 
