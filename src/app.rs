@@ -96,24 +96,6 @@ pub struct App {
     /// allowing different parts of the app to know if it's in a loading state.
     loading_status: Arc<AtomicBool>,
 
-    /// A thread-safe, shared vector holding the list of crates fetched from
-    /// crates.io, wrapped in a mutex to control concurrent access.
-    crates: Arc<Mutex<Vec<crates_io_api::Crate>>>,
-
-    /// A thread-safe, shared vector holding the list of version fetched from
-    /// crates.io, wrapped in a mutex to control concurrent access.
-    versions: Arc<Mutex<Vec<crates_io_api::Version>>>,
-
-    /// A thread-safe shared container holding the detailed information about
-    /// the currently selected crate; this can be `None` if no crate is
-    /// selected.
-    full_crate_info: Arc<Mutex<Option<crates_io_api::FullCrate>>>,
-
-    /// A thread-safe shared container holding the detailed information about
-    /// the currently selected crate; this can be `None` if no crate is
-    /// selected.
-    crate_response: Arc<Mutex<Option<crates_io_api::CrateResponse>>>,
-
     /// A thread-safe shared container holding the detailed information about
     /// the currently selected crate; this can be `None` if no crate is
     /// selected.
@@ -163,10 +145,6 @@ impl App {
             last_mode: Mode::default(),
             loading_status: Default::default(),
             search,
-            crates: Default::default(),
-            versions: Default::default(),
-            full_crate_info: Default::default(),
-            crate_response: Default::default(),
             crate_info: Default::default(),
             summary_data: Default::default(),
             summary: Default::default(),
@@ -304,9 +282,9 @@ impl App {
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
-            Action::UpdateSearchTableResults => {
-                self.search.update_search_table_results(self.crates.clone())
-            }
+            Action::UpdateSearchTableResults => self
+                .search
+                .update_search_table_results(self.search.crates.clone()),
             Action::UpdateSummary => self.update_summary(),
             Action::ShowFullCrateInfo => self.show_full_crate_details(),
             Action::ShowErrorPopup(ref err) => self.show_error_popup(err.clone()),
@@ -352,7 +330,8 @@ impl App {
 
 impl App {
     fn tick(&mut self) {
-        self.search.update_search_table_results(self.crates.clone());
+        self.search
+            .update_search_table_results(self.search.crates.clone());
     }
 
     fn init(&mut self) -> Result<()> {
@@ -591,7 +570,7 @@ impl App {
     }
 
     fn open_docs_url_in_browser(&self) -> Result<()> {
-        if let Some(crate_response) = self.crate_response.lock().unwrap().clone() {
+        if let Some(crate_response) = self.search.crate_response.lock().unwrap().clone() {
             let name = crate_response.crate_data.name;
             webbrowser::open(&format!("https://docs.rs/{name}/latest"))?;
         }
@@ -610,7 +589,7 @@ impl App {
     }
 
     fn open_crates_io_url_in_browser(&self) -> Result<()> {
-        if let Some(crate_response) = self.crate_response.lock().unwrap().clone() {
+        if let Some(crate_response) = self.search.crate_response.lock().unwrap().clone() {
             let name = crate_response.crate_data.name;
             webbrowser::open(&format!("https://crates.io/crates/{name}"))?;
         }
@@ -621,7 +600,7 @@ impl App {
         use copypasta::ClipboardProvider;
         match copypasta::ClipboardContext::new() {
             Ok(mut ctx) => {
-                if let Some(crate_response) = self.crate_response.lock().unwrap().clone() {
+                if let Some(crate_response) = self.search.crate_response.lock().unwrap().clone() {
                     let msg = format!("cargo add {}", crate_response.crate_data.name);
                     let _ = match ctx.set_contents(msg.clone()).ok() {
                         Some(_) => self.tx.send(Action::ShowInfoPopup(format!(
@@ -655,7 +634,7 @@ impl App {
     }
 
     fn clear_all_previous_task_details_handles(&mut self) {
-        *self.full_crate_info.lock().unwrap() = None;
+        *self.search.full_crate_info.lock().unwrap() = None;
         for (_, v) in self.last_task_details_handle.iter() {
             v.abort()
         }
@@ -676,8 +655,8 @@ impl App {
     /// Clears current search results and resets the UI to prepare for new data.
     fn prepare_reload(&mut self) {
         self.search.search_results.select(None);
-        *self.full_crate_info.lock().unwrap() = None;
-        *self.crate_response.lock().unwrap() = None;
+        *self.search.full_crate_info.lock().unwrap() = None;
+        *self.search.crate_response.lock().unwrap() = None;
     }
 
     /// Creates the parameters required for the search task.
@@ -686,8 +665,8 @@ impl App {
             search: self.search.search.clone(),
             page: self.search.page.clamp(1, u64::MAX),
             page_size: self.search.page_size,
-            crates: self.crates.clone(),
-            versions: self.versions.clone(),
+            crates: self.search.crates.clone(),
+            versions: self.search.versions.clone(),
             loading_status: self.loading_status.clone(),
             sort: self.search.sort.clone(),
             tx: self.tx.clone(),
@@ -715,7 +694,7 @@ impl App {
         }
         if let Some(crate_name) = self.search.search_results.selected_crate_name() {
             let tx = self.tx.clone();
-            let crate_response = self.crate_response.clone();
+            let crate_response = self.search.crate_response.clone();
             let loading_status = self.loading_status.clone();
 
             // Spawn the async work to fetch crate details.
@@ -745,7 +724,7 @@ impl App {
         }
         if let Some(crate_name) = self.search.search_results.selected_crate_name() {
             let tx = self.tx.clone();
-            let full_crate_info = self.full_crate_info.clone();
+            let full_crate_info = self.search.full_crate_info.clone();
             let loading_status = self.loading_status.clone();
 
             // Spawn the async work to fetch crate details.
@@ -805,7 +784,7 @@ impl App {
     }
 
     fn render_crate_info(&mut self, area: Rect, buf: &mut Buffer) {
-        if let Some(ci) = self.crate_response.lock().unwrap().clone() {
+        if let Some(ci) = self.search.crate_response.lock().unwrap().clone() {
             Clear.render(area, buf);
             CrateInfoTableWidget::new(ci).render(area, buf, &mut self.crate_info);
         }

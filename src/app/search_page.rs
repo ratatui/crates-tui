@@ -46,6 +46,24 @@ pub struct SearchPage {
     /// The total number of crates fetchable from crates.io, which may not be
     /// known initially and can be used for UI elements like pagination.
     pub total_num_crates: Option<u64>,
+
+    /// A thread-safe, shared vector holding the list of crates fetched from
+    /// crates.io, wrapped in a mutex to control concurrent access.
+    pub crates: Arc<Mutex<Vec<crates_io_api::Crate>>>,
+
+    /// A thread-safe, shared vector holding the list of version fetched from
+    /// crates.io, wrapped in a mutex to control concurrent access.
+    pub versions: Arc<Mutex<Vec<crates_io_api::Version>>>,
+
+    /// A thread-safe shared container holding the detailed information about
+    /// the currently selected crate; this can be `None` if no crate is
+    /// selected.
+    pub full_crate_info: Arc<Mutex<Option<crates_io_api::FullCrate>>>,
+
+    /// A thread-safe shared container holding the detailed information about
+    /// the currently selected crate; this can be `None` if no crate is
+    /// selected.
+    pub crate_response: Arc<Mutex<Option<crates_io_api::CrateResponse>>>,
 }
 
 #[derive(Debug, Default)]
@@ -70,6 +88,10 @@ impl SearchPage {
             page_size: 25,
             sort: crates_io_api::Sort::Relevance,
             total_num_crates: None,
+            crates: Default::default(),
+            versions: Default::default(),
+            full_crate_info: Default::default(),
+            crate_response: Default::default(),
         }
     }
 
