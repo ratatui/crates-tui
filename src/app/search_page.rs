@@ -33,10 +33,20 @@ pub struct SearchPage {
     /// A prompt displaying the current search or filter query, if any, that the
     /// user can interact with.
     pub prompt: SearchFilterPrompt,
+
+    /// The current page number being displayed or interacted with in the UI.
+    pub page: u64,
+
+    /// The number of crates displayed per page in the UI.
+    pub page_size: u64,
+
+    /// Sort preference for search results
+    pub sort: crates_io_api::Sort,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum SearchMode {
+    #[default]
     Search,
     Filter,
     ResultsHideCrate,
@@ -46,12 +56,15 @@ pub enum SearchMode {
 impl SearchPage {
     pub fn new() -> Self {
         Self {
-            search_mode: SearchMode::Search,
+            search_mode: Default::default(),
             search: String::new(),
             filter: String::new(),
             search_results: SearchResultsTable::default(),
             input: Input::default(),
             prompt: SearchFilterPrompt::default(),
+            page: 1,
+            page_size: 25,
+            sort: crates_io_api::Sort::Relevance,
         }
     }
 

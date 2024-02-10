@@ -92,15 +92,6 @@ pub struct App {
     /// various parts of the app to be handled by the event loop.
     tx: UnboundedSender<Action>,
 
-    /// The current page number being displayed or interacted with in the UI.
-    page: u64,
-
-    /// The number of crates displayed per page in the UI.
-    page_size: u64,
-
-    /// Sort preference for search results
-    sort: crates_io_api::Sort,
-
     /// A thread-safe indicator of whether data is currently being loaded,
     /// allowing different parts of the app to know if it's in a loading state.
     loading_status: Arc<AtomicBool>,
@@ -172,9 +163,6 @@ impl App {
         Self {
             rx,
             tx,
-            page: 1,
-            page_size: 25,
-            sort: crates_io_api::Sort::Relevance,
             mode: Mode::default(),
             last_mode: Mode::default(),
             loading_status: Default::default(),
@@ -423,9 +411,9 @@ impl App {
 
     fn increment_page(&mut self) {
         if let Some(n) = self.total_num_crates {
-            let max_page_size = (n / self.page_size) + 1;
-            if self.page < max_page_size {
-                self.page = self.page.saturating_add(1).min(max_page_size);
+            let max_page_size = (n / self.search.page_size) + 1;
+            if self.search.page < max_page_size {
+                self.search.page = self.search.page.saturating_add(1).min(max_page_size);
                 self.reload_data();
             }
         }
@@ -433,8 +421,8 @@ impl App {
 
     fn decrement_page(&mut self) {
         let min_page_size = 1;
-        if self.page > min_page_size {
-            self.page = self.page.saturating_sub(1).max(min_page_size);
+        if self.search.page > min_page_size {
+            self.search.page = self.search.page.saturating_sub(1).max(min_page_size);
             self.reload_data();
         }
     }
@@ -530,7 +518,7 @@ impl App {
 
     fn toggle_sort_by_forward(&mut self) {
         use crates_io_api::Sort as S;
-        self.sort = match self.sort {
+        self.search.sort = match self.search.sort {
             S::Alphabetical => S::Relevance,
             S::Relevance => S::Downloads,
             S::Downloads => S::RecentDownloads,
@@ -542,7 +530,7 @@ impl App {
 
     fn toggle_sort_by_backward(&mut self) {
         use crates_io_api::Sort as S;
-        self.sort = match self.sort {
+        self.search.sort = match self.search.sort {
             S::Relevance => S::Alphabetical,
             S::Downloads => S::Relevance,
             S::RecentDownloads => S::Downloads,
@@ -701,12 +689,12 @@ impl App {
     fn create_search_parameters(&self) -> crates_io_api_helper::SearchParameters {
         crates_io_api_helper::SearchParameters {
             search: self.search.search.clone(),
-            page: self.page.clamp(1, u64::MAX),
-            page_size: self.page_size,
+            page: self.search.page.clamp(1, u64::MAX),
+            page_size: self.search.page_size,
             crates: self.crates.clone(),
             versions: self.versions.clone(),
             loading_status: self.loading_status.clone(),
-            sort: self.sort.clone(),
+            sort: self.search.sort.clone(),
             tx: self.tx.clone(),
         }
     }
@@ -850,7 +838,7 @@ impl App {
 
     fn selected_with_page_context(&self) -> u64 {
         self.search.search_results.selected().map_or(0, |n| {
-            (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1
+            (self.search.page.saturating_sub(1) * self.search.page_size) + n as u64 + 1
         })
     }
 
@@ -859,8 +847,8 @@ impl App {
     }
 
     fn page_number_status(&self) -> String {
-        let max_page_size = (self.total_num_crates.unwrap_or_default() / self.page_size) + 1;
-        format!("Page: {}/{}", self.page, max_page_size)
+        let max_page_size = (self.total_num_crates.unwrap_or_default() / self.search.page_size) + 1;
+        format!("Page: {}/{}", self.search.page, max_page_size)
     }
 
     fn search_results_status(&self) -> String {
@@ -985,7 +973,8 @@ impl App {
     }
 
     fn render_prompt(&mut self, area: Rect, buf: &mut Buffer) {
-        let p = SearchFilterPromptWidget::new(self.mode, self.sort.clone(), &self.search.input);
+        let p =
+            SearchFilterPromptWidget::new(self.mode, self.search.sort.clone(), &self.search.input);
         p.render(area, buf, &mut self.search.prompt);
     }
 
