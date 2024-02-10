@@ -129,13 +129,14 @@ pub struct App {
 impl App {
     pub fn new() -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
-        let search = SearchPage::new();
+        let loading_status = Arc::new(AtomicBool::default());
+        let search = SearchPage::new(tx.clone(), loading_status.clone());
         Self {
             rx,
             tx,
             mode: Mode::default(),
             last_mode: Mode::default(),
-            loading_status: Default::default(),
+            loading_status,
             search,
             crate_info: Default::default(),
             summary_data: Default::default(),
@@ -256,9 +257,9 @@ impl App {
 
             Action::ScrollCrateInfoUp => self.crate_info.scroll_previous(),
             Action::ScrollCrateInfoDown => self.crate_info.scroll_next(),
-            Action::ReloadData => self.reload_data(),
-            Action::IncrementPage => self.increment_page(),
-            Action::DecrementPage => self.decrement_page(),
+            Action::ReloadData => self.search.reload_data(),
+            Action::IncrementPage => self.search.increment_page(),
+            Action::DecrementPage => self.search.decrement_page(),
             Action::NextSummaryMode => self.summary.next_mode(),
             Action::PreviousSummaryMode => self.summary.previous_mode(),
             Action::NextTab => self.goto_next_tab(),
@@ -273,18 +274,16 @@ impl App {
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
-            Action::UpdateSearchTableResults => self
-                .search
-                .update_search_table_results(self.search.crates.clone()),
+            Action::UpdateSearchTableResults => self.search.update_search_table_results(),
             Action::UpdateSummary => self.update_summary(),
             Action::ShowFullCrateInfo => self.show_full_crate_details(),
             Action::ShowErrorPopup(ref err) => self.show_error_popup(err.clone()),
             Action::ShowInfoPopup(ref info) => self.show_info_popup(info.clone()),
             Action::ClosePopup => self.close_popup(),
             Action::ToggleSortBy { reload, forward } => self.toggle_sort_by(reload, forward)?,
-            Action::ClearTaskDetailsHandle(ref id) => {
-                self.clear_task_details_handle(uuid::Uuid::parse_str(id)?)?
-            }
+            Action::ClearTaskDetailsHandle(ref id) => self
+                .search
+                .clear_task_details_handle(uuid::Uuid::parse_str(id)?)?,
             Action::OpenDocsUrlInBrowser => self.open_docs_url_in_browser()?,
             Action::OpenCratesIOUrlInBrowser if self.mode.is_summary() => {
                 self.open_summary_url_in_browser()?
@@ -321,8 +320,7 @@ impl App {
 
 impl App {
     fn tick(&mut self) {
-        self.search
-            .update_search_table_results(self.search.crates.clone());
+        self.search.update_search_table_results();
     }
 
     fn init(&mut self) -> Result<()> {
@@ -371,24 +369,6 @@ impl App {
             Mode::Summary => self.summary.scroll_next(),
             Mode::Help => self.help.scroll_next(),
             _ => self.search.scroll_down(),
-        }
-    }
-
-    fn increment_page(&mut self) {
-        if let Some(n) = self.search.total_num_crates {
-            let max_page_size = (n / self.search.page_size) + 1;
-            if self.search.page < max_page_size {
-                self.search.page = self.search.page.saturating_add(1).min(max_page_size);
-                self.reload_data();
-            }
-        }
-    }
-
-    fn decrement_page(&mut self) {
-        let min_page_size = 1;
-        if self.search.page > min_page_size {
-            self.search.page = self.search.page.saturating_sub(1).max(min_page_size);
-            self.reload_data();
         }
     }
 
@@ -466,7 +446,7 @@ impl App {
     }
 
     fn submit_search(&mut self) {
-        self.clear_all_previous_task_details_handles();
+        self.search.clear_all_previous_task_details_handles();
         self.switch_mode(Mode::PickerHideCrateInfo);
         self.search.filter.clear();
         self.search.search = self.search.input.value().into();
@@ -475,9 +455,9 @@ impl App {
     fn toggle_show_crate_info(&mut self) {
         self.mode.toggle_crate_info();
         if self.mode.should_show_crate_info() {
-            self.request_crate_details()
+            self.search.request_crate_details()
         } else {
-            self.clear_all_previous_task_details_handles();
+            self.search.clear_all_previous_task_details_handles();
         }
     }
 
@@ -547,13 +527,13 @@ impl App {
     }
 
     fn update_current_selection_crate_info(&mut self) {
-        self.clear_all_previous_task_details_handles();
-        self.request_crate_details();
+        self.search.clear_all_previous_task_details_handles();
+        self.search.request_crate_details();
     }
 
     fn show_full_crate_details(&mut self) {
-        self.clear_all_previous_task_details_handles();
-        self.request_full_crate_details();
+        self.search.clear_all_previous_task_details_handles();
+        self.search.request_full_crate_details();
     }
 
     fn store_total_number_of_crates(&mut self, n: u64) {
@@ -615,129 +595,6 @@ impl App {
             }
         }
         Ok(())
-    }
-
-    fn clear_task_details_handle(&mut self, id: uuid::Uuid) -> Result<()> {
-        if let Some((_, handle)) = self.search.last_task_details_handle.remove_entry(&id) {
-            handle.abort()
-        }
-        Ok(())
-    }
-
-    fn clear_all_previous_task_details_handles(&mut self) {
-        *self.search.full_crate_info.lock().unwrap() = None;
-        for (_, v) in self.search.last_task_details_handle.iter() {
-            v.abort()
-        }
-        self.search.last_task_details_handle.clear()
-    }
-
-    /// Reloads the list of crates based on the current search parameters,
-    /// updating the application state accordingly. This involves fetching
-    /// data asynchronously from the crates.io API and updating various parts of
-    /// the application state, such as the crates listing, current crate
-    /// info, and loading status.
-    fn reload_data(&mut self) {
-        self.prepare_reload();
-        let search_params = self.create_search_parameters();
-        self.request_search_results(search_params);
-    }
-
-    /// Clears current search results and resets the UI to prepare for new data.
-    fn prepare_reload(&mut self) {
-        self.search.search_results.select(None);
-        *self.search.full_crate_info.lock().unwrap() = None;
-        *self.search.crate_response.lock().unwrap() = None;
-    }
-
-    /// Creates the parameters required for the search task.
-    fn create_search_parameters(&self) -> crates_io_api_helper::SearchParameters {
-        crates_io_api_helper::SearchParameters {
-            search: self.search.search.clone(),
-            page: self.search.page.clamp(1, u64::MAX),
-            page_size: self.search.page_size,
-            crates: self.search.crates.clone(),
-            versions: self.search.versions.clone(),
-            loading_status: self.loading_status.clone(),
-            sort: self.search.sort.clone(),
-            tx: self.tx.clone(),
-        }
-    }
-
-    /// Spawns an asynchronous task to fetch crate data from crates.io.
-    fn request_search_results(&self, params: crates_io_api_helper::SearchParameters) {
-        tokio::spawn(async move {
-            params.loading_status.store(true, Ordering::SeqCst);
-            if let Err(error_message) = crates_io_api_helper::request_search_results(&params).await
-            {
-                let _ = params.tx.send(Action::ShowErrorPopup(error_message));
-            }
-            let _ = params.tx.send(Action::UpdateSearchTableResults);
-            params.loading_status.store(false, Ordering::SeqCst);
-        });
-    }
-
-    /// Spawns an asynchronous task to fetch crate details from crates.io based
-    /// on currently selected crate
-    fn request_crate_details(&mut self) {
-        if self.search.search_results.crates.is_empty() {
-            return;
-        }
-        if let Some(crate_name) = self.search.search_results.selected_crate_name() {
-            let tx = self.tx.clone();
-            let crate_response = self.search.crate_response.clone();
-            let loading_status = self.loading_status.clone();
-
-            // Spawn the async work to fetch crate details.
-            let uuid = uuid::Uuid::new_v4();
-            let last_task_details_handle = tokio::spawn(async move {
-                info!("Requesting details for {crate_name}: {uuid}");
-                loading_status.store(true, Ordering::SeqCst);
-                if let Err(error_message) =
-                    crates_io_api_helper::request_crate_details(&crate_name, crate_response).await
-                {
-                    let _ = tx.send(Action::ShowErrorPopup(error_message));
-                };
-                loading_status.store(false, Ordering::SeqCst);
-                info!("Retrieved details for {crate_name}: {uuid}");
-                let _ = tx.send(Action::ClearTaskDetailsHandle(uuid.to_string()));
-            });
-            self.search
-                .last_task_details_handle
-                .insert(uuid, last_task_details_handle);
-        }
-    }
-
-    /// Spawns an asynchronous task to fetch crate details from crates.io based
-    /// on currently selected crate
-    fn request_full_crate_details(&mut self) {
-        if self.search.search_results.crates.is_empty() {
-            return;
-        }
-        if let Some(crate_name) = self.search.search_results.selected_crate_name() {
-            let tx = self.tx.clone();
-            let full_crate_info = self.search.full_crate_info.clone();
-            let loading_status = self.loading_status.clone();
-
-            // Spawn the async work to fetch crate details.
-            let uuid = uuid::Uuid::new_v4();
-            let last_task_details_handle = tokio::spawn(async move {
-                info!("Requesting details for {crate_name}: {uuid}");
-                loading_status.store(true, Ordering::SeqCst);
-                if let Err(error_message) =
-                    crates_io_api_helper::request_full_crate_details(&crate_name, full_crate_info)
-                        .await
-                {
-                    let _ = tx.send(Action::ShowErrorPopup(error_message));
-                };
-                loading_status.store(false, Ordering::SeqCst);
-                info!("Retrieved details for {crate_name}: {uuid}");
-                let _ = tx.send(Action::ClearTaskDetailsHandle(uuid.to_string()));
-            });
-            self.search
-                .last_task_details_handle
-                .insert(uuid, last_task_details_handle);
-        }
     }
 
     fn request_summary(&self) -> Result<()> {
@@ -803,26 +660,8 @@ impl App {
         )
     }
 
-    fn selected_with_page_context(&self) -> u64 {
-        self.search.search_results.selected().map_or(0, |n| {
-            (self.search.page.saturating_sub(1) * self.search.page_size) + n as u64 + 1
-        })
-    }
-
     fn loading(&self) -> bool {
         self.loading_status.load(Ordering::SeqCst)
-    }
-
-    fn page_number_status(&self) -> String {
-        let max_page_size =
-            (self.search.total_num_crates.unwrap_or_default() / self.search.page_size) + 1;
-        format!("Page: {}/{}", self.search.page, max_page_size)
-    }
-
-    fn search_results_status(&self) -> String {
-        let selected = self.selected_with_page_context();
-        let ncrates = self.search.total_num_crates.unwrap_or_default();
-        format!("{}/{} Results", selected, ncrates)
     }
 }
 
@@ -919,15 +758,17 @@ impl App {
             &mut self.search.search_results,
         );
 
-        Line::from(self.page_number_status()).left_aligned().render(
-            main.inner(&Margin {
-                horizontal: 1,
-                vertical: 2,
-            }),
-            buf,
-        );
+        Line::from(self.search.page_number_status())
+            .left_aligned()
+            .render(
+                main.inner(&Margin {
+                    horizontal: 1,
+                    vertical: 2,
+                }),
+                buf,
+            );
 
-        Line::from(self.search_results_status())
+        Line::from(self.search.results_status())
             .right_aligned()
             .render(
                 main.inner(&Margin {

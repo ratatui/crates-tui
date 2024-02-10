@@ -15,7 +15,7 @@ pub enum SummaryMode {
     PopularCategories,
 }
 
-const HIGHLIGHT_SYMBOL: &str = "█";
+const HIGHLIGHT_SYMBOL: &str = " █ ";
 
 impl SummaryMode {
     /// Get the previous tab, if there is no previous tab return the current tab.
