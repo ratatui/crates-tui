@@ -1,6 +1,8 @@
+use crates_io_api::Crate;
 use itertools::Itertools;
 use num_format::{Locale, ToFormattedString};
 use ratatui::{prelude::*, widgets::*};
+use unicode_width::UnicodeWidthStr;
 
 use crate::config;
 
@@ -84,11 +86,13 @@ impl StatefulWidget for SearchResultsWidget {
     type State = SearchResults;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
-        let [area, scrollbar_area] =
-            Layout::horizontal([Constraint::Fill(1), Constraint::Length(1)]).areas(area);
+        use Constraint::*;
+        const TABLE_HEADER_HEIGHT: u16 = 3;
+        const COLUMN_SPACING: u16 = 3;
 
+        let [table_area, scrollbar_area] = Layout::horizontal([Fill(1), Length(1)]).areas(area);
         let [_, scrollbar_area] =
-            Layout::vertical([Constraint::Length(3), Constraint::Fill(1)]).areas(scrollbar_area);
+            Layout::vertical([Length(TABLE_HEADER_HEIGHT), Fill(1)]).areas(scrollbar_area);
 
         Scrollbar::default()
             .track_symbol(Some(" "))
@@ -98,106 +102,117 @@ impl StatefulWidget for SearchResultsWidget {
             .track_style(config::get().color.base06)
             .render(scrollbar_area, buf, &mut state.scrollbar_state);
 
-        let widths = [
-            Constraint::Length(1),
-            Constraint::Max(20),
-            Constraint::Min(0),
-            Constraint::Max(10),
-        ];
-        let (areas, spacers) =
-            Layout::horizontal(widths)
-                .spacing(1)
-                .split_with_spacers(area.inner(&Margin {
-                    horizontal: 1,
-                    vertical: 0,
-                }));
-        let description_area = areas[2];
-        let text_wrap_width = description_area.width as usize;
-
-        let selected = state.selected().unwrap_or_default();
-        let table_widget = {
-            let header = Row::new(
-                ["Name", "Description", "Downloads"]
-                    .iter()
-                    .map(|h| Text::from(vec!["".into(), Line::from(h.bold()), "".into()])),
-            )
-            .fg(config::get().color.base05)
-            .bg(config::get().color.base00)
-            .height(3);
-            let highlight_symbol = if self.highlight {
-                " █ "
-            } else {
-                " \u{2022} "
-            };
-
-            let rows = state.crates.iter().enumerate().map(|(i, item)| {
-                let mut desc = textwrap::wrap(
-                    &item.description.clone().unwrap_or_default(),
-                    text_wrap_width,
-                )
-                .iter()
-                .map(|s| Line::from(s.to_string()))
-                .collect_vec();
-                desc.insert(0, "".into());
-                let height = desc.len();
-                Row::new([
-                    Text::from(vec!["".into(), Line::from(item.name.clone()), "".into()]),
-                    Text::from(desc),
-                    Text::from(vec![
-                        "".into(),
-                        Line::from(item.downloads.to_formatted_string(&Locale::en)),
-                        "".into(),
-                    ]),
-                ])
-                .style({
-                    let s = Style::default()
-                        .fg(config::get().color.base05)
-                        .bg(match i % 2 {
-                            0 => config::get().color.base00,
-                            1 => config::get().color.base01,
-                            _ => unreachable!("Cannot reach this line"),
-                        });
-                    if i == selected {
-                        s.bg(config::get().color.base02)
-                    } else {
-                        s
-                    }
-                })
-                .height(height.saturating_add(1) as u16)
-            });
-
-            let widths = [Constraint::Max(20), Constraint::Min(0), Constraint::Max(10)];
-            Table::new(rows, widths)
-                .header(header)
-                .column_spacing(1)
-                .highlight_symbol(Text::from(vec![
-                    "".into(),
-                    highlight_symbol.into(),
-                    "".into(),
-                ]))
-                .highlight_style(config::get().color.base05)
-                .highlight_spacing(HighlightSpacing::Always)
+        let highlight_symbol = if self.highlight {
+            " █ "
+        } else {
+            " \u{2022} "
         };
 
-        StatefulWidget::render(table_widget, area, buf, &mut state.table_state);
+        let column_widths = [Max(20), Fill(1), Max(11)];
 
-        // only render margins when there's items in the table
-        if !state.crates.is_empty() {
-            // don't render margin for the first column
-            for space in spacers.iter().skip(2).copied() {
-                Text::from(
-                    std::iter::once(" ".into())
-                        .chain(std::iter::once(" ".into()))
-                        .chain(std::iter::once(" ".into()))
-                        .chain(
-                            std::iter::repeat("│".fg(config::get().color.base0f))
-                                .take(space.height as usize),
-                        )
-                        .map(Line::from)
-                        .collect_vec(),
-                )
-                .render(space, buf);
-            }
+        // Emulate the table layout calculations using Layout so we can render the vertical borders
+        // in the space between the columns and can wrap the description field based on the actual
+        // width of the description column
+        let highlight_symbol_width = highlight_symbol.width() as u16;
+        let [_highlight_column, table_columns] =
+            Layout::horizontal([Length(highlight_symbol_width), Fill(1)]).areas(table_area);
+        let column_layout = Layout::horizontal(column_widths).spacing(COLUMN_SPACING);
+        let [_name_column, description_column, _downloads_column] =
+            column_layout.areas(table_columns);
+        let spacers: [Rect; 4] = column_layout.spacers(table_columns);
+
+        let vertical_pad = |line| Text::from(vec!["".into(), line, "".into()]);
+
+        let header_cells = ["Name", "Description", "Downloads"]
+            .map(|h| h.bold().into())
+            .map(vertical_pad);
+        let header = Row::new(header_cells)
+            .fg(config::get().color.base05)
+            .bg(config::get().color.base00)
+            .height(TABLE_HEADER_HEIGHT);
+
+        let description_column_width = description_column.width as usize;
+        let selected_index = state.selected().unwrap_or_default();
+        let rows = state
+            .crates
+            .iter()
+            .enumerate()
+            .map(|(index, krate)| {
+                row_from_crate(krate, description_column_width, index, selected_index)
+            })
+            .collect_vec();
+
+        let table = Table::new(rows, column_widths)
+            .header(header)
+            .column_spacing(COLUMN_SPACING)
+            .highlight_symbol(vertical_pad(highlight_symbol.into()))
+            .highlight_style(config::get().color.base05)
+            .highlight_spacing(HighlightSpacing::Always);
+
+        StatefulWidget::render(table, table_area, buf, &mut state.table_state);
+
+        render_table_borders(state, spacers, buf);
+    }
+}
+
+fn row_from_crate(
+    krate: &Crate,
+    description_column_width: usize,
+    index: usize,
+    selected_index: usize,
+) -> Row {
+    let mut description = textwrap::wrap(
+        &krate.description.clone().unwrap_or_default(),
+        description_column_width,
+    )
+    .iter()
+    .map(|s| Line::from(s.to_string()))
+    .collect_vec();
+    description.insert(0, "".into());
+    description.push("".into());
+    let vertical_padded = |line| Text::from(vec!["".into(), line, "".into()]);
+    let crate_name = Line::from(krate.name.clone());
+    let downloads = Line::from(krate.downloads.to_formatted_string(&Locale::en)).right_aligned();
+    let description_height = description.len() as u16;
+    Row::new([
+        vertical_padded(crate_name),
+        Text::from(description),
+        vertical_padded(downloads),
+    ])
+    .height(description_height)
+    .fg(config::get().color.base05)
+    .bg(bg_color(index, selected_index))
+}
+
+fn bg_color(index: usize, selected_index: usize) -> Color {
+    if index == selected_index {
+        config::get().color.base02
+    } else {
+        match index % 2 {
+            0 => config::get().color.base00,
+            1 => config::get().color.base01,
+            _ => unreachable!("mod 2 is always 0 or 1"),
+        }
+    }
+}
+
+fn render_table_borders(state: &mut SearchResults, spacers: [Rect; 4], buf: &mut Buffer) {
+    // only render margins when there's items in the table
+    if !state.crates.is_empty() {
+        // don't render margin for the first column
+        for space in spacers.iter().skip(1).copied() {
+            Text::from(
+                std::iter::once(" ".into())
+                    .chain(std::iter::once(" ".into()))
+                    .chain(std::iter::once(" ".into()))
+                    .chain(
+                        std::iter::repeat(" │".fg(config::get().color.base0f))
+                            .take(space.height as usize),
+                    )
+                    .map(Line::from)
+                    .collect_vec(),
+            )
+            .render(space, buf);
         }
     }
 }
