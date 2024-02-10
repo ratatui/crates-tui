@@ -101,6 +101,10 @@ impl StatefulWidget for SearchResultsTableWidget {
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let [area, scrollbar_area] =
             Layout::horizontal([Constraint::Fill(1), Constraint::Length(1)]).areas(area);
+
+        let [_, scrollbar_area] =
+            Layout::vertical([Constraint::Length(3), Constraint::Fill(1)]).areas(scrollbar_area);
+
         Scrollbar::default()
             .track_symbol(Some(" "))
             .begin_symbol(None)
