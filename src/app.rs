@@ -379,14 +379,6 @@ impl App {
         Ok(())
     }
 
-    fn update_summary(&mut self) {
-        if let Some(summary) = self.summary_data.lock().unwrap().clone() {
-            self.summary.summary_data = Some(summary);
-        } else {
-            self.summary.summary_data = None;
-        }
-    }
-
     fn key_refresh_tick(&mut self) {
         self.last_tick_key_events.drain(..);
     }
@@ -820,6 +812,14 @@ impl App {
     fn update_cursor(&mut self, frame: &mut Frame<'_>) {
         if let Some(cursor_position) = self.search.cursor_position() {
             frame.set_cursor(cursor_position.x, cursor_position.y)
+        }
+    }
+
+    fn update_summary(&mut self) {
+        if let Some(summary) = self.summary_data.lock().unwrap().clone() {
+            self.summary.summary_data = Some(summary);
+        } else {
+            self.summary.summary_data = None;
         }
     }
 
