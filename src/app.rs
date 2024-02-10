@@ -36,6 +36,9 @@ use crate::{
     },
 };
 
+mod search;
+use search::Search;
+
 #[derive(
     Default, Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIs,
 )]
@@ -177,19 +180,10 @@ pub struct App {
     selected_tab: SelectedTab,
 }
 
-#[derive(Debug)]
-struct Search {
-    /// A string for the current search input by the user, submitted to
-    /// crates.io as a query
-    search: String,
-}
-
 impl App {
     pub fn new() -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
-        let search = Search {
-            search: Default::default(),
-        };
+        let search = Search::new();
         Self {
             rx,
             tx,
