@@ -21,6 +21,14 @@ It supports features like:
 cargo install crates-tui
 ```
 
+### Arch Linux
+
+`crates-tui` can be installed with an [AUR helper](https://wiki.archlinux.org/title/AUR_helpers):
+
+```sh
+paru -S crates-tui
+```
+
 ## Screenshots
 
 ### Open in browser
