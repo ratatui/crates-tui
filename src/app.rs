@@ -22,7 +22,7 @@ use crate::{
         help::{Help, HelpWidget},
         popup_message::{PopupMessageState, PopupMessageWidget},
         search_filter_prompt::SearchFilterPromptWidget,
-        search_results_table::SearchResultsTableWidget,
+        search_page::SearchPageWidget,
         summary::{Summary, SummaryWidget},
         tabs::SelectedTab,
     },
@@ -658,31 +658,7 @@ impl App {
         let [main, prompt] =
             Layout::vertical([Constraint::Min(0), Constraint::Length(prompt_height)]).areas(area);
 
-        SearchResultsTableWidget::new(self.search.is_focused()).render(
-            main,
-            buf,
-            &mut self.search.results,
-        );
-
-        Line::from(self.search.page_number_status())
-            .left_aligned()
-            .render(
-                main.inner(&Margin {
-                    horizontal: 1,
-                    vertical: 2,
-                }),
-                buf,
-            );
-
-        Line::from(self.search.results_status())
-            .right_aligned()
-            .render(
-                main.inner(&Margin {
-                    horizontal: 1,
-                    vertical: 2,
-                }),
-                buf,
-            );
+        SearchPageWidget::new(self.mode).render(main, buf, &mut self.search);
 
         self.render_prompt(prompt, buf);
     }

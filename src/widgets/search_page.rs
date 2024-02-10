@@ -11,15 +11,19 @@ use tracing::info;
 
 use crossterm::event::{Event as CrosstermEvent, KeyEvent};
 use itertools::Itertools;
-use ratatui::layout::Position;
+use ratatui::prelude::*;
+use ratatui::{layout::Position, widgets::StatefulWidget};
 use tokio::{sync::mpsc::UnboundedSender, task::JoinHandle};
 use tui_input::{backend::crossterm::EventHandler, Input};
 
 use crate::{
     action::Action,
+    app::Mode,
     crates_io_api_helper,
     widgets::{search_filter_prompt::SearchFilterPrompt, search_results_table::SearchResultsTable},
 };
+
+use super::search_results_table::SearchResultsTableWidget;
 
 #[derive(Debug)]
 pub struct SearchPage {
@@ -419,5 +423,46 @@ impl SearchPage {
             self.tx.send(Action::ReloadData)?;
         }
         Ok(())
+    }
+}
+
+pub struct SearchPageWidget {
+    pub mode: Mode,
+}
+
+impl SearchPageWidget {
+    pub fn new(mode: Mode) -> Self {
+        Self { mode }
+    }
+}
+
+impl StatefulWidget for SearchPageWidget {
+    type State = SearchPage;
+
+    fn render(
+        self,
+        area: ratatui::prelude::Rect,
+        buf: &mut ratatui::prelude::Buffer,
+        state: &mut Self::State,
+    ) {
+        SearchResultsTableWidget::new(state.is_focused()).render(area, buf, &mut state.results);
+
+        Line::from(state.page_number_status())
+            .left_aligned()
+            .render(
+                area.inner(&Margin {
+                    horizontal: 1,
+                    vertical: 2,
+                }),
+                buf,
+            );
+
+        Line::from(state.results_status()).right_aligned().render(
+            area.inner(&Margin {
+                horizontal: 1,
+                vertical: 2,
+            }),
+            buf,
+        );
     }
 }
