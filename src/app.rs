@@ -36,6 +36,9 @@ use crate::{
 
 mod search_page;
 use search_page::SearchPage;
+mod search_prompt;
+// TODO switch to use search_prompt::SearchPrompt
+use search_prompt::*;
 
 use self::search_page::SearchMode;
 

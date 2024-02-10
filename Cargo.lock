@@ -516,7 +516,7 @@ dependencies = [
  "libc",
  "num-format",
  "pretty_assertions",
- "ratatui 0.26.0",
+ "ratatui 0.26.1-alpha.1",
  "ratatui-macros",
  "serde",
  "serde_with",
@@ -1821,9 +1821,9 @@ dependencies = [
 
 [[package]]
 name = "ratatui"
-version = "0.26.0"
+version = "0.26.1-alpha.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "154b85ef15a5d1719bcaa193c3c81fe645cd120c156874cd660fe49fd21d1373"
+checksum = "5cfa59531a59983ab60e4433f1db8bf85751e0b6dfca30f7a3863b45049340dc"
 dependencies = [
  "bitflags 2.4.2",
  "cassowary",
