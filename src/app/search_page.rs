@@ -2,9 +2,13 @@ use std::sync::{Arc, Mutex};
 
 use crossterm::event::{Event as CrosstermEvent, KeyEvent};
 use itertools::Itertools;
+use ratatui::layout::Position;
 use tui_input::{backend::crossterm::EventHandler, Input};
 
-use crate::{action::Action, widgets::search_results_table::SearchResultsTable};
+use crate::{
+    action::Action,
+    widgets::{search_filter_prompt::SearchFilterPrompt, search_results_table::SearchResultsTable},
+};
 
 #[derive(Debug)]
 pub struct SearchPage {
@@ -23,6 +27,10 @@ pub struct SearchPage {
     /// An input handler component for managing raw user input into textual
     /// form.
     pub input: tui_input::Input,
+
+    /// A prompt displaying the current search or filter query, if any, that the
+    /// user can interact with.
+    pub prompt: SearchFilterPrompt,
 }
 
 impl SearchPage {
@@ -32,6 +40,7 @@ impl SearchPage {
             filter: String::new(),
             search_results: SearchResultsTable::default(),
             input: Input::default(),
+            prompt: SearchFilterPrompt::default(),
         }
     }
 
@@ -86,5 +95,9 @@ impl SearchPage {
     pub fn handle_filter_prompt_change(&mut self) {
         self.filter = self.input.value().into();
         self.search_results.select(None);
+    }
+
+    pub fn cursor_position(&self) -> Option<Position> {
+        self.prompt.cursor_position()
     }
 }

@@ -27,7 +27,7 @@ use crate::{
         crate_info_table::{CrateInfo, CrateInfoTableWidget},
         help::{Help, HelpWidget},
         popup_message::{PopupMessageState, PopupMessageWidget},
-        search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
+        search_filter_prompt::SearchFilterPromptWidget,
         search_results_table::SearchResultsTableWidget,
         summary::{Summary, SummaryWidget},
         tabs::SelectedTab,
@@ -150,10 +150,6 @@ pub struct App {
     /// and commands are interpreted.
     last_mode: Mode,
 
-    /// A prompt displaying the current search or filter query, if any, that the
-    /// user can interact with.
-    prompt: SearchFilterPrompt,
-
     /// A list of key events that have been held since the last tick, useful for
     /// interpreting sequences of key presses.
     last_tick_key_events: Vec<KeyEvent>,
@@ -190,7 +186,6 @@ impl App {
             last_task_details_handle: Default::default(),
             total_num_crates: Default::default(),
             popup: Default::default(),
-            prompt: Default::default(),
             last_tick_key_events: Default::default(),
             frame_count: Default::default(),
             help: Default::default(),
@@ -806,7 +801,7 @@ impl App {
 
     // Sets cursor for the prompt
     fn update_cursor(&mut self, frame: &mut Frame<'_>) {
-        if let Some(cursor_position) = self.prompt.cursor_position() {
+        if let Some(cursor_position) = self.search.cursor_position() {
             frame.set_cursor(cursor_position.x, cursor_position.y)
         }
     }
@@ -964,7 +959,7 @@ impl StatefulWidget for AppWidget {
         state.events_widget().render(events, buf);
 
         let p = SearchFilterPromptWidget::new(state.mode, state.sort.clone(), &state.search.input);
-        p.render(prompt, buf, &mut state.prompt);
+        p.render(prompt, buf, &mut state.search.prompt);
 
         state.render_main(table, buf, state.mode);
 
