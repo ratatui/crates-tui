@@ -15,7 +15,6 @@ pub mod keybindings {
     impl KeyBindings {
         pub fn command_to_action(&self, command: Command) -> Action {
             match command {
-                Command::Ignore => Action::Ignore,
                 Command::Quit => Action::Quit,
                 Command::NextTab => Action::NextTab,
                 Command::PreviousTab => Action::PreviousTab,
