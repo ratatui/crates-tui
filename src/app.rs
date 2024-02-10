@@ -141,10 +141,6 @@ pub struct App {
 
     search: Search,
 
-    /// A string for the current filter input by the user, used only locally
-    /// for filtering for the list of crates in the current view.
-    filter: String,
-
     /// An input handler component for managing raw user input into textual
     /// form.
     input: tui_input::Input,
@@ -194,7 +190,6 @@ impl App {
             last_mode: Mode::default(),
             loading_status: Default::default(),
             search,
-            filter: Default::default(),
             crates: Default::default(),
             versions: Default::default(),
             full_crate_info: Default::default(),
@@ -411,7 +406,7 @@ impl App {
         self.search_results
             .content_length(self.search_results.crates.len());
 
-        let filter = self.filter.clone();
+        let filter = self.search.filter.clone();
         let filter_words = filter.split_whitespace().collect::<Vec<_>>();
 
         let crates: Vec<_> = self
@@ -501,7 +496,7 @@ impl App {
         self.input = self.input.clone().with_value(if self.mode.is_search() {
             self.search.search.clone()
         } else if self.mode.is_filter() {
-            self.filter.clone()
+            self.search.filter.clone()
         } else {
             unreachable!("Cannot enter insert mode when mode is {:?}", self.mode)
         });
@@ -551,14 +546,14 @@ impl App {
     }
 
     fn handle_filter_prompt_change(&mut self) {
-        self.filter = self.input.value().into();
+        self.search.filter = self.input.value().into();
         self.search_results.select(None);
     }
 
     fn submit_search(&mut self) {
         self.clear_all_previous_task_details_handles();
         self.switch_mode(Mode::PickerHideCrateInfo);
-        self.filter.clear();
+        self.search.filter.clear();
         self.search.search = self.input.value().into();
     }
 
