@@ -73,17 +73,6 @@ pub struct App {
     /// allowing different parts of the app to know if it's in a loading state.
     loading_status: Arc<AtomicBool>,
 
-    /// contains list state for summary
-    summary: Summary,
-
-    /// contains table state for info popup
-    crate_info: CrateInfo,
-
-    search: SearchPage,
-
-    /// A popupt to show info / error messages
-    popup: Option<(PopupMessageWidget, PopupMessageState)>,
-
     /// The active mode of the application, which could change how user inputs
     /// and commands are interpreted.
     mode: Mode,
@@ -99,8 +88,11 @@ pub struct App {
     /// frame counter
     frame_count: usize,
 
+    summary: Summary,
+    crate_info: CrateInfo,
+    search: SearchPage,
+    popup: Option<(PopupMessageWidget, PopupMessageState)>,
     help: Help,
-
     selected_tab: SelectedTab,
 }
 
