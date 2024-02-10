@@ -92,6 +92,7 @@ impl StatefulWidget for SearchResultsWidget {
 
         Scrollbar::default()
             .track_symbol(Some(" "))
+            .thumb_symbol("▐")
             .begin_symbol(None)
             .end_symbol(None)
             .track_style(config::get().color.base06)
