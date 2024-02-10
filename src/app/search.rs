@@ -1,6 +1,8 @@
 use std::sync::{Arc, Mutex};
 
+use crossterm::event::{Event as CrosstermEvent, KeyEvent};
 use itertools::Itertools;
+use tui_input::{backend::crossterm::EventHandler, Input};
 
 use crate::{action::Action, widgets::search_results_table::SearchResultsTable};
 
@@ -17,6 +19,10 @@ pub struct Search {
     /// A table component designed to handle the listing and selection of crates
     /// within the terminal UI.
     pub search_results: SearchResultsTable,
+
+    /// An input handler component for managing raw user input into textual
+    /// form.
+    pub input: tui_input::Input,
 }
 
 impl Search {
@@ -24,7 +30,8 @@ impl Search {
         Self {
             search: String::new(),
             filter: String::new(),
-            search_results: Default::default(),
+            search_results: SearchResultsTable::default(),
+            input: Input::default(),
         }
     }
 
@@ -70,5 +77,14 @@ impl Search {
 
     pub fn scroll_down(&mut self) {
         self.search_results.scroll_next(1);
+    }
+
+    pub fn handle_key(&mut self, key: KeyEvent) {
+        self.input.handle_event(&CrosstermEvent::Key(key));
+    }
+
+    pub fn handle_filter_prompt_change(&mut self) {
+        self.filter = self.input.value().into();
+        self.search_results.select(None);
     }
 }

@@ -16,7 +16,6 @@ use tokio::{
     task::JoinHandle,
 };
 use tracing::{debug, error, info};
-use tui_input::backend::crossterm::EventHandler;
 
 use crate::{
     action::Action,
@@ -140,10 +139,6 @@ pub struct App {
 
     search: Search,
 
-    /// An input handler component for managing raw user input into textual
-    /// form.
-    input: tui_input::Input,
-
     /// A popupt to show info / error messages
     popup: Option<(PopupMessageWidget, PopupMessageState)>,
 
@@ -194,7 +189,6 @@ impl App {
             summary: Default::default(),
             last_task_details_handle: Default::default(),
             total_num_crates: Default::default(),
-            input: Default::default(),
             popup: Default::default(),
             prompt: Default::default(),
             last_tick_key_events: Default::default(),
@@ -255,10 +249,10 @@ impl App {
     fn forward_key_events(&mut self, key: KeyEvent) -> Result<()> {
         match self.mode {
             Mode::Search => {
-                self.input.handle_event(&crossterm::event::Event::Key(key));
+                self.search.handle_key(key);
             }
             Mode::Filter => {
-                self.input.handle_event(&crossterm::event::Event::Key(key));
+                self.search.handle_key(key);
                 self.tx.send(Action::HandleFilterPromptChange)?
             }
             _ => (),
@@ -332,7 +326,7 @@ impl App {
             Action::SwitchMode(Mode::PickerShowCrateInfo) => self.enter_normal_mode(),
             Action::SwitchMode(mode) => self.switch_mode(mode),
             Action::SwitchToLastMode => self.switch_to_last_mode(),
-            Action::HandleFilterPromptChange => self.handle_filter_prompt_change(),
+            Action::HandleFilterPromptChange => self.search.handle_filter_prompt_change(),
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
@@ -464,13 +458,17 @@ impl App {
 
     fn enter_insert_mode(&mut self, mode: Mode) {
         self.switch_mode(mode);
-        self.input = self.input.clone().with_value(if self.mode.is_search() {
-            self.search.search.clone()
-        } else if self.mode.is_filter() {
-            self.search.filter.clone()
-        } else {
-            unreachable!("Cannot enter insert mode when mode is {:?}", self.mode)
-        });
+        self.search.input = self
+            .search
+            .input
+            .clone()
+            .with_value(if self.mode.is_search() {
+                self.search.search.clone()
+            } else if self.mode.is_filter() {
+                self.search.filter.clone()
+            } else {
+                unreachable!("Cannot enter insert mode when mode is {:?}", self.mode)
+            });
     }
 
     fn enter_normal_mode(&mut self) {
@@ -518,16 +516,11 @@ impl App {
         }
     }
 
-    fn handle_filter_prompt_change(&mut self) {
-        self.search.filter = self.input.value().into();
-        self.search.search_results.select(None);
-    }
-
     fn submit_search(&mut self) {
         self.clear_all_previous_task_details_handles();
         self.switch_mode(Mode::PickerHideCrateInfo);
         self.search.filter.clear();
-        self.search.search = self.input.value().into();
+        self.search.search = self.search.input.value().into();
     }
 
     fn toggle_show_crate_info(&mut self) {
@@ -977,7 +970,7 @@ impl StatefulWidget for AppWidget {
         state.render_tabs(tabs, buf);
         state.events_widget().render(events, buf);
 
-        let p = SearchFilterPromptWidget::new(state.mode, state.sort.clone(), &state.input);
+        let p = SearchFilterPromptWidget::new(state.mode, state.sort.clone(), &state.search.input);
         p.render(prompt, buf, &mut state.prompt);
 
         state.render_main(table, buf, state.mode);
