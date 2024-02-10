@@ -51,6 +51,10 @@ impl Mode {
     pub fn is_prompt(&self) -> bool {
         self.is_search() || self.is_filter()
     }
+
+    pub fn is_picker(&self) -> bool {
+        self.is_picker_hide_crate_info() || self.is_picker_show_crate_info()
+    }
 }
 
 struct AppWidget;
@@ -351,6 +355,7 @@ impl App {
     fn switch_mode(&mut self, mode: Mode) {
         self.last_mode = self.mode;
         self.mode = mode;
+        self.search.mode = mode;
         match self.mode {
             Mode::Search => {
                 self.selected_tab.select(SelectedTab::Search);
@@ -402,8 +407,7 @@ impl App {
             PopupMessageWidget::new("Error".into(), message),
             PopupMessageState::default(),
         ));
-        self.last_mode = self.mode;
-        self.mode = Mode::Popup;
+        self.switch_mode(Mode::Popup);
     }
 
     fn show_info_popup(&mut self, info: String) {
@@ -412,8 +416,7 @@ impl App {
             PopupMessageWidget::new("Info".into(), info),
             PopupMessageState::default(),
         ));
-        self.last_mode = self.mode;
-        self.mode = Mode::Popup;
+        self.switch_mode(Mode::Popup);
     }
 
     fn close_popup(&mut self) {
@@ -649,17 +652,22 @@ impl App {
     }
 
     fn render_search(&mut self, area: Rect, buf: &mut Buffer) {
-        let prompt_height = if self.mode.is_prompt() && self.search.is_focused() {
+        let prompt_height = if self.mode.is_prompt() && self.search.is_prompt() {
             5
         } else {
-            1
+            0
         };
-        let [main, prompt] =
-            Layout::vertical([Constraint::Min(0), Constraint::Length(prompt_height)]).areas(area);
+        let [main, prompt, status_bar] = Layout::vertical([
+            Constraint::Min(0),
+            Constraint::Length(prompt_height),
+            Constraint::Length(1),
+        ])
+        .areas(area);
 
         SearchPageWidget::new(self.mode).render(main, buf, &mut self.search);
 
         self.render_prompt(prompt, buf);
+        self.render_status_bar(status_bar, buf);
     }
 
     fn render_prompt(&mut self, area: Rect, buf: &mut Buffer) {
@@ -667,13 +675,17 @@ impl App {
             self.mode,
             self.search.sort.clone(),
             &self.search.input,
-            self.search.mode,
+            self.search.search_mode,
         );
         p.render(area, buf, &mut self.search.prompt);
     }
 
     fn render_status_bar(&mut self, area: Rect, buf: &mut Buffer) {
-        let s = StatusBarWidget::new(self.mode);
+        let s = StatusBarWidget::new(
+            self.mode,
+            self.search.sort.clone(),
+            self.search.input.value().to_string(),
+        );
         s.render(area, buf);
     }
 

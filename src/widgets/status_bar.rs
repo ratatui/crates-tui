@@ -3,27 +3,78 @@ use ratatui::{prelude::*, widgets::*};
 use crate::{app::Mode, command::Command, config};
 
 pub struct StatusBarWidget {
+    text: String,
     mode: Mode,
+    sort: crates_io_api::Sort,
 }
 
 impl StatusBarWidget {
-    pub fn new(mode: Mode) -> Self {
-        Self { mode }
+    pub fn new(mode: Mode, sort: crates_io_api::Sort, text: String) -> Self {
+        Self { text, mode, sort }
     }
 }
 
 impl Widget for StatusBarWidget {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        self.input_block().render(area, buf);
+        self.status().render(area, buf);
     }
 }
 
 impl StatusBarWidget {
-    fn input_block(&self) -> Block {
+    fn input_text(&self) -> Line {
+        if self.mode.is_picker() {
+            Line::from(vec![
+                self.text.clone().into(),
+                " (".into(),
+                format!("{:?}", self.sort.clone()).fg(config::get().color.base0d),
+                ")".into(),
+            ])
+        } else {
+            "".into()
+        }
+    }
+
+    fn status(&self) -> Block {
         let line = if self.mode.is_filter() {
-            vec!["Filter: ".into(), "Enter".bold(), " to submit".into()]
+            let help = config::get()
+                .key_bindings
+                .get_config_for_command(self.mode, Command::SwitchMode(Mode::Help))
+                .into_iter()
+                .next()
+                .unwrap_or_default();
+            vec![
+                "Enter".bold(),
+                " to submit, ".into(),
+                help.bold(),
+                " for help".into(),
+            ]
         } else if self.mode.is_search() {
-            vec!["Search: ".into(), "Enter".bold(), " to submit".into()]
+            let toggle_sort = config::get()
+                .key_bindings
+                .get_config_for_command(
+                    Mode::Search,
+                    Command::ToggleSortBy {
+                        reload: false,
+                        forward: true,
+                    },
+                )
+                .into_iter()
+                .next()
+                .unwrap_or_default();
+            let help = config::get()
+                .key_bindings
+                .get_config_for_command(self.mode, Command::SwitchMode(Mode::Help))
+                .into_iter()
+                .next()
+                .unwrap_or_default();
+            vec![
+                toggle_sort.bold(),
+                " to toggle sort, ".into(),
+                "Enter".bold(),
+                " to submit, ".into(),
+                help.bold(),
+                " for help".into(),
+            ]
         } else if self.mode.is_summary() {
             let help = config::get()
                 .key_bindings
@@ -81,50 +132,15 @@ impl StatusBarWidget {
                 " for help".into(),
             ]
         };
-        let borders = Borders::NONE;
-        let alignment = Alignment::Right;
         let border_color = match self.mode {
             Mode::Search => config::get().color.base0a,
             Mode::Filter => config::get().color.base0b,
             _ => config::get().color.base06,
         };
-        let input_block = Block::default()
-            .borders(borders)
-            .title(block::Title::from(Line::from(line)).alignment(alignment))
+        Block::default()
+            .title(block::Title::from(Line::from(line)).alignment(Alignment::Right))
+            .title(block::Title::from(self.input_text()).alignment(Alignment::Left))
             .fg(config::get().color.base05)
-            .border_style(border_color);
-        if self.mode.is_search() {
-            let help = config::get()
-                .key_bindings
-                .get_config_for_command(self.mode, Command::SwitchMode(Mode::Help))
-                .into_iter()
-                .next()
-                .unwrap_or_default();
-            let toggle_sort = config::get()
-                .key_bindings
-                .get_config_for_command(
-                    Mode::Search,
-                    Command::ToggleSortBy {
-                        reload: false,
-                        forward: true,
-                    },
-                )
-                .into_iter()
-                .next()
-                .unwrap_or_default();
-            input_block
-                .title(Line::from(vec![
-                    toggle_sort.bold(),
-                    " to toggle sort".into(),
-                ]))
-                .title_alignment(Alignment::Right)
-                .title(
-                    block::Title::from(Line::from(vec![help.bold(), " for help".into()]))
-                        .position(block::Position::Bottom)
-                        .alignment(Alignment::Right),
-                )
-        } else {
-            input_block
-        }
+            .border_style(border_color)
     }
 }

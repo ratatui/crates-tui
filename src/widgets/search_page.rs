@@ -27,7 +27,8 @@ use super::search_results_table::SearchResultsTableWidget;
 
 #[derive(Debug)]
 pub struct SearchPage {
-    pub mode: SearchMode,
+    pub mode: Mode,
+    pub search_mode: SearchMode,
 
     /// A string for the current search input by the user, submitted to
     /// crates.io as a query
@@ -122,6 +123,7 @@ impl SearchPage {
     pub fn new(tx: UnboundedSender<Action>, loading_status: Arc<AtomicBool>) -> Self {
         Self {
             mode: Default::default(),
+            search_mode: Default::default(),
             search: String::new(),
             filter: String::new(),
             results: SearchResultsTable::default(),
@@ -223,8 +225,8 @@ impl SearchPage {
         Ok(())
     }
 
-    pub fn is_focused(&self) -> bool {
-        self.mode.is_focused()
+    pub fn is_prompt(&self) -> bool {
+        self.search_mode.is_focused()
     }
 
     pub fn clear_all_previous_task_details_handles(&mut self) {
@@ -366,25 +368,25 @@ impl SearchPage {
     }
 
     pub fn enter_normal_mode(&mut self) {
-        self.mode = SearchMode::ResultsHideCrate;
+        self.search_mode = SearchMode::ResultsHideCrate;
         if !self.results.crates.is_empty() && self.results.selected().is_none() {
             self.results.select(Some(0))
         }
     }
 
     pub fn enter_filter_insert_mode(&mut self) {
-        self.mode = SearchMode::Filter;
+        self.search_mode = SearchMode::Filter;
         self.input = self.input.clone().with_value(self.filter.clone());
     }
 
     pub fn enter_search_insert_mode(&mut self) {
-        self.mode = SearchMode::Search;
+        self.search_mode = SearchMode::Search;
         self.input = self.input.clone().with_value(self.search.clone());
     }
 
     pub fn toggle_show_crate_info(&mut self) {
-        self.mode.toggle_show_crate_info();
-        if self.mode.should_show_crate_info() {
+        self.search_mode.toggle_show_crate_info();
+        if self.search_mode.should_show_crate_info() {
             self.request_crate_details()
         } else {
             self.clear_all_previous_task_details_handles();
@@ -426,6 +428,10 @@ impl SearchPage {
         }
         Ok(())
     }
+
+    fn is_focused(&self) -> bool {
+        self.mode.is_picker()
+    }
 }
 
 pub struct SearchPageWidget {
@@ -447,7 +453,11 @@ impl StatefulWidget for SearchPageWidget {
         buf: &mut ratatui::prelude::Buffer,
         state: &mut Self::State,
     ) {
-        SearchResultsTableWidget::new(state.is_focused()).render(area, buf, &mut state.results);
+        SearchResultsTableWidget::new(!state.is_prompt() && state.is_focused()).render(
+            area,
+            buf,
+            &mut state.results,
+        );
 
         Line::from(state.page_number_status())
             .left_aligned()
