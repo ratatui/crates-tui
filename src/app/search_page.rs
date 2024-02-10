@@ -12,6 +12,8 @@ use crate::{
 
 #[derive(Debug)]
 pub struct SearchPage {
+    pub search_mode: SearchMode,
+
     /// A string for the current search input by the user, submitted to
     /// crates.io as a query
     pub search: String,
@@ -33,9 +35,18 @@ pub struct SearchPage {
     pub prompt: SearchFilterPrompt,
 }
 
+#[derive(Debug)]
+pub enum SearchMode {
+    Search,
+    Filter,
+    ResultsHideCrate,
+    ResultsShowCrate,
+}
+
 impl SearchPage {
     pub fn new() -> Self {
         Self {
+            search_mode: SearchMode::Search,
             search: String::new(),
             filter: String::new(),
             search_results: SearchResultsTable::default(),

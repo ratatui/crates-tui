@@ -37,6 +37,8 @@ use crate::{
 mod search_page;
 use search_page::SearchPage;
 
+use self::search_page::SearchMode;
+
 #[derive(
     Default, Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIs,
 )]
@@ -472,8 +474,21 @@ impl App {
         self.last_mode = self.mode;
         self.mode = mode;
         match self.mode {
-            Mode::Search | Mode::Filter | Mode::PickerHideCrateInfo | Mode::PickerShowCrateInfo => {
-                self.selected_tab.select(SelectedTab::Search)
+            Mode::Search => {
+                self.selected_tab.select(SelectedTab::Search);
+                self.search.search_mode = SearchMode::Search;
+            }
+            Mode::Filter => {
+                self.selected_tab.select(SelectedTab::Search);
+                self.search.search_mode = SearchMode::Filter;
+            }
+            Mode::PickerHideCrateInfo => {
+                self.selected_tab.select(SelectedTab::Search);
+                self.search.search_mode = SearchMode::ResultsHideCrate;
+            }
+            Mode::PickerShowCrateInfo => {
+                self.selected_tab.select(SelectedTab::Search);
+                self.search.search_mode = SearchMode::ResultsShowCrate;
             }
             Mode::Summary => self.selected_tab.select(SelectedTab::Summary),
             Mode::Help => {
@@ -578,10 +593,10 @@ impl App {
 
     fn close_popup(&mut self) {
         self.popup = None;
-        self.mode = if self.last_mode.is_popup() {
-            Mode::Search
+        if self.last_mode.is_popup() {
+            self.switch_mode(Mode::Search);
         } else {
-            self.last_mode
+            self.switch_mode(self.last_mode);
         }
     }
 
@@ -593,7 +608,6 @@ impl App {
     fn show_full_crate_details(&mut self) {
         self.clear_all_previous_task_details_handles();
         self.request_full_crate_details();
-        // self.mode = Mode::FullCrateDetails;
     }
 
     fn store_total_number_of_crates(&mut self, n: u64) {
