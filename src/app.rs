@@ -233,31 +233,25 @@ impl App {
             Event::KeyRefresh => Some(Action::KeyRefresh),
             Event::Render => Some(Action::Render),
             Event::Resize(x, y) => Some(Action::Resize(x, y)),
-            Event::Key(key) => {
-                debug!("Received key {:?}", key);
-                self.forward_key_events(key)?;
-                self.handle_key_events_from_config(key)
-            }
+            Event::Key(key) => self.handle_key_event(key)?,
             _ => None,
         };
         Ok(maybe_action)
     }
 
-    /// Processes key events depending on the current mode
-    ///
-    /// This function forwards events to input prompt handler
-    fn forward_key_events(&mut self, key: KeyEvent) -> Result<()> {
+    fn handle_key_event(&mut self, key: KeyEvent) -> Result<Option<Action>> {
+        debug!("Received key {:?}", key);
         match self.mode {
             Mode::Search => {
                 self.search.handle_key(key);
             }
             Mode::Filter => {
                 self.search.handle_key(key);
-                self.tx.send(Action::HandleFilterPromptChange)?
+                self.search.handle_filter_prompt_change();
             }
             _ => (),
         };
-        Ok(())
+        Ok(self.handle_key_events_from_config(key))
     }
 
     /// Evaluates a sequence of key events against user-configured key bindings
