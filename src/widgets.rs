@@ -5,5 +5,6 @@ pub mod search_filter_prompt;
 pub mod search_page;
 pub mod search_prompt;
 pub mod search_results_table;
+pub mod status_bar;
 pub mod summary;
 pub mod tabs;

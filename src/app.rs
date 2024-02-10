@@ -22,14 +22,13 @@ use crate::{
         help::{Help, HelpWidget},
         popup_message::{PopupMessageState, PopupMessageWidget},
         search_filter_prompt::SearchFilterPromptWidget,
+        search_page::SearchPage,
         search_page::SearchPageWidget,
+        status_bar::StatusBarWidget,
         summary::{Summary, SummaryWidget},
         tabs::SelectedTab,
     },
 };
-
-use crate::widgets::search_page::SearchMode;
-use crate::widgets::search_page::SearchPage;
 
 #[derive(
     Default, Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIs,
@@ -355,13 +354,11 @@ impl App {
         match self.mode {
             Mode::Search => {
                 self.selected_tab.select(SelectedTab::Search);
-                self.search.mode = SearchMode::Search;
-                self.search.enter_insert_mode();
+                self.search.enter_search_insert_mode();
             }
             Mode::Filter => {
                 self.selected_tab.select(SelectedTab::Search);
-                self.search.mode = SearchMode::Filter;
-                self.search.enter_insert_mode();
+                self.search.enter_filter_insert_mode();
             }
             Mode::Summary => {
                 self.search.enter_normal_mode();
@@ -522,8 +519,10 @@ impl App {
 
     // Sets cursor for the prompt
     fn update_cursor(&mut self, frame: &mut Frame<'_>) {
-        if let Some(cursor_position) = self.search.cursor_position() {
-            frame.set_cursor(cursor_position.x, cursor_position.y)
+        if self.mode.is_prompt() {
+            if let Some(cursor_position) = self.search.cursor_position() {
+                frame.set_cursor(cursor_position.x, cursor_position.y)
+            }
         }
     }
 
@@ -636,17 +635,17 @@ impl App {
     }
 
     fn render_summary(&mut self, area: Rect, buf: &mut Buffer) {
-        let [main, prompt] =
+        let [main, status_bar] =
             Layout::vertical([Constraint::Fill(0), Constraint::Length(1)]).areas(area);
         SummaryWidget.render(main, buf, &mut self.summary);
-        self.render_prompt(prompt, buf);
+        self.render_status_bar(status_bar, buf);
     }
 
     fn render_help(&mut self, area: Rect, buf: &mut Buffer) {
-        let [main, prompt] =
+        let [main, status_bar] =
             Layout::vertical([Constraint::Fill(0), Constraint::Length(1)]).areas(area);
         HelpWidget.render(main, buf, &mut self.help);
-        self.render_prompt(prompt, buf);
+        self.render_status_bar(status_bar, buf);
     }
 
     fn render_search(&mut self, area: Rect, buf: &mut Buffer) {
@@ -671,6 +670,11 @@ impl App {
             self.search.mode,
         );
         p.render(area, buf, &mut self.search.prompt);
+    }
+
+    fn render_status_bar(&mut self, area: Rect, buf: &mut Buffer) {
+        let s = StatusBarWidget::new(self.mode);
+        s.render(area, buf);
     }
 
     fn spinner(&self) -> String {

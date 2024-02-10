@@ -239,6 +239,7 @@ impl SearchPage {
         self.clear_all_previous_task_details_handles();
         self.filter.clear();
         self.search = self.input.value().into();
+        let _ = self.tx.send(Action::SwitchMode(Mode::PickerHideCrateInfo));
     }
 
     /// Reloads the list of crates based on the current search parameters,
@@ -365,19 +366,20 @@ impl SearchPage {
     }
 
     pub fn enter_normal_mode(&mut self) {
+        self.mode = SearchMode::ResultsHideCrate;
         if !self.results.crates.is_empty() && self.results.selected().is_none() {
             self.results.select(Some(0))
         }
     }
 
-    pub fn enter_insert_mode(&mut self) {
-        self.input = self.input.clone().with_value(if self.mode.is_search() {
-            self.search.clone()
-        } else if self.mode.is_filter() {
-            self.filter.clone()
-        } else {
-            unreachable!("Cannot enter insert mode when mode is {:?}", self.mode)
-        });
+    pub fn enter_filter_insert_mode(&mut self) {
+        self.mode = SearchMode::Filter;
+        self.input = self.input.clone().with_value(self.filter.clone());
+    }
+
+    pub fn enter_search_insert_mode(&mut self) {
+        self.mode = SearchMode::Search;
+        self.input = self.input.clone().with_value(self.search.clone());
     }
 
     pub fn toggle_show_crate_info(&mut self) {
