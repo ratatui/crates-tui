@@ -8,7 +8,6 @@ use std::{
 
 use color_eyre::eyre::Result;
 use crossterm::event::KeyEvent;
-use itertools::Itertools;
 use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIs};
@@ -30,7 +29,7 @@ use crate::{
         help::{Help, HelpWidget},
         popup_message::{PopupMessageState, PopupMessageWidget},
         search_filter_prompt::{SearchFilterPrompt, SearchFilterPromptWidget},
-        search_results_table::{SearchResultsTable, SearchResultsTableWidget},
+        search_results_table::SearchResultsTableWidget,
         summary::{Summary, SummaryWidget},
         tabs::SelectedTab,
     },
@@ -145,10 +144,6 @@ pub struct App {
     /// form.
     input: tui_input::Input,
 
-    /// A table component designed to handle the listing and selection of crates
-    /// within the terminal UI.
-    search_results: SearchResultsTable,
-
     /// A popupt to show info / error messages
     popup: Option<(PopupMessageWidget, PopupMessageState)>,
 
@@ -200,7 +195,6 @@ impl App {
             last_task_details_handle: Default::default(),
             total_num_crates: Default::default(),
             input: Default::default(),
-            search_results: Default::default(),
             popup: Default::default(),
             prompt: Default::default(),
             last_tick_key_events: Default::default(),
@@ -316,12 +310,14 @@ impl App {
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
             Action::ScrollUp => self.scroll_up(),
             Action::ScrollDown => self.scroll_down(),
-            Action::ScrollTop => self.search_results.scroll_to_top(),
-            Action::ScrollBottom => self.search_results.scroll_to_bottom(),
+
+            Action::ScrollTop
+            | Action::ScrollBottom
+            | Action::ScrollSearchResultsUp
+            | Action::ScrollSearchResultsDown => self.search.handle_action(action.clone()),
+
             Action::ScrollCrateInfoUp => self.crate_info.scroll_previous(),
             Action::ScrollCrateInfoDown => self.crate_info.scroll_next(),
-            Action::ScrollSearchResultsUp => self.search_results.scroll_previous(1),
-            Action::ScrollSearchResultsDown => self.search_results.scroll_next(1),
             Action::ReloadData => self.reload_data(),
             Action::IncrementPage => self.increment_page(),
             Action::DecrementPage => self.decrement_page(),
@@ -340,7 +336,9 @@ impl App {
             Action::SubmitSearch => self.submit_search(),
             Action::ToggleShowCrateInfo => self.toggle_show_crate_info(),
             Action::UpdateCurrentSelectionCrateInfo => self.update_current_selection_crate_info(),
-            Action::UpdateSearchTableResults => self.update_search_table_results(),
+            Action::UpdateSearchTableResults => {
+                self.search.update_search_table_results(self.crates.clone())
+            }
             Action::UpdateSummary => self.update_summary(),
             Action::ShowFullCrateInfo => self.show_full_crate_details(),
             Action::ShowErrorPopup(ref err) => self.show_error_popup(err.clone()),
@@ -386,7 +384,7 @@ impl App {
 
 impl App {
     fn tick(&mut self) {
-        self.update_search_table_results();
+        self.search.update_search_table_results(self.crates.clone());
     }
 
     fn init(&mut self) -> Result<()> {
@@ -400,33 +398,6 @@ impl App {
         } else {
             self.summary.summary_data = None;
         }
-    }
-
-    fn update_search_table_results(&mut self) {
-        self.search_results
-            .content_length(self.search_results.crates.len());
-
-        let filter = self.search.filter.clone();
-        let filter_words = filter.split_whitespace().collect::<Vec<_>>();
-
-        let crates: Vec<_> = self
-            .crates
-            .lock()
-            .unwrap()
-            .iter()
-            .filter(|c| {
-                filter_words.iter().all(|word| {
-                    c.name.to_lowercase().contains(word)
-                        || c.description
-                            .clone()
-                            .unwrap_or_default()
-                            .to_lowercase()
-                            .contains(word)
-                })
-            })
-            .cloned()
-            .collect_vec();
-        self.search_results.crates = crates;
     }
 
     fn key_refresh_tick(&mut self) {
@@ -456,7 +427,7 @@ impl App {
             }
             Mode::Summary => self.summary.scroll_previous(),
             Mode::Help => self.help.scroll_previous(),
-            _ => self.search_results.scroll_previous(1),
+            _ => self.search.scroll_up(),
         }
     }
 
@@ -469,7 +440,7 @@ impl App {
             }
             Mode::Summary => self.summary.scroll_next(),
             Mode::Help => self.help.scroll_next(),
-            _ => self.search_results.scroll_next(1),
+            _ => self.search.scroll_down(),
         }
     }
 
@@ -504,8 +475,10 @@ impl App {
 
     fn enter_normal_mode(&mut self) {
         self.switch_mode(Mode::PickerHideCrateInfo);
-        if !self.search_results.crates.is_empty() && self.search_results.selected().is_none() {
-            self.search_results.select(Some(0))
+        if !self.search.search_results.crates.is_empty()
+            && self.search.search_results.selected().is_none()
+        {
+            self.search.search_results.select(Some(0))
         }
     }
 
@@ -547,7 +520,7 @@ impl App {
 
     fn handle_filter_prompt_change(&mut self) {
         self.search.filter = self.input.value().into();
-        self.search_results.select(None);
+        self.search.search_results.select(None);
     }
 
     fn submit_search(&mut self) {
@@ -731,7 +704,7 @@ impl App {
 
     /// Clears current search results and resets the UI to prepare for new data.
     fn prepare_reload(&mut self) {
-        self.search_results.select(None);
+        self.search.search_results.select(None);
         *self.full_crate_info.lock().unwrap() = None;
         *self.crate_response.lock().unwrap() = None;
     }
@@ -766,10 +739,10 @@ impl App {
     /// Spawns an asynchronous task to fetch crate details from crates.io based
     /// on currently selected crate
     fn request_crate_details(&mut self) {
-        if self.search_results.crates.is_empty() {
+        if self.search.search_results.crates.is_empty() {
             return;
         }
-        if let Some(crate_name) = self.search_results.selected_crate_name() {
+        if let Some(crate_name) = self.search.search_results.selected_crate_name() {
             let tx = self.tx.clone();
             let crate_response = self.crate_response.clone();
             let loading_status = self.loading_status.clone();
@@ -796,10 +769,10 @@ impl App {
     /// Spawns an asynchronous task to fetch crate details from crates.io based
     /// on currently selected crate
     fn request_full_crate_details(&mut self) {
-        if self.search_results.crates.is_empty() {
+        if self.search.search_results.crates.is_empty() {
             return;
         }
-        if let Some(crate_name) = self.search_results.selected_crate_name() {
+        if let Some(crate_name) = self.search.search_results.selected_crate_name() {
             let tx = self.tx.clone();
             let full_crate_info = self.full_crate_info.clone();
             let loading_status = self.loading_status.clone();
@@ -880,7 +853,7 @@ impl App {
     }
 
     fn selected_with_page_context(&self) -> u64 {
-        self.search_results.selected().map_or(0, |n| {
+        self.search.search_results.selected().map_or(0, |n| {
             (self.page.saturating_sub(1) * self.page_size) + n as u64 + 1
         })
     }
@@ -911,7 +884,7 @@ impl App {
         SearchResultsTableWidget::new(self.mode.is_picker()).render(
             area,
             buf,
-            &mut self.search_results,
+            &mut self.search.search_results,
         );
 
         Line::from(self.page_number_status()).left_aligned().render(
