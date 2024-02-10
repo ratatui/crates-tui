@@ -127,10 +127,6 @@ pub struct App {
 
     last_task_details_handle: HashMap<uuid::Uuid, JoinHandle<()>>,
 
-    /// The total number of crates fetchable from crates.io, which may not be
-    /// known initially and can be used for UI elements like pagination.
-    total_num_crates: Option<u64>,
-
     search: SearchPage,
 
     /// A popupt to show info / error messages
@@ -175,7 +171,6 @@ impl App {
             summary_data: Default::default(),
             summary: Default::default(),
             last_task_details_handle: Default::default(),
-            total_num_crates: Default::default(),
             popup: Default::default(),
             last_tick_key_events: Default::default(),
             frame_count: Default::default(),
@@ -410,7 +405,7 @@ impl App {
     }
 
     fn increment_page(&mut self) {
-        if let Some(n) = self.total_num_crates {
+        if let Some(n) = self.search.total_num_crates {
             let max_page_size = (n / self.search.page_size) + 1;
             if self.search.page < max_page_size {
                 self.search.page = self.search.page.saturating_add(1).min(max_page_size);
@@ -592,7 +587,7 @@ impl App {
     }
 
     fn store_total_number_of_crates(&mut self, n: u64) {
-        self.total_num_crates = Some(n)
+        self.search.total_num_crates = Some(n)
     }
 
     fn open_docs_url_in_browser(&self) -> Result<()> {
@@ -847,13 +842,14 @@ impl App {
     }
 
     fn page_number_status(&self) -> String {
-        let max_page_size = (self.total_num_crates.unwrap_or_default() / self.search.page_size) + 1;
+        let max_page_size =
+            (self.search.total_num_crates.unwrap_or_default() / self.search.page_size) + 1;
         format!("Page: {}/{}", self.search.page, max_page_size)
     }
 
     fn search_results_status(&self) -> String {
         let selected = self.selected_with_page_context();
-        let ncrates = self.total_num_crates.unwrap_or_default();
+        let ncrates = self.search.total_num_crates.unwrap_or_default();
         format!("{}/{} Results", selected, ncrates)
     }
 }

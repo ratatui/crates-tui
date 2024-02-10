@@ -42,6 +42,10 @@ pub struct SearchPage {
 
     /// Sort preference for search results
     pub sort: crates_io_api::Sort,
+
+    /// The total number of crates fetchable from crates.io, which may not be
+    /// known initially and can be used for UI elements like pagination.
+    pub total_num_crates: Option<u64>,
 }
 
 #[derive(Debug, Default)]
@@ -65,6 +69,7 @@ impl SearchPage {
             page: 1,
             page_size: 25,
             sort: crates_io_api::Sort::Relevance,
+            total_num_crates: None,
         }
     }
 
