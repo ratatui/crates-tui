@@ -358,6 +358,10 @@ impl App {
                 self.help.mode = Some(self.last_mode);
                 self.selected_tab.select(SelectedTab::None)
             }
+            Mode::PickerShowCrateInfo | Mode::PickerHideCrateInfo => {
+                self.search.enter_normal_mode();
+                self.selected_tab.select(SelectedTab::Search)
+            }
             _ => {
                 self.search.enter_normal_mode();
                 self.selected_tab.select(SelectedTab::None)
