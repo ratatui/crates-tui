@@ -5,7 +5,6 @@ use crate::app::Mode;
 
 #[derive(Debug, Display, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Command {
-    Ignore,
     Quit,
     NextTab,
     PreviousTab,
