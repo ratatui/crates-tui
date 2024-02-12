@@ -88,7 +88,7 @@ fn select_by_mode(state: &mut Help, rows: &Vec<(Mode, Command, String)>) {
         tracing::debug!("{:?}", mode);
         let selected = rows
             .iter()
-            .find_position(|(mode, _, _)| mode == mode)
+            .find_position(|(m, _, _)| *m == mode)
             .map(|(index, _)| index)
             .unwrap_or_default();
         *state.state.selected_mut() = Some(selected);
