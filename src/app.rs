@@ -318,7 +318,7 @@ impl App {
                 }
             }
             Mode::Summary => self.summary.scroll_previous(),
-            Mode::Help => self.help.scroll_previous(),
+            Mode::Help => self.help.scroll_up(),
             _ => self.search.scroll_up(),
         }
     }
@@ -331,7 +331,7 @@ impl App {
                 }
             }
             Mode::Summary => self.summary.scroll_next(),
-            Mode::Help => self.help.scroll_next(),
+            Mode::Help => self.help.scroll_down(),
             _ => self.search.scroll_down(),
         }
     }
