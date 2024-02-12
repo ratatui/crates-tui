@@ -4,7 +4,7 @@ use std::sync::{
 };
 
 use color_eyre::eyre::Result;
-use crossterm::event::KeyEvent;
+use crossterm::event::{Event as CrosstermEvent, KeyEvent};
 use ratatui::{prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIs};
@@ -150,8 +150,8 @@ impl App {
             Event::Tick => Some(Action::Tick),
             Event::KeyRefresh => Some(Action::KeyRefresh),
             Event::Render => Some(Action::Render),
-            Event::Resize(x, y) => Some(Action::Resize(x, y)),
-            Event::Key(key) => self.handle_key_event(key)?,
+            Event::Crossterm(CrosstermEvent::Resize(x, y)) => Some(Action::Resize(x, y)),
+            Event::Crossterm(CrosstermEvent::Key(key)) => self.handle_key_event(key)?,
             _ => None,
         };
         Ok(maybe_action)

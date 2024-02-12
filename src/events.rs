@@ -29,12 +29,7 @@ pub enum Event {
     Tick,
     KeyRefresh,
     Render,
-    FocusGained,
-    FocusLost,
-    Paste(String),
-    Key(KeyEvent),
-    Mouse(MouseEvent),
-    Resize(u16, u16),
+    Crossterm(CrosstermEvent),
 }
 
 impl Events {
@@ -75,17 +70,9 @@ fn render_stream() -> Pin<Box<dyn Stream<Item = Event>>> {
 fn crossterm_stream() -> Pin<Box<dyn Stream<Item = Event>>> {
     Box::pin(EventStream::new().fuse().filter_map(|event| async move {
         match event {
-            Ok(event) => match event {
-                CrosstermEvent::Key(key) if key.kind == KeyEventKind::Press => {
-                    Some(Event::Key(key))
-                }
-                CrosstermEvent::Mouse(mouse) => Some(Event::Mouse(mouse)),
-                CrosstermEvent::Resize(x, y) => Some(Event::Resize(x, y)),
-                CrosstermEvent::FocusLost => Some(Event::FocusLost),
-                CrosstermEvent::FocusGained => Some(Event::FocusGained),
-                CrosstermEvent::Paste(s) => Some(Event::Paste(s)),
-                _ => None,
-            },
+            // Ignore key release / repeat events
+            Ok(CrosstermEvent::Key(key)) if key.kind == KeyEventKind::Release => None,
+            Ok(event) => Some(Event::Crossterm(event)),
             Err(_) => Some(Event::Error),
         }
     }))
