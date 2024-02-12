@@ -62,7 +62,7 @@ pub mod keybindings {
             if key_events.is_empty() {
                 None
             } else if let Some(Some(command)) = self.0.get(&mode).map(|kb| kb.get(key_events)) {
-                Some(command.clone())
+                Some(*command)
             } else {
                 self.event_to_command(mode, &key_events[1..])
             }
@@ -134,7 +134,7 @@ pub mod keybindings {
                         .collect::<Vec<String>>()
                         .join("");
 
-                    string_event_map.insert(key_string, command.clone());
+                    string_event_map.insert(key_string, *command);
                 }
 
                 serialized_map.insert(*mode, string_event_map);

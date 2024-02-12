@@ -83,7 +83,7 @@ fn key_bindings_for_command(mode: Mode, command: Command) -> Vec<String> {
 /// updates the selected index based on the current mode
 ///
 /// Only changes the selected index for the first render
-fn select_by_mode(state: &mut Help, rows: &Vec<(Mode, Command, String)>) {
+fn select_by_mode(state: &mut Help, rows: &[(Mode, Command, String)]) {
     if let Some(mode) = state.mode {
         tracing::debug!("{:?}", mode);
         let selected = rows
@@ -106,11 +106,11 @@ fn select_by_mode(state: &mut Help, rows: &Vec<(Mode, Command, String)>) {
     );
 }
 
-fn into_rows<'a>(rows: &'a [(Mode, Command, String)]) -> impl Iterator<Item = Row<'a>> {
+fn into_rows(rows: &[(Mode, Command, String)]) -> impl Iterator<Item = Row<'_>> {
     rows.iter().map(|(mode, command, keys)| {
         Row::new([
             Line::styled(format!("{} ", mode), Color::DarkGray),
-            Line::raw(format!("{}", keys)),
+            Line::raw(keys.to_string()),
             Line::raw(format!("{:?} ", command)),
         ])
         .fg(config::get().color.base05)
