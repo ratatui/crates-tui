@@ -128,8 +128,10 @@ impl App {
                 self.handle_event(e)?.map(|action| self.tx.send(action));
             }
             while let Ok(action) = self.rx.try_recv() {
-                self.handle_action(action.clone(), &mut tui)?
-                    .map(|action| self.tx.send(action));
+                self.handle_action(action.clone())?;
+                if matches!(action, Action::Resize(_, _) | Action::Render) {
+                    self.draw(&mut tui)?;
+                }
             }
             if self.should_quit() {
                 break;
@@ -194,24 +196,18 @@ impl App {
 
     /// Performs the `Action` by calling on a respective app method.
     ///
-    /// `Action`'s represent a reified method call on the `App` instance.
-    ///
-    /// Upon receiving an action, this function updates the application state,
-    /// performs necessary operations like drawing or resizing the view, or
-    /// changing the mode. Actions that affect the navigation within the
-    /// application, are also handled. Certain actions generate a follow-up
-    /// action which will be to be processed in the next iteration of the main
-    /// event loop.
-    fn handle_action(&mut self, action: Action, tui: &mut Tui) -> Result<Option<Action>> {
+    /// Upon receiving an action, this function updates the application state, performs necessary
+    /// operations like drawing or resizing the view, or changing the mode. Actions that affect the
+    /// navigation within the application, are also handled. Certain actions generate a follow-up
+    /// action which will be to be processed in the next iteration of the main event loop.
+    fn handle_action(&mut self, action: Action) -> Result<()> {
         if action != Action::Tick && action != Action::Render && action != Action::KeyRefresh {
             info!("{action:?}");
         }
         match action {
             Action::Quit => self.quit(),
-            Action::Render => self.draw(tui)?,
             Action::KeyRefresh => self.key_refresh_tick(),
             Action::Init => self.init()?,
-            Action::Resize(w, h) => self.resize(tui, (w, h))?,
             Action::Tick => self.tick(),
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
             Action::ScrollUp => self.scroll_up(),
@@ -256,19 +252,18 @@ impl App {
             Action::CopyCargoAddCommandToClipboard => self.copy_cargo_add_command_to_clipboard()?,
             _ => {}
         }
-        let maybe_action = match action {
+        match action {
             Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom
-                if self.mode.is_summary() || self.mode.is_popup() || self.mode.is_help() =>
+                if self.mode.is_prompt() || self.mode.is_picker() =>
             {
-                None
+                let _ = self.tx.send(Action::UpdateCurrentSelectionCrateInfo);
             }
-            Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom => {
-                Some(Action::UpdateCurrentSelectionCrateInfo)
+            Action::SubmitSearch => {
+                let _ = self.tx.send(Action::ReloadData);
             }
-            Action::SubmitSearch => Some(Action::ReloadData),
-            _ => None,
+            _ => {}
         };
-        Ok(maybe_action)
+        Ok(())
     }
 
     // Render the `AppWidget` as a stateful widget using `self` as the `State`
@@ -294,12 +289,6 @@ impl App {
 
     fn key_refresh_tick(&mut self) {
         self.last_tick_key_events.drain(..);
-    }
-
-    fn resize(&mut self, tui: &mut Tui, (w, h): (u16, u16)) -> Result<()> {
-        tui.resize(Rect::new(0, 0, w, h))?;
-        self.tx.send(Action::Render)?;
-        Ok(())
     }
 
     fn should_quit(&self) -> bool {
