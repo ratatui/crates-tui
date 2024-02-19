@@ -128,8 +128,11 @@ impl App {
                 self.handle_event(e)?.map(|action| self.tx.send(action));
             }
             while let Ok(action) = self.rx.try_recv() {
-                self.handle_action(action.clone(), &mut tui)?
+                self.handle_action(action.clone())?
                     .map(|action| self.tx.send(action));
+                if matches!(action, Action::Resize(_, _) | Action::Render) {
+                    self.draw(&mut tui)?;
+                }
             }
             if self.should_quit() {
                 break;
@@ -202,16 +205,14 @@ impl App {
     /// application, are also handled. Certain actions generate a follow-up
     /// action which will be to be processed in the next iteration of the main
     /// event loop.
-    fn handle_action(&mut self, action: Action, tui: &mut Tui) -> Result<Option<Action>> {
+    fn handle_action(&mut self, action: Action) -> Result<Option<Action>> {
         if action != Action::Tick && action != Action::Render && action != Action::KeyRefresh {
             info!("{action:?}");
         }
         match action {
             Action::Quit => self.quit(),
-            Action::Render => self.draw(tui)?,
             Action::KeyRefresh => self.key_refresh_tick(),
             Action::Init => self.init()?,
-            Action::Resize(w, h) => self.resize(tui, (w, h))?,
             Action::Tick => self.tick(),
             Action::StoreTotalNumberOfCrates(n) => self.store_total_number_of_crates(n),
             Action::ScrollUp => self.scroll_up(),
@@ -294,12 +295,6 @@ impl App {
 
     fn key_refresh_tick(&mut self) {
         self.last_tick_key_events.drain(..);
-    }
-
-    fn resize(&mut self, tui: &mut Tui, (w, h): (u16, u16)) -> Result<()> {
-        tui.resize(Rect::new(0, 0, w, h))?;
-        self.tx.send(Action::Render)?;
-        Ok(())
     }
 
     fn should_quit(&self) -> bool {
