@@ -29,6 +29,6 @@ async fn main() -> Result<()> {
     let tui = tui::init()?;
     let events = events::Events::new();
     App::new().run(tui, events).await?;
-
+    tui::restore()?;
     Ok(())
 }

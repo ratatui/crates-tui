@@ -56,7 +56,7 @@ fn install_color_eyre_panic_hook(panic_hook: PanicHook) {
     // Fn(&PanicInfo<'_>`
     let panic_hook = panic_hook.into_panic_hook();
     panic::set_hook(Box::new(move |panic_info| {
-        if let Err(err) = tui::restore_backend() {
+        if let Err(err) = tui::restore() {
             error!("Unable to restore terminal: {err:?}");
         }
 
@@ -70,7 +70,7 @@ fn install_color_eyre_panic_hook(panic_hook: PanicHook) {
 fn install_eyre_hook(eyre_hook: EyreHook) -> color_eyre::Result<()> {
     let eyre_hook = eyre_hook.into_eyre_hook();
     eyre::set_hook(Box::new(move |error| {
-        tui::restore_backend().unwrap();
+        tui::restore().unwrap();
         eyre_hook(error)
     }))?;
     Ok(())

@@ -9,15 +9,6 @@ use crate::config;
 pub type Tui = Terminal<CrosstermBackend<Stdout>>;
 
 pub fn init() -> Result<Tui> {
-    let backend = init_backend()?;
-    let mut terminal = Terminal::new(backend)?;
-    terminal.clear()?;
-    terminal.hide_cursor()?;
-    Ok(terminal)
-}
-
-fn init_backend() -> Result<CrosstermBackend<Stdout>> {
-    let backend = CrosstermBackend::new(stdout());
     enable_raw_mode()?;
     execute!(stdout(), EnterAlternateScreen)?;
     if config::get().enable_mouse {
@@ -26,10 +17,13 @@ fn init_backend() -> Result<CrosstermBackend<Stdout>> {
     if config::get().enable_paste {
         execute!(stdout(), EnableBracketedPaste)?;
     }
-    Ok(backend)
+    let mut terminal = Terminal::new(CrosstermBackend::new(stdout()))?;
+    terminal.clear()?;
+    terminal.hide_cursor()?;
+    Ok(terminal)
 }
 
-pub fn restore_backend() -> Result<()> {
+pub fn restore() -> Result<()> {
     if config::get().enable_mouse {
         execute!(stdout(), DisableBracketedPaste)?;
     }
