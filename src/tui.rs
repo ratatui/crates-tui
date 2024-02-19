@@ -1,7 +1,4 @@
-use std::{
-    io::{stdout, Stdout},
-    ops::{Deref, DerefMut},
-};
+use std::io::{stdout, Stdout};
 
 use color_eyre::eyre::Result;
 use crossterm::{event::*, execute, terminal::*};
@@ -9,18 +6,14 @@ use ratatui::prelude::*;
 
 use crate::config;
 
-pub struct Tui {
-    terminal: Terminal<CrosstermBackend<Stdout>>,
-}
+pub type Tui = Terminal<CrosstermBackend<Stdout>>;
 
-impl Tui {
-    pub fn init() -> Result<Self> {
-        let backend = init_backend()?;
-        let mut terminal = Terminal::new(backend)?;
-        terminal.clear()?;
-        terminal.hide_cursor()?;
-        Ok(Self { terminal })
-    }
+pub fn init() -> Result<Tui> {
+    let backend = init_backend()?;
+    let mut terminal = Terminal::new(backend)?;
+    terminal.clear()?;
+    terminal.hide_cursor()?;
+    Ok(terminal)
 }
 
 fn init_backend() -> Result<CrosstermBackend<Stdout>> {
@@ -46,24 +39,4 @@ pub fn restore_backend() -> Result<()> {
     execute!(stdout(), LeaveAlternateScreen)?;
     disable_raw_mode()?;
     Ok(())
-}
-
-impl Deref for Tui {
-    type Target = Terminal<CrosstermBackend<Stdout>>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.terminal
-    }
-}
-
-impl DerefMut for Tui {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.terminal
-    }
-}
-
-impl Drop for Tui {
-    fn drop(&mut self) {
-        restore_backend().unwrap();
-    }
 }
