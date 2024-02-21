@@ -24,7 +24,7 @@ pub fn init() -> Result<Tui> {
 }
 
 pub fn restore() -> Result<()> {
-    if config::get().enable_mouse {
+    if config::get().enable_paste {
         execute!(stdout(), DisableBracketedPaste)?;
     }
     if config::get().enable_mouse {
