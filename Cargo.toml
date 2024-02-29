@@ -38,7 +38,7 @@ num-format = "0.4.4"
 pretty_assertions = "1.4.0"
 ratatui = { version = "0.26.1", features = ["serde", "macros"] }
 ratatui-macros = "0.2.3"
-serde = { version = "1.0.188", features = ["derive"] }
+serde = { version = "1.0.197", features = ["derive"] }
 serde_with = "3.5.0"
 signal-hook = "0.3.17"
 strip-ansi-escapes = "0.2.0"
