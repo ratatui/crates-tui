@@ -27,7 +27,7 @@ crates_io_api = "0.9.0"
 crossterm = { version = "0.27.0", features = ["serde", "event-stream"] }
 derive_deref = "1.1.1"
 directories = "5.0.1"
-figment = { version = "0.10.14", features = ["env", "toml", "yaml"] }
+figment = { version = "0.10.15", features = ["env", "toml", "yaml"] }
 futures = "0.3.28"
 human-panic = "1.2.0"
 itertools = "0.12.0"
