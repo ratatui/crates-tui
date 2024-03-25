@@ -47,7 +47,7 @@ textwrap = "0.16.1"
 tokio = { version = "1.36.0", features = ["full"] }
 tokio-stream = "0.1.15"
 tokio-util = "0.7.10"
-toml = "0.8.8"
+toml = "0.8.12"
 tracing = "0.1.40"
 tracing-appender = "0.2.3"
 tracing-error = "0.2.0"
