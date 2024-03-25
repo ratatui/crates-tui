@@ -55,7 +55,7 @@ tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde", "serde_json"] }
 tui-input = "0.8.0"
 unicode-width = "0.1.11"
-uuid = "1.7.0"
+uuid = "1.8.0"
 webbrowser = "0.8.13"
 
 [build-dependencies]
