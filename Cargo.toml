@@ -23,7 +23,7 @@ chrono = "0.4.38"
 clap = { version = "4.5.4", features = ["derive", "cargo", "wrap_help", "unicode", "string", "unstable-styles", "color"] }
 color-eyre = "0.6.3"
 copypasta = "0.10.1"
-crates_io_api = "0.9.0"
+crates_io_api = "0.11.0"
 crossterm = { version = "0.27.0", features = ["serde", "event-stream"] }
 derive_deref = "1.1.1"
 directories = "5.0.1"
