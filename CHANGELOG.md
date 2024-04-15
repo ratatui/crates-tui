@@ -7,6 +7,19 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.9](https://github.com/ratatui-org/crates-tui/compare/v0.1.8...v0.1.9) - 2024-04-15
+
+### Added
+- Update dependabot.yml to group cargo PRs ([#63](https://github.com/ratatui-org/crates-tui/pull/63))
+
+### Other
+- *(deps)* bump webbrowser from 0.8.14 to 0.8.15 ([#62](https://github.com/ratatui-org/crates-tui/pull/62))
+- *(deps)* bump figment from 0.10.15 to 0.10.16 ([#61](https://github.com/ratatui-org/crates-tui/pull/61))
+- *(deps)* bump crates_io_api from 0.9.0 to 0.11.0 ([#60](https://github.com/ratatui-org/crates-tui/pull/60))
+- *(deps)* bump chrono from 0.4.37 to 0.4.38 ([#59](https://github.com/ratatui-org/crates-tui/pull/59))
+- *(deps)* bump ratatui from 0.26.1 to 0.26.2 ([#58](https://github.com/ratatui-org/crates-tui/pull/58))
+- *(deps)* bump webbrowser from 0.8.13 to 0.8.14 ([#56](https://github.com/ratatui-org/crates-tui/pull/56))
+
 ## [0.1.8](https://github.com/ratatui-org/crates-tui/compare/v0.1.7...v0.1.8) - 2024-04-01
 
 ### Fixed
