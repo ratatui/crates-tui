@@ -56,7 +56,7 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde", "s
 tui-input = "0.8.0"
 unicode-width = "0.1.11"
 uuid = "1.8.0"
-webbrowser = "0.8.14"
+webbrowser = "0.8.15"
 
 [build-dependencies]
 vergen = { version = "8.2.6", features = [ "build", "git", "git2", "cargo" ]}
