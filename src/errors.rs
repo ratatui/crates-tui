@@ -24,7 +24,7 @@ pub fn install_hooks() -> Result<()> {
         if #[cfg(debug_assertions)] {
             install_better_panic();
         } else {
-            install_human_panic();
+            human_panic::setup_panic!();
         }
     }
     install_color_eyre_panic_hook(panic_hook);
@@ -39,16 +39,6 @@ fn install_better_panic() {
         .most_recent_first(false)
         .verbosity(better_panic::Verbosity::Full)
         .install()
-}
-
-#[allow(dead_code)]
-fn install_human_panic() {
-    human_panic::setup_panic!(Metadata {
-        name: env!("CARGO_PKG_NAME").into(),
-        version: env!("CARGO_PKG_VERSION").into(),
-        authors: env!("CARGO_PKG_AUTHORS").replace(':', ", ").into(),
-        homepage: env!("CARGO_PKG_HOMEPAGE").into(),
-    });
 }
 
 fn install_color_eyre_panic_hook(panic_hook: PanicHook) {
