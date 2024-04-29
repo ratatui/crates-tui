@@ -38,8 +38,8 @@ num-format = "0.4.4"
 pretty_assertions = "1.4.0"
 ratatui = { version = "0.26.2", features = ["serde", "macros"] }
 ratatui-macros = "0.2.3"
-serde = { version = "1.0.198", features = ["derive"] }
-serde_with = "3.7.0"
+serde = { version = "1.0.199", features = ["derive"] }
+serde_with = "3.8.1"
 signal-hook = "0.3.17"
 strip-ansi-escapes = "0.2.0"
 strum = { version = "0.26.2", features = ["derive"] }
@@ -54,7 +54,7 @@ tracing-error = "0.2.0"
 tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde", "serde_json"] }
 tui-input = "0.8.0"
-unicode-width = "0.1.11"
+unicode-width = "0.1.12"
 uuid = "1.8.0"
 webbrowser = "1.0.0"
 
