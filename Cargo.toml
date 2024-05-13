@@ -37,8 +37,8 @@ libc = "0.2.154"
 num-format = "0.4.4"
 pretty_assertions = "1.4.0"
 ratatui = { version = "0.26.2", features = ["serde", "macros"] }
-ratatui-macros = "0.2.3"
-serde = { version = "1.0.200", features = ["derive"] }
+ratatui-macros = "0.3.1"
+serde = { version = "1.0.201", features = ["derive"] }
 serde_with = "3.8.1"
 signal-hook = "0.3.17"
 strip-ansi-escapes = "0.2.0"
