@@ -20,41 +20,41 @@ eula = false
 better-panic = "0.3.0"
 cfg-if = "1.0.0"
 chrono = "0.4.38"
-clap = { version = "4.5.4", features = ["derive", "cargo", "wrap_help", "unicode", "string", "unstable-styles", "color"] }
+clap = { version = "4.5.7", features = ["derive", "cargo", "wrap_help", "unicode", "string", "unstable-styles", "color"] }
 color-eyre = "0.6.3"
 copypasta = "0.10.1"
 crates_io_api = "0.11.0"
 crossterm = { version = "0.27.0", features = ["serde", "event-stream"] }
 derive_deref = "1.1.1"
 directories = "5.0.1"
-figment = { version = "0.10.18", features = ["env", "toml", "yaml"] }
+figment = { version = "0.10.19", features = ["env", "toml", "yaml"] }
 futures = "0.3.28"
 human-panic = "2.0.0"
-itertools = "0.12.0"
+itertools = "0.13.0"
 json5 = "0.4.1"
 lazy_static = "1.4.0"
-libc = "0.2.154"
+libc = "0.2.155"
 num-format = "0.4.4"
 pretty_assertions = "1.4.0"
-ratatui = { version = "0.26.2", features = ["serde", "macros"] }
-ratatui-macros = "0.3.1"
-serde = { version = "1.0.201", features = ["derive"] }
+ratatui = { version = "0.26.3", features = ["serde", "macros"] }
+ratatui-macros = "0.4.0"
+serde = { version = "1.0.203", features = ["derive"] }
 serde_with = "3.8.1"
 signal-hook = "0.3.17"
 strip-ansi-escapes = "0.2.0"
 strum = { version = "0.26.2", features = ["derive"] }
 textwrap = "0.16.1"
-tokio = { version = "1.37.0", features = ["full"] }
+tokio = { version = "1.38.0", features = ["full"] }
 tokio-stream = "0.1.15"
 tokio-util = "0.7.11"
-toml = "0.8.12"
+toml = "0.8.14"
 tracing = "0.1.40"
 tracing-appender = "0.2.3"
 tracing-error = "0.2.0"
 tracing-log = "0.2.0"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde", "serde_json"] }
 tui-input = "0.8.0"
-unicode-width = "0.1.12"
+unicode-width = "0.1.13"
 uuid = "1.8.0"
 webbrowser = "1.0.1"
 
