@@ -9,7 +9,6 @@ use crate::config;
 #[derive(Debug, Default)]
 pub struct SearchResults {
     pub crates: Vec<crates_io_api::Crate>,
-    pub versions: Vec<crates_io_api::Version>,
     pub table_state: TableState,
     pub scrollbar_state: ScrollbarState,
 }

@@ -439,15 +439,9 @@ impl SearchPage {
     }
 }
 
-pub struct SearchPageWidget {
-    pub mode: Mode,
-}
+pub struct SearchPageWidget;
 
 impl SearchPageWidget {
-    pub fn new(mode: Mode) -> Self {
-        Self { mode }
-    }
-
     fn render_crate_info(&self, area: Rect, buf: &mut Buffer, state: &mut SearchPage) {
         if let Some(ci) = state.crate_response.lock().unwrap().clone() {
             CrateInfoTableWidget::new(ci).render(area, buf, &mut state.crate_info);

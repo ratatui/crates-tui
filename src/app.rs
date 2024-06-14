@@ -604,7 +604,7 @@ impl App {
         ])
         .areas(area);
 
-        SearchPageWidget::new(self.mode).render(main, buf, &mut self.search);
+        SearchPageWidget.render(main, buf, &mut self.search);
 
         self.render_prompt(prompt, buf);
         self.render_status_bar(status_bar, buf);
