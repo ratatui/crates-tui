@@ -7,6 +7,17 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.11](https://github.com/ratatui-org/crates-tui/compare/v0.1.10...v0.1.11) - 2024-06-14
+
+### Fixed
+- remove unused fields ([#74](https://github.com/ratatui-org/crates-tui/pull/74))
+
+### Other
+- *(deps)* bump the cargo-dependencies group across 1 directory with 10 updates ([#73](https://github.com/ratatui-org/crates-tui/pull/73))
+- *(deps)* bump the cargo-dependencies group with 2 updates ([#69](https://github.com/ratatui-org/crates-tui/pull/69))
+- *(deps)* bump the cargo-dependencies group with 4 updates ([#68](https://github.com/ratatui-org/crates-tui/pull/68))
+- *(deps)* bump the cargo-dependencies group with 3 updates ([#66](https://github.com/ratatui-org/crates-tui/pull/66))
+
 ## [0.1.10](https://github.com/ratatui-org/crates-tui/compare/v0.1.9...v0.1.10) - 2024-04-26
 
 ### Other
