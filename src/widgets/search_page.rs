@@ -476,7 +476,7 @@ impl StatefulWidget for SearchPageWidget {
         Line::from(state.page_number_status())
             .left_aligned()
             .render(
-                area.inner(&Margin {
+                area.inner(Margin {
                     horizontal: 1,
                     vertical: 2,
                 }),
@@ -484,7 +484,7 @@ impl StatefulWidget for SearchPageWidget {
             );
 
         Line::from(state.results_status()).right_aligned().render(
-            area.inner(&Margin {
+            area.inner(Margin {
                 horizontal: 1,
                 vertical: 2,
             }),

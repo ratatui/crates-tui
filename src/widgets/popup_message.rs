@@ -2,7 +2,10 @@ use itertools::Itertools;
 use ratatui::{
     layout::Flex,
     prelude::*,
-    widgets::{block::*, *},
+    widgets::{
+        block::{Position, Title},
+        *,
+    },
 };
 
 #[derive(Debug, Default, Clone, Copy)]

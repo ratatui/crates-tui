@@ -50,10 +50,10 @@ impl StatefulWidget for SearchFilterPromptWidget<'_> {
         self.input_block().render(area, buf);
 
         if self.search_mode.is_focused() {
-            self.sort_by_info().render(meta.inner(&self.margin()), buf);
+            self.sort_by_info().render(meta.inner(self.margin()), buf);
         }
         self.input_text(input.width as usize)
-            .render(input.inner(&self.margin()), buf);
+            .render(input.inner(self.margin()), buf);
 
         self.update_cursor_state(area, state);
     }
