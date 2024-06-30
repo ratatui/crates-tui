@@ -250,9 +250,6 @@ impl App {
             }
             Action::OpenCratesIOUrlInBrowser => self.open_crates_io_url_in_browser()?,
             Action::CopyCargoAddCommandToClipboard => self.copy_cargo_add_command_to_clipboard()?,
-            _ => {}
-        }
-        match action {
             Action::ScrollUp | Action::ScrollDown | Action::ScrollTop | Action::ScrollBottom
                 if self.mode.is_prompt() || self.mode.is_picker() =>
             {
