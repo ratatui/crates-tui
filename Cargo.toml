@@ -38,8 +38,8 @@ num-format = "0.4.4"
 pretty_assertions = "1.4.0"
 ratatui = { version = "0.27.0", features = ["serde", "macros"] }
 ratatui-macros = "0.4.2"
-serde = { version = "1.0.203", features = ["derive"] }
-serde_with = "3.8.2"
+serde = { version = "1.0.204", features = ["derive"] }
+serde_with = "3.8.3"
 signal-hook = "0.3.17"
 strip-ansi-escapes = "0.2.0"
 strum = { version = "0.26.3", features = ["derive"] }
