@@ -37,17 +37,17 @@ libc = "0.2.155"
 num-format = "0.4.4"
 pretty_assertions = "1.4.0"
 ratatui = { version = "0.27.0", features = ["serde", "macros"] }
-ratatui-macros = "0.4.2"
+ratatui-macros = "0.4.3"
 serde = { version = "1.0.204", features = ["derive"] }
 serde_with = "3.9.0"
 signal-hook = "0.3.17"
 strip-ansi-escapes = "0.2.0"
 strum = { version = "0.26.3", features = ["derive"] }
 textwrap = "0.16.1"
-tokio = { version = "1.38.0", features = ["full"] }
+tokio = { version = "1.38.1", features = ["full"] }
 tokio-stream = "0.1.15"
 tokio-util = "0.7.11"
-toml = "0.8.14"
+toml = "0.8.15"
 tracing = "0.1.40"
 tracing-appender = "0.2.3"
 tracing-error = "0.2.0"
