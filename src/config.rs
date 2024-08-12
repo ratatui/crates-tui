@@ -191,6 +191,9 @@ pub fn init(cli: &Cli) -> Result<()> {
         .merge(Yaml::file(color_file))
         .extract::<Base16Palette>()?;
     config.color = base16;
+    if let Some(data_dir) = cli.data_dir.clone() {
+        config.data_home = data_dir;
+    }
     CONFIG
         .set(config)
         .map_err(|config| eyre!("failed to set config {config:?}"))
