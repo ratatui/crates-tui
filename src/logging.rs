@@ -9,7 +9,7 @@ use crate::config;
 
 pub fn init() -> Result<()> {
     let config = config::get();
-    let directory = config.data_home.clone();
+    let directory = config.data_dir.clone();
     std::fs::create_dir_all(directory.clone())?;
     let log_file = format!("{}.log", env!("CARGO_PKG_NAME"));
     let log_path = directory.join(log_file);

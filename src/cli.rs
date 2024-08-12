@@ -36,20 +36,21 @@ Authors: {author}"
 #[derive(Debug, Default, Parser, Serialize)]
 #[command(author, version = version(), about, long_about = None)]
 pub struct Cli {
-    /// Tick rate, i.e. number of ticks per second
-    #[arg(short, long, value_name = "FLOAT", default_value_t = 1.0)]
-    pub tick_rate: f64,
-
     /// Print default configuration
     #[arg(long)]
     pub print_default_config: bool,
 
     /// A path to a crates-tui configuration file.
-    #[arg(short, long, value_name = "FILE")]
+    #[arg(
+        short,
+        long,
+        value_name = "FILE",
+        default_value = get_default_config_path()
+    )]
     pub config_file: Option<PathBuf>,
 
     /// A path to a base16 color file.
-    #[arg(long, value_name = "FILE")]
+    #[arg(long, value_name = "FILE", default_value = get_default_color_file())]
     pub color_file: Option<PathBuf>,
 
     /// Frame rate, i.e. number of frames per second
@@ -57,16 +58,33 @@ pub struct Cli {
     pub frame_rate: f64,
 
     /// The directory to use for storing application data.
-    #[arg(long, value_name = "DIR")]
+    #[arg(long, value_name = "DIR", default_value = get_default_data_dir())]
     pub data_dir: Option<PathBuf>,
 
-    /// The log level to use.
+    /// The log level to use. Valid values are: error, warn, info, debug, trace, off.
     ///
-    /// Valid values are: error, warn, info, debug, trace, off. The default is
-    /// info.
+    /// [default: info]
     #[arg(long, value_name = "LEVEL", alias = "log")]
     #[serde_as(as = "NoneAsEmptyString")]
     pub log_level: Option<LevelFilter>,
+}
+
+fn get_default_config_path() -> String {
+    crate::config::default_config_file()
+        .to_string_lossy()
+        .into_owned()
+}
+
+fn get_default_color_file() -> String {
+    crate::config::default_color_file()
+        .to_string_lossy()
+        .into_owned()
+}
+
+fn get_default_data_dir() -> String {
+    crate::config::default_data_dir()
+        .to_string_lossy()
+        .into_owned()
 }
 
 pub fn parse() -> Cli {
