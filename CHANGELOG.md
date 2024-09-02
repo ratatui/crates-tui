@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.20](https://github.com/ratatui/crates-tui/compare/v0.1.19...v0.1.20) - 2024-09-02
+
+### Other
+- Better help page ([#94](https://github.com/ratatui/crates-tui/pull/94))
+
 ## [0.1.19](https://github.com/ratatui/crates-tui/compare/v0.1.18...v0.1.19) - 2024-09-02
 
 ### Other
