@@ -114,7 +114,7 @@ impl Default for Base16Palette {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     /// The directory to use for storing application data (logs etc.).
-    pub data_home: PathBuf,
+    pub data_dir: PathBuf,
 
     /// The directory to use for storing application configuration (colors
     /// etc.).
@@ -152,7 +152,7 @@ impl Default for Config {
         let rose_pine = Base16Palette::default();
 
         Self {
-            data_home: default_data_dir(),
+            data_dir: default_data_dir(),
             config_home: default_config_dir(),
             config_file: default_config_file(),
             log_level: None,
@@ -192,7 +192,7 @@ pub fn init(cli: &Cli) -> Result<()> {
         .extract::<Base16Palette>()?;
     config.color = base16;
     if let Some(data_dir) = cli.data_dir.clone() {
-        config.data_home = data_dir;
+        config.data_dir = data_dir;
     }
     CONFIG
         .set(config)
@@ -211,12 +211,12 @@ pub fn get() -> &'static Config {
 }
 
 /// Returns the path to the default configuration file.
-fn default_config_file() -> PathBuf {
+pub fn default_config_file() -> PathBuf {
     default_config_dir().join("config.toml")
 }
 
 /// Returns the path to the default configuration file.
-fn default_color_file() -> PathBuf {
+pub fn default_color_file() -> PathBuf {
     default_config_dir().join("color.yaml")
 }
 
@@ -229,7 +229,7 @@ fn default_config_dir() -> PathBuf {
 }
 
 /// Returns the directory to use for storing data files.
-fn default_data_dir() -> PathBuf {
+pub fn default_data_dir() -> PathBuf {
     env::var("CRATES_TUI_DATA_HOME")
         .map(PathBuf::from)
         .or_else(|_| project_dirs().map(|dirs| dirs.data_local_dir().to_path_buf()))

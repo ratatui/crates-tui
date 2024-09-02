@@ -20,7 +20,15 @@ eula = false
 better-panic = "0.3.0"
 cfg-if = "1.0.0"
 chrono = "0.4.38"
-clap = { version = "4.5.16", features = ["derive", "cargo", "wrap_help", "unicode", "string", "unstable-styles", "color"] }
+clap = { version = "4.5.16", features = [
+    "derive",
+    "cargo",
+    "wrap_help",
+    "unicode",
+    "string",
+    "unstable-styles",
+    "color",
+] }
 color-eyre = "0.6.3"
 copypasta = "0.10.1"
 crates_io_api = "0.11.0"
@@ -52,14 +60,18 @@ tracing = "0.1.40"
 tracing-appender = "0.2.3"
 tracing-error = "0.2.0"
 tracing-log = "0.2.0"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter", "serde", "serde_json"] }
+tracing-subscriber = { version = "0.3.18", features = [
+    "env-filter",
+    "serde",
+    "serde_json",
+] }
 tui-input = "0.10.1"
 unicode-width = "0.1.13"
 uuid = "1.10.0"
 webbrowser = "1.0.1"
 
 [build-dependencies]
-vergen = { version = "8.3.2", features = [ "build", "git", "git2", "cargo" ]}
+vergen = { version = "8.3.2", features = ["build", "git", "git2", "cargo"] }
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
@@ -75,6 +87,11 @@ ci = ["github"]
 # The installers to generate for each app
 installers = ["shell", "powershell"]
 # Target platforms to build apps for (Rust target-triple syntax)
-targets = ["aarch64-apple-darwin", "x86_64-apple-darwin", "x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"]
+targets = [
+    "aarch64-apple-darwin",
+    "x86_64-apple-darwin",
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+]
 # Publish jobs to run in CI
 pr-run-mode = "plan"
