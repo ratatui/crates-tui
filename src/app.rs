@@ -269,7 +269,7 @@ impl App {
     // Render the `AppWidget` as a stateful widget using `self` as the `State`
     fn draw(&mut self, tui: &mut Tui) -> Result<()> {
         tui.draw(|frame| {
-            frame.render_stateful_widget(AppWidget, frame.size(), self);
+            frame.render_stateful_widget(AppWidget, frame.area(), self);
             self.update_frame_count(frame);
             self.update_cursor(frame);
         })?;
@@ -485,7 +485,7 @@ impl App {
     fn update_cursor(&mut self, frame: &mut Frame<'_>) {
         if self.mode.is_prompt() {
             if let Some(cursor_position) = self.search.cursor_position() {
-                frame.set_cursor(cursor_position.x, cursor_position.y)
+                frame.set_cursor_position(cursor_position);
             }
         }
     }
