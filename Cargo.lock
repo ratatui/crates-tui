@@ -501,7 +501,7 @@ dependencies = [
 
 [[package]]
 name = "crates-tui"
-version = "0.1.19"
+version = "0.1.20"
 dependencies = [
  "better-panic",
  "cfg-if",
