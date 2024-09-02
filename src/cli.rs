@@ -1,6 +1,9 @@
 use std::path::PathBuf;
 
-use clap::Parser;
+use clap::{
+    builder::{styling::AnsiColor, Styles},
+    Parser,
+};
 use serde::Serialize;
 use serde_with::{serde_as, skip_serializing_none, NoneAsEmptyString};
 use tracing::level_filters::LevelFilter;
@@ -27,6 +30,12 @@ Authors: {author}"
     )
 }
 
+const HELP_STYLES: Styles = Styles::styled()
+    .header(AnsiColor::Blue.on_default().bold())
+    .usage(AnsiColor::Blue.on_default().bold())
+    .literal(AnsiColor::White.on_default())
+    .placeholder(AnsiColor::Green.on_default());
+
 /// Command line arguments.
 ///
 /// Implements Serialize so that we can use it as a source for Figment
@@ -34,7 +43,7 @@ Authors: {author}"
 #[serde_as]
 #[skip_serializing_none]
 #[derive(Debug, Default, Parser, Serialize)]
-#[command(author, version = version(), about, long_about = None)]
+#[command(author, version = version(), about, long_about = None, styles = HELP_STYLES)]
 pub struct Cli {
     /// Print default configuration
     #[arg(long)]
