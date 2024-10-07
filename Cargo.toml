@@ -20,7 +20,7 @@ eula = false
 better-panic = "0.3.0"
 cfg-if = "1.0.0"
 chrono = "0.4.38"
-clap = { version = "4.5.17", features = [
+clap = { version = "4.5.19", features = [
     "derive",
     "cargo",
     "wrap_help",
@@ -36,18 +36,18 @@ crossterm = { version = "0.28.1", features = ["serde", "event-stream"] }
 derive_deref = "1.1.1"
 directories = "5.0.1"
 figment = { version = "0.10.19", features = ["env", "toml", "yaml"] }
-futures = "0.3.28"
+futures = "0.3.31"
 human-panic = "2.0.1"
 itertools = "0.13.0"
 json5 = "0.4.1"
 lazy_static = "1.5.0"
-libc = "0.2.158"
+libc = "0.2.159"
 num-format = "0.4.4"
-pretty_assertions = "1.4.0"
+pretty_assertions = "1.4.1"
 ratatui = { version = "0.28.0", features = ["serde", "macros"] }
 ratatui-macros = "0.5.0"
 serde = { version = "1.0.210", features = ["derive"] }
-serde_with = "3.9.0"
+serde_with = "3.11.0"
 signal-hook = "0.3.17"
 strip-ansi-escapes = "0.2.0"
 strum = { version = "0.26.3", features = ["derive"] }
@@ -66,9 +66,9 @@ tracing-subscriber = { version = "0.3.18", features = [
     "serde_json",
 ] }
 tui-input = "0.10.1"
-unicode-width = "0.1.13"
+unicode-width = "0.2.0"
 uuid = "1.10.0"
-webbrowser = "1.0.1"
+webbrowser = "1.0.2"
 
 [build-dependencies]
 vergen = { version = "8.3.2", features = ["build", "git", "git2", "cargo"] }
