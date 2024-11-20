@@ -132,7 +132,7 @@ impl StatefulWidget for CrateInfoTableWidget {
             )
             .block(Block::default().borders(Borders::ALL))
             .highlight_symbol("\u{2022} ")
-            .highlight_style(config::get().color.base05)
+            .row_highlight_style(config::get().color.base05)
             .highlight_spacing(HighlightSpacing::Always);
 
         if let Some(i) = state.crate_info.selected() {
