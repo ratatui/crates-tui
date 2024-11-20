@@ -1,12 +1,5 @@
 use itertools::Itertools;
-use ratatui::{
-    layout::Flex,
-    prelude::*,
-    widgets::{
-        block::{Position, Title},
-        *,
-    },
-};
+use ratatui::{layout::Flex, prelude::*, widgets::*};
 
 #[derive(Debug, Default, Clone, Copy)]
 pub struct PopupMessageState {
@@ -56,13 +49,11 @@ impl StatefulWidget for &PopupMessageWidget {
             .areas(center);
 
         state.scroll = state.scroll.min(line_count.saturating_sub(1));
-        let instruction = Title::from(vec!["Esc".bold(), " to close".into()])
-            .position(Position::Bottom)
-            .alignment(Alignment::Right);
+        let instruction = Line::from(vec!["Esc".bold(), " to close".into()]).right_aligned();
         let block = Block::bordered()
             .border_style(Color::DarkGray)
             .title(self.title.clone())
-            .title(instruction);
+            .title_bottom(instruction);
         Clear.render(center, buf);
         Paragraph::new(self.message.clone())
             .block(block)

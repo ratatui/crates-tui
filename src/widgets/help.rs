@@ -51,7 +51,7 @@ impl StatefulWidget for &HelpWidget {
             .header(header)
             .column_spacing(5)
             .highlight_symbol(HIGHLIGHT_SYMBOL)
-            .highlight_style(config::get().color.base05)
+            .row_highlight_style(config::get().color.base05)
             .highlight_spacing(HighlightSpacing::Always);
         StatefulWidget::render(table, area, buf, &mut state.state);
     }

@@ -145,7 +145,7 @@ impl StatefulWidget for SearchResultsWidget {
             .header(header)
             .column_spacing(COLUMN_SPACING)
             .highlight_symbol(vertical_pad(highlight_symbol.into()))
-            .highlight_style(config::get().color.base05)
+            .row_highlight_style(config::get().color.base05)
             .highlight_spacing(HighlightSpacing::Always);
 
         StatefulWidget::render(table, table_area, buf, &mut state.table_state);

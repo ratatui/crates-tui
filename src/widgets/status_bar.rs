@@ -138,8 +138,8 @@ impl StatusBarWidget {
             _ => config::get().color.base06,
         };
         Block::default()
-            .title(block::Title::from(Line::from(line)).alignment(Alignment::Right))
-            .title(block::Title::from(self.input_text()).alignment(Alignment::Left))
+            .title(Line::from(line).right_aligned())
+            .title(self.input_text().left_aligned())
             .fg(config::get().color.base05)
             .border_style(border_color)
     }
