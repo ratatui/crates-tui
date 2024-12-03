@@ -98,7 +98,7 @@ impl Summary {
             let suffix = match self.mode {
                 SummaryMode::NewCrates => summary.new_crates[i].name.clone(),
                 SummaryMode::MostDownloaded => summary.most_downloaded[i].name.clone(),
-                SummaryMode::JustUpdated => summary.most_downloaded[i].name.clone(),
+                SummaryMode::JustUpdated => summary.just_updated[i].name.clone(),
                 SummaryMode::MostRecentlyDownloaded => {
                     summary.most_recently_downloaded[i].name.clone()
                 }
@@ -382,10 +382,11 @@ impl StatefulWidget for &SummaryWidget {
 
         let [_, area, _] = Layout::horizontal([Min(0), Percentage(85), Min(0)]).areas(area);
 
-        let [top, bottom] = Layout::vertical([Percentage(50), Percentage(50)])
+        let [t, top, bottom] = Layout::vertical([Length(1), Percentage(50), Percentage(50)])
             .spacing(1)
             .areas(area);
 
+        Span::raw(format! {"{:?}", state.selected(SummaryMode::JustUpdated)}).render(t, buf);
         let [new_crates, most_downloaded, just_updated] =
             Layout::horizontal([Percentage(30), Percentage(30), Percentage(30)])
                 .flex(Flex::Center)
