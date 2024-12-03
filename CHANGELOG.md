@@ -7,6 +7,16 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.22](https://github.com/ratatui/crates-tui/compare/v0.1.21...v0.1.22) - 2024-12-03
+
+### Fixed
+
+- url of `just updated` crates ([#120](https://github.com/ratatui/crates-tui/pull/120))
+
+### Other
+
+- *(deps)* bump the cargo-dependencies group with 6 updates ([#117](https://github.com/ratatui/crates-tui/pull/117))
+
 ## [0.1.21](https://github.com/ratatui/crates-tui/compare/v0.1.20...v0.1.21) - 2024-11-20
 
 ### Other
