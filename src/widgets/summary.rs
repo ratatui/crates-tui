@@ -98,7 +98,7 @@ impl Summary {
             let suffix = match self.mode {
                 SummaryMode::NewCrates => summary.new_crates[i].name.clone(),
                 SummaryMode::MostDownloaded => summary.most_downloaded[i].name.clone(),
-                SummaryMode::JustUpdated => summary.most_downloaded[i].name.clone(),
+                SummaryMode::JustUpdated => summary.just_updated[i].name.clone(),
                 SummaryMode::MostRecentlyDownloaded => {
                     summary.most_recently_downloaded[i].name.clone()
                 }
