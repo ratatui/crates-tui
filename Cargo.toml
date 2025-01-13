@@ -20,7 +20,7 @@ eula = false
 better-panic = "0.3.0"
 cfg-if = "1.0.0"
 chrono = "0.4.39"
-clap = { version = "4.5.23", features = [
+clap = { version = "4.5.26", features = [
     "derive",
     "cargo",
     "wrap_help",
@@ -34,11 +34,11 @@ copypasta = "0.10.1"
 crates_io_api = "0.11.0"
 crossterm = { version = "0.28.1", features = ["serde", "event-stream"] }
 derive_deref = "1.1.1"
-directories = "5.0.1"
+directories = "6.0.0"
 figment = { version = "0.10.19", features = ["env", "toml", "yaml"] }
 futures = "0.3.31"
 human-panic = "2.0.2"
-itertools = "0.13.0"
+itertools = "0.14.0"
 json5 = "0.4.1"
 lazy_static = "1.5.0"
 libc = "0.2.169"
@@ -52,7 +52,7 @@ signal-hook = "0.3.17"
 strip-ansi-escapes = "0.2.0"
 strum = { version = "0.26.3", features = ["derive"] }
 textwrap = "0.16.1"
-tokio = { version = "1.41.1", features = ["full"] }
+tokio = { version = "1.43.0", features = ["full"] }
 tokio-stream = "0.1.17"
 tokio-util = "0.7.13"
 toml = "0.8.16"
@@ -67,7 +67,7 @@ tracing-subscriber = { version = "0.3.19", features = [
 ] }
 tui-input = "0.11.1"
 unicode-width = "0.2.0"
-uuid = "1.11.0"
+uuid = "1.11.1"
 webbrowser = "1.0.3"
 
 [build-dependencies]
