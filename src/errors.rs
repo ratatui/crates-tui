@@ -4,9 +4,7 @@ use color_eyre::{
     config::{EyreHook, HookBuilder, PanicHook},
     eyre::{self, Result},
 };
-use tracing::error;
 
-use crate::tui;
 use cfg_if::cfg_if;
 
 pub fn install_hooks() -> Result<()> {
@@ -46,10 +44,7 @@ fn install_color_eyre_panic_hook(panic_hook: PanicHook) {
     // Fn(&PanicInfo<'_>`
     let panic_hook = panic_hook.into_panic_hook();
     panic::set_hook(Box::new(move |panic_info| {
-        if let Err(err) = tui::restore() {
-            error!("Unable to restore terminal: {err:?}");
-        }
-
+        ratatui::restore();
         // not sure about this
         // let msg = format!("{}", panic_hook.panic_report(panic_info));
         // error!("Error: {}", strip_ansi_escapes::strip_str(msg));
@@ -60,7 +55,7 @@ fn install_color_eyre_panic_hook(panic_hook: PanicHook) {
 fn install_eyre_hook(eyre_hook: EyreHook) -> color_eyre::Result<()> {
     let eyre_hook = eyre_hook.into_eyre_hook();
     eyre::set_hook(Box::new(move |error| {
-        tui::restore().unwrap();
+        ratatui::restore();
         eyre_hook(error)
     }))?;
     Ok(())

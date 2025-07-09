@@ -1,6 +1,9 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
+use std::{
+    io::Stdout,
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc,
+    },
 };
 
 use color_eyre::eyre::Result;
@@ -16,7 +19,6 @@ use crate::{
     config,
     events::{Event, Events},
     serde_helper::keybindings::key_event_to_string,
-    tui::Tui,
     widgets::{
         help::{Help, HelpWidget},
         popup_message::{PopupMessageState, PopupMessageWidget},
@@ -28,6 +30,8 @@ use crate::{
         tabs::SelectedTab,
     },
 };
+
+pub type Tui = Terminal<CrosstermBackend<Stdout>>;
 
 #[derive(
     Default, Debug, Display, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, EnumIs,
