@@ -71,11 +71,11 @@ impl SearchFilterPromptWidget<'_> {
             Mode::Filter => config::get().color.base0b,
             _ => config::get().color.base06,
         };
-        let input_block = Block::default()
+
+        Block::default()
             .borders(borders)
             .fg(config::get().color.base05)
-            .border_style(border_color);
-        input_block
+            .border_style(border_color)
     }
 
     fn sort_by_info(&self) -> impl Widget {
