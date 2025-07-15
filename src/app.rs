@@ -94,8 +94,9 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(query: Option<String>) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
+        let _ = tx.send(Action::Init { query });
         let loading_status = Arc::new(AtomicBool::default());
         let search = SearchPage::new(tx.clone(), loading_status.clone());
         let summary = Summary::new(tx.clone(), loading_status.clone());
@@ -116,17 +117,12 @@ impl App {
     }
 
     /// Runs the main loop of the application, handling events and actions
-    pub async fn run(
-        &mut self,
-        tui: &mut DefaultTerminal,
-        mut events: Events,
-        query: Option<String>,
-    ) -> Result<()> {
+    #[tokio::main]
+    pub async fn run(&mut self, tui: &mut DefaultTerminal) -> Result<()> {
         // uncomment to test error handling
         // panic!("test panic");
         // Err(color_eyre::eyre::eyre!("Error"))?;
-        self.tx.send(Action::Init { query })?;
-
+        let mut events = Events::new();
         loop {
             if let Some(e) = events.next().await {
                 self.handle_event(e)?.map(|action| self.tx.send(action));

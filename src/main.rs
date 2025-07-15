@@ -11,9 +11,8 @@ mod serde_helper;
 mod widgets;
 
 use app::App;
-use color_eyre::eyre::Result;
 
-fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     let cli = cli::parse();
     config::init(&cli)?;
     logging::init()?;
@@ -24,11 +23,6 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
-    let runtime = tokio::runtime::Runtime::new()?;
-    ratatui::run(move |tui| {
-        runtime.block_on(async {
-            let events = events::Events::new();
-            App::new().run(tui, events, cli.query).await
-        })
-    })
+    let mut app = App::new(cli.query);
+    ratatui::run(|tui| app.run(tui))
 }

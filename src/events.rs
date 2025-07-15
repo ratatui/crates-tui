@@ -1,3 +1,4 @@
+use core::fmt;
 use std::{pin::Pin, time::Duration};
 
 use crossterm::event::{Event as CrosstermEvent, *};
@@ -10,6 +11,12 @@ use crate::config;
 
 pub struct Events {
     streams: StreamMap<StreamName, Pin<Box<dyn Stream<Item = Event>>>>,
+}
+
+impl fmt::Debug for Events {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Events").finish_non_exhaustive()
+    }
 }
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash)]
