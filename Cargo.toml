@@ -17,10 +17,10 @@ eula = false
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-better-panic = "0.3.0"
-cfg-if = "1.0.0"
-chrono = "0.4.39"
-clap = { version = "4.5.27", features = [
+better-panic = "0.3"
+cfg-if = "1.0"
+chrono = "0.4"
+clap = { version = "4.5", features = [
     "derive",
     "cargo",
     "wrap_help",
@@ -29,39 +29,35 @@ clap = { version = "4.5.27", features = [
     "unstable-styles",
     "color",
 ] }
-color-eyre = "0.6.3"
-copypasta = "0.10.1"
-crates_io_api = "0.11.0"
-crossterm = { version = "0.28.1", features = ["serde", "event-stream"] }
-derive_deref = "1.1.1"
-directories = "6.0.0"
-figment = { version = "0.10.19", features = ["env", "toml", "yaml"] }
-futures = "0.3.31"
-human-panic = "2.0.2"
-itertools = "0.14.0"
-num-format = "0.4.4"
-ratatui = { version = "0.30.0-alpha.5", features = ["serde", "macros"] }
-serde = { version = "1.0.217", features = ["derive"] }
-serde_with = "3.12.0"
-strum = { version = "0.26.3", features = ["derive"] }
-textwrap = "0.16.1"
-tokio = { version = "1.43.0", features = ["full"] }
-tokio-stream = "0.1.17"
-toml = "0.8.16"
-tracing = "0.1.41"
-tracing-error = "0.2.1"
-tracing-subscriber = { version = "0.3.19", features = [
-    "env-filter",
-    "serde",
-    "serde_json",
-] }
-tui-input = "0.11.1"
-unicode-width = "0.2.0"
-uuid = "1.12.1"
-webbrowser = "1.0.3"
+color-eyre = "0.6"
+copypasta = "0.10"
+crates_io_api = "0.11"
+crossterm = { version = "0.28", features = ["serde", "event-stream"] }
+derive_deref = "1"
+directories = "6"
+figment = { version = "0.10", features = ["env", "toml", "yaml"] }
+futures = "0.3"
+human-panic = "2"
+itertools = "0.14"
+num-format = "0.4"
+ratatui = { version = "0.30.0-alpha", features = ["serde", "macros"] }
+serde = { version = "1", features = ["derive"] }
+serde_with = "3"
+strum = { version = "0.27", features = ["derive"] }
+textwrap = "0.16"
+tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
+toml = "0.9"
+tracing = "0.1"
+tracing-error = "0.2"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "serde", "serde_json"] }
+tui-input = "0.14"
+unicode-width = "0.2"
+uuid = "1"
+webbrowser = "1"
 
 [build-dependencies]
-vergen = { version = "8.3.2", features = ["build", "git", "git2", "cargo"] }
+vergen = { version = "8", features = ["build", "git", "git2", "cargo"] }
 
 # The profile that 'cargo dist' will build with
 [profile.dist]
