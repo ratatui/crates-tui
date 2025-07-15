@@ -130,7 +130,7 @@ impl App {
             while let Ok(action) = self.rx.try_recv() {
                 self.handle_action(action.clone())?;
                 if matches!(action, Action::Resize(_, _) | Action::Render) {
-                    self.draw(tui)?;
+                    tui.draw(|frame| self.render(frame))?;
                 }
             }
             if self.should_quit() {
@@ -267,13 +267,10 @@ impl App {
     }
 
     // Render the `AppWidget` as a stateful widget using `self` as the `State`
-    fn draw(&mut self, tui: &mut DefaultTerminal) -> Result<()> {
-        tui.draw(|frame| {
-            frame.render_stateful_widget(AppWidget, frame.area(), self);
-            self.update_frame_count(frame);
-            self.update_cursor(frame);
-        })?;
-        Ok(())
+    fn render(&mut self, frame: &mut Frame) {
+        frame.render_stateful_widget(AppWidget, frame.area(), self);
+        self.update_frame_count(frame);
+        self.update_cursor(frame);
     }
 }
 
