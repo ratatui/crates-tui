@@ -5,7 +5,7 @@ pub mod keybindings {
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use derive_deref::{Deref, DerefMut};
     use itertools::Itertools;
-    use serde::{de::Deserializer, Deserialize, Serialize, Serializer};
+    use serde::{Deserialize, Serialize, Serializer, de::Deserializer};
 
     use crate::{action::Action, app::Mode, command::Command};
 
@@ -290,12 +290,11 @@ pub mod keybindings {
 
     pub fn parse_key_sequence(raw: &str) -> Result<Vec<KeyEvent>, String> {
         if raw.chars().filter(|c| *c == '>').count() != raw.chars().filter(|c| *c == '<').count() {
-            return Err(format!("Unable to parse `{}`", raw));
+            return Err(format!("Unable to parse `{raw}`"));
         }
         let raw = if !raw.contains("><") {
             let raw = raw.strip_prefix('<').unwrap_or(raw);
-            let raw = raw.strip_prefix('>').unwrap_or(raw);
-            raw
+            raw.strip_prefix('>').unwrap_or(raw)
         } else {
             raw
         };

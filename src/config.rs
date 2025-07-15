@@ -1,14 +1,14 @@
 use std::{env, path::PathBuf, str::FromStr, sync::OnceLock};
 
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::{Result, eyre};
 use directories::ProjectDirs;
 use figment::{
-    providers::{Env, Format, Serialized, Toml, Yaml},
     Figment,
+    providers::{Env, Format, Serialized, Toml, Yaml},
 };
 use ratatui::style::Color;
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, DisplayFromStr, NoneAsEmptyString};
+use serde_with::{DisplayFromStr, NoneAsEmptyString, serde_as};
 use tracing::level_filters::LevelFilter;
 
 use crate::{cli::Cli, serde_helper::keybindings::KeyBindings};

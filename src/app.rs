@@ -1,6 +1,6 @@
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 
 use color_eyre::eyre::Result;
@@ -479,8 +479,7 @@ impl App {
             }
             Err(err) => {
                 let _ = self.tx.send(Action::ShowErrorPopup(format!(
-                    "Unable to create ClipboardContext: {}",
-                    err
+                    "Unable to create ClipboardContext: {err}"
                 )));
             }
         }

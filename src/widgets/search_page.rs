@@ -2,8 +2,8 @@ use color_eyre::Result;
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
     },
 };
 use strum::EnumIs;
@@ -14,7 +14,7 @@ use itertools::Itertools;
 use ratatui::prelude::*;
 use ratatui::{layout::Position, widgets::StatefulWidget};
 use tokio::{sync::mpsc::UnboundedSender, task::JoinHandle};
-use tui_input::{backend::crossterm::EventHandler, Input};
+use tui_input::{Input, backend::crossterm::EventHandler};
 
 use crate::{
     action::Action,
@@ -358,7 +358,7 @@ impl SearchPage {
     pub fn results_status(&self) -> String {
         let selected = self.selected_with_page_context();
         let ncrates = self.total_num_crates.unwrap_or_default();
-        format!("{}/{} Results", selected, ncrates)
+        format!("{selected}/{ncrates} Results")
     }
 
     pub fn selected_with_page_context(&self) -> u64 {

@@ -1,4 +1,4 @@
-use std::io::{stdout, Stdout};
+use std::io::{Stdout, stdout};
 
 use color_eyre::eyre::Result;
 use crossterm::{event::*, execute, terminal::*};

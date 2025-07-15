@@ -3,7 +3,7 @@ use ratatui::{prelude::*, widgets::*};
 
 use crate::{
     app::Mode,
-    command::{Command, ALL_COMMANDS},
+    command::{ALL_COMMANDS, Command},
     config,
 };
 
@@ -109,9 +109,9 @@ fn select_by_mode(state: &mut Help, rows: &[(Mode, Command, String)]) {
 fn into_rows(rows: &[(Mode, Command, String)]) -> impl Iterator<Item = Row<'_>> {
     rows.iter().map(|(mode, command, keys)| {
         Row::new([
-            Line::styled(format!("{} ", mode), Color::DarkGray),
+            Line::styled(format!("{mode} "), Color::DarkGray),
             Line::raw(keys.to_string()),
-            Line::raw(format!("{:?} ", command)),
+            Line::raw(format!("{command:?} ")),
         ])
         .fg(config::get().color.base05)
         .bg(config::get().color.base00)

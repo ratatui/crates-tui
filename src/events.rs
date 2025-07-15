@@ -4,7 +4,7 @@ use crossterm::event::{Event as CrosstermEvent, *};
 use futures::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use tokio::time::interval;
-use tokio_stream::{wrappers::IntervalStream, StreamMap};
+use tokio_stream::{StreamMap, wrappers::IntervalStream};
 
 use crate::config;
 

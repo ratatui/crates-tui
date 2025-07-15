@@ -1,4 +1,4 @@
-use std::sync::{atomic::AtomicBool, Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic::AtomicBool};
 
 use crates_io_api::CratesQuery;
 use tokio::sync::mpsc::UnboundedSender;
