@@ -116,11 +116,10 @@ impl App {
     }
 
     /// Runs the main loop of the application, handling events and actions
-    pub fn run(
+    pub async fn run(
         &mut self,
         tui: &mut DefaultTerminal,
-        runtime: tokio::runtime::Handle,
-        events: Events,
+        mut events: Events,
         query: Option<String>,
     ) -> Result<()> {
         // uncomment to test error handling
@@ -128,11 +127,6 @@ impl App {
         // Err(color_eyre::eyre::eyre!("Error"))?;
         self.tx.send(Action::Init { query })?;
 
-        std::thread::spawn(|| runtime.block_on(async move { self.async_run(tui, events).await }))
-            .join()?
-    }
-
-    async fn async_run(&mut self, tui: &mut DefaultTerminal, mut events: Events) -> Result<()> {
         loop {
             if let Some(e) = events.next().await {
                 self.handle_event(e)?.map(|action| self.tx.send(action));

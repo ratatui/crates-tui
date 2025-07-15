@@ -13,8 +13,7 @@ mod widgets;
 use app::App;
 use color_eyre::eyre::Result;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
     let cli = cli::parse();
     config::init(&cli)?;
     logging::init()?;
@@ -25,7 +24,11 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    let events = events::Events::new();
-    let runtime = tokio::runtime::Handle::current();
-    ratatui::run(move |tui| App::new().run(tui, runtime, events, cli.query))
+    let runtime = tokio::runtime::Runtime::new()?;
+    ratatui::run(move |tui| {
+        runtime.block_on(async {
+            let events = events::Events::new();
+            App::new().run(tui, events, cli.query).await
+        })
+    })
 }
