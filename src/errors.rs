@@ -10,7 +10,7 @@ pub fn install_hooks() -> Result<()> {
             human_panic::setup_panic!();
         }
     }
-    Ok(color_eyre::install()?)
+    color_eyre::install()
 }
 
 #[allow(dead_code)]
