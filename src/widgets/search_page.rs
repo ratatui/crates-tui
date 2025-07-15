@@ -358,7 +358,7 @@ impl SearchPage {
     pub fn results_status(&self) -> String {
         let selected = self.selected_with_page_context();
         let ncrates = self.total_num_crates.unwrap_or_default();
-        format!("{}/{} Results", selected, ncrates)
+        format!("{selected}/{ncrates} Results")
     }
 
     pub fn selected_with_page_context(&self) -> u64 {

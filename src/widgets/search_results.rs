@@ -205,8 +205,7 @@ fn render_table_borders(state: &mut SearchResults, spacers: [Rect; 4], buf: &mut
                     .chain(std::iter::once(" ".into()))
                     .chain(std::iter::once(" ".into()))
                     .chain(
-                        std::iter::repeat(" │".fg(config::get().color.base0f))
-                            .take(space.height as usize),
+                        std::iter::repeat_n(" │".fg(config::get().color.base0f), space.height as usize),
                     )
                     .map(Line::from)
                     .collect_vec(),
