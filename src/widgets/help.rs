@@ -3,7 +3,7 @@ use ratatui::{prelude::*, widgets::*};
 
 use crate::{
     app::Mode,
-    command::{Command, ALL_COMMANDS},
+    command::{ALL_COMMANDS, Command},
     config,
 };
 

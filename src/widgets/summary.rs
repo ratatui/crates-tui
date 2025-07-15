@@ -1,7 +1,7 @@
 use color_eyre::Result;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc, Mutex,
+    atomic::{AtomicBool, Ordering},
 };
 
 use itertools::Itertools;
@@ -407,11 +407,14 @@ impl StatefulWidget for &SummaryWidget {
         let list = state.just_updated();
         self.render_list(just_updated, buf, list, SummaryMode::JustUpdated, state);
 
-        let [most_recently_downloaded, popular_keywords, popular_categories] =
-            Layout::horizontal([Percentage(30), Percentage(30), Percentage(30)])
-                .flex(Flex::Center)
-                .spacing(2)
-                .areas(bottom);
+        let [
+            most_recently_downloaded,
+            popular_keywords,
+            popular_categories,
+        ] = Layout::horizontal([Percentage(30), Percentage(30), Percentage(30)])
+            .flex(Flex::Center)
+            .spacing(2)
+            .areas(bottom);
 
         let list = state.most_recently_downloaded();
         self.render_list(

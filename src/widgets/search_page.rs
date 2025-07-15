@@ -2,8 +2,8 @@ use color_eyre::Result;
 use std::{
     collections::HashMap,
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
     },
 };
 use strum::EnumIs;
@@ -14,7 +14,7 @@ use itertools::Itertools;
 use ratatui::prelude::*;
 use ratatui::{layout::Position, widgets::StatefulWidget};
 use tokio::{sync::mpsc::UnboundedSender, task::JoinHandle};
-use tui_input::{backend::crossterm::EventHandler, Input};
+use tui_input::{Input, backend::crossterm::EventHandler};
 
 use crate::{
     action::Action,

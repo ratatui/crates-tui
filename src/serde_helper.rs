@@ -5,7 +5,7 @@ pub mod keybindings {
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use derive_deref::{Deref, DerefMut};
     use itertools::Itertools;
-    use serde::{de::Deserializer, Deserialize, Serialize, Serializer};
+    use serde::{Deserialize, Serialize, Serializer, de::Deserializer};
 
     use crate::{action::Action, app::Mode, command::Command};
 

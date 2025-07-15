@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
 use clap::{
-    builder::{styling::AnsiColor, Styles},
     Parser,
+    builder::{Styles, styling::AnsiColor},
 };
 use serde::Serialize;
-use serde_with::{serde_as, skip_serializing_none, NoneAsEmptyString};
+use serde_with::{NoneAsEmptyString, serde_as, skip_serializing_none};
 use tracing::level_filters::LevelFilter;
 
 pub fn version() -> String {
