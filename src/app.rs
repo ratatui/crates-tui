@@ -5,7 +5,7 @@ use std::sync::{
 
 use color_eyre::eyre::Result;
 use crossterm::event::{Event as CrosstermEvent, KeyEvent};
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{DefaultTerminal, prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIs};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
@@ -16,7 +16,6 @@ use crate::{
     config,
     events::{Event, Events},
     serde_helper::keybindings::key_event_to_string,
-    tui::Tui,
     widgets::{
         help::{Help, HelpWidget},
         popup_message::{PopupMessageState, PopupMessageWidget},
@@ -117,10 +116,11 @@ impl App {
     }
 
     /// Runs the main loop of the application, handling events and actions
-    pub async fn run(
+    pub fn run(
         &mut self,
-        mut tui: Tui,
-        mut events: Events,
+        tui: &mut DefaultTerminal,
+        runtime: tokio::runtime::Handle,
+        events: Events,
         query: Option<String>,
     ) -> Result<()> {
         // uncomment to test error handling
@@ -128,6 +128,11 @@ impl App {
         // Err(color_eyre::eyre::eyre!("Error"))?;
         self.tx.send(Action::Init { query })?;
 
+        std::thread::spawn(|| runtime.block_on(async move { self.async_run(tui, events).await }))
+            .join()?
+    }
+
+    async fn async_run(&mut self, tui: &mut DefaultTerminal, mut events: Events) -> Result<()> {
         loop {
             if let Some(e) = events.next().await {
                 self.handle_event(e)?.map(|action| self.tx.send(action));
@@ -135,7 +140,7 @@ impl App {
             while let Ok(action) = self.rx.try_recv() {
                 self.handle_action(action.clone())?;
                 if matches!(action, Action::Resize(_, _) | Action::Render) {
-                    self.draw(&mut tui)?;
+                    self.draw(tui)?;
                 }
             }
             if self.should_quit() {
@@ -272,7 +277,7 @@ impl App {
     }
 
     // Render the `AppWidget` as a stateful widget using `self` as the `State`
-    fn draw(&mut self, tui: &mut Tui) -> Result<()> {
+    fn draw(&mut self, tui: &mut DefaultTerminal) -> Result<()> {
         tui.draw(|frame| {
             frame.render_stateful_widget(AppWidget, frame.area(), self);
             self.update_frame_count(frame);
@@ -515,7 +520,7 @@ impl App {
         Some(
             Block::default()
                 .title(title)
-                .title_position(ratatui::widgets::block::Position::Top)
+                .title_position(ratatui::widgets::TitlePosition::Top)
                 .title_alignment(ratatui::layout::Alignment::Right),
         )
     }

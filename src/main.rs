@@ -8,7 +8,6 @@ mod errors;
 mod events;
 mod logging;
 mod serde_helper;
-mod tui;
 mod widgets;
 
 use app::App;
@@ -26,9 +25,7 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    let tui = tui::init()?;
     let events = events::Events::new();
-    App::new().run(tui, events, cli.query).await?;
-    tui::restore()?;
-    Ok(())
+    let runtime = tokio::runtime::Handle::current();
+    ratatui::run(move |tui| App::new().run(tui, runtime, events, cli.query))
 }
