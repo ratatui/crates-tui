@@ -8,14 +8,11 @@ mod errors;
 mod events;
 mod logging;
 mod serde_helper;
-mod tui;
 mod widgets;
 
 use app::App;
-use color_eyre::eyre::Result;
 
-#[tokio::main]
-async fn main() -> Result<()> {
+fn main() -> color_eyre::Result<()> {
     let cli = cli::parse();
     config::init(&cli)?;
     logging::init()?;
@@ -26,9 +23,6 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    let tui = tui::init()?;
-    let events = events::Events::new();
-    App::new().run(tui, events, cli.query).await?;
-    tui::restore()?;
-    Ok(())
+    let mut app = App::new(cli.query);
+    ratatui::run(|tui| app.run(tui))
 }

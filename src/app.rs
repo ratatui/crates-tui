@@ -5,7 +5,7 @@ use std::sync::{
 
 use color_eyre::eyre::Result;
 use crossterm::event::{Event as CrosstermEvent, KeyEvent};
-use ratatui::{prelude::*, widgets::*};
+use ratatui::{DefaultTerminal, prelude::*, widgets::*};
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIs};
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
@@ -16,7 +16,6 @@ use crate::{
     config,
     events::{Event, Events},
     serde_helper::keybindings::key_event_to_string,
-    tui::Tui,
     widgets::{
         help::{Help, HelpWidget},
         popup_message::{PopupMessageState, PopupMessageWidget},
@@ -95,8 +94,9 @@ pub struct App {
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(query: Option<String>) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
+        let _ = tx.send(Action::Init { query });
         let loading_status = Arc::new(AtomicBool::default());
         let search = SearchPage::new(tx.clone(), loading_status.clone());
         let summary = Summary::new(tx.clone(), loading_status.clone());
@@ -117,17 +117,12 @@ impl App {
     }
 
     /// Runs the main loop of the application, handling events and actions
-    pub async fn run(
-        &mut self,
-        mut tui: Tui,
-        mut events: Events,
-        query: Option<String>,
-    ) -> Result<()> {
+    #[tokio::main]
+    pub async fn run(&mut self, tui: &mut DefaultTerminal) -> Result<()> {
         // uncomment to test error handling
         // panic!("test panic");
         // Err(color_eyre::eyre::eyre!("Error"))?;
-        self.tx.send(Action::Init { query })?;
-
+        let mut events = Events::new();
         loop {
             if let Some(e) = events.next().await {
                 self.handle_event(e)?.map(|action| self.tx.send(action));
@@ -135,7 +130,7 @@ impl App {
             while let Ok(action) = self.rx.try_recv() {
                 self.handle_action(action.clone())?;
                 if matches!(action, Action::Resize(_, _) | Action::Render) {
-                    self.draw(&mut tui)?;
+                    tui.draw(|frame| self.render(frame))?;
                 }
             }
             if self.should_quit() {
@@ -272,13 +267,10 @@ impl App {
     }
 
     // Render the `AppWidget` as a stateful widget using `self` as the `State`
-    fn draw(&mut self, tui: &mut Tui) -> Result<()> {
-        tui.draw(|frame| {
-            frame.render_stateful_widget(AppWidget, frame.area(), self);
-            self.update_frame_count(frame);
-            self.update_cursor(frame);
-        })?;
-        Ok(())
+    fn render(&mut self, frame: &mut Frame) {
+        frame.render_stateful_widget(AppWidget, frame.area(), self);
+        self.update_frame_count(frame);
+        self.update_cursor(frame);
     }
 }
 
@@ -515,7 +507,7 @@ impl App {
         Some(
             Block::default()
                 .title(title)
-                .title_position(ratatui::widgets::block::Position::Top)
+                .title_position(ratatui::widgets::TitlePosition::Top)
                 .title_alignment(ratatui::layout::Alignment::Right),
         )
     }
