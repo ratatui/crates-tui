@@ -31,8 +31,8 @@ clap = { version = "4.5", features = [
 ] }
 color-eyre = "0.6"
 copypasta = "0.10"
-crates_io_api = "0.11"
-crossterm = { version = "0.28", features = ["serde", "event-stream"] }
+crates_io_api = "0.12"
+crossterm = { version = "0.29", features = ["serde", "event-stream"] }
 derive_deref = "1"
 directories = "6"
 figment = { version = "0.10", features = ["env", "toml", "yaml"] }
@@ -40,7 +40,7 @@ futures = "0.3"
 human-panic = "2"
 itertools = "0.14"
 num-format = "0.4"
-ratatui = { version = "0.30.0-alpha", features = ["serde", "macros"] }
+ratatui = { version = "0.30.0-beta.0", features = ["serde", "macros"] }
 serde = { version = "1", features = ["derive"] }
 serde_with = "3"
 strum = { version = "0.27", features = ["derive"] }
