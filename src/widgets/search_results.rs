@@ -159,7 +159,7 @@ fn row_from_crate(
     description_column_width: usize,
     index: usize,
     selected_index: usize,
-) -> Row {
+) -> Row<'_> {
     let mut description = textwrap::wrap(
         &krate.description.clone().unwrap_or_default(),
         description_column_width,
