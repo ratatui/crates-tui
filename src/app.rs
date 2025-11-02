@@ -485,14 +485,14 @@ impl App {
 
     // Sets cursor for the prompt
     fn update_cursor(&mut self, frame: &mut Frame<'_>) {
-        if self.mode.is_prompt() {
-            if let Some(cursor_position) = self.search.cursor_position() {
-                frame.set_cursor_position(cursor_position);
-            }
+        if self.mode.is_prompt()
+            && let Some(cursor_position) = self.search.cursor_position()
+        {
+            frame.set_cursor_position(cursor_position);
         }
     }
 
-    fn events_widget(&self) -> Option<Block> {
+    fn events_widget(&self) -> Option<Block<'_>> {
         if self.last_tick_key_events.is_empty() {
             return None;
         }

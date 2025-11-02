@@ -21,7 +21,7 @@ impl Widget for StatusBarWidget {
 }
 
 impl StatusBarWidget {
-    fn input_text(&self) -> Line {
+    fn input_text(&self) -> Line<'_> {
         if self.mode.is_picker() {
             Line::from(vec![
                 self.text.clone().into(),
@@ -34,7 +34,7 @@ impl StatusBarWidget {
         }
     }
 
-    fn status(&self) -> Block {
+    fn status(&self) -> Block<'_> {
         let line = if self.mode.is_filter() {
             let help = config::get()
                 .key_bindings

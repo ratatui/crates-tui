@@ -60,7 +60,7 @@ impl StatefulWidget for SearchFilterPromptWidget<'_> {
 }
 
 impl SearchFilterPromptWidget<'_> {
-    fn input_block(&self) -> Block {
+    fn input_block(&self) -> Block<'_> {
         let borders = if self.search_mode.is_focused() {
             Borders::ALL
         } else {
