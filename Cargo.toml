@@ -1,6 +1,6 @@
 [package]
 name = "crates-tui"
-version = "0.1.25"
+version = "0.1.26"
 edition = "2024"
 description = "A TUI for crates.io"
 license = "MIT"
