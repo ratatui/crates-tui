@@ -7,6 +7,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.26](https://github.com/ratatui/crates-tui/compare/v0.1.25...v0.1.26) - 2026-01-01
+
+### Other
+
+- *(deps)* bump actions/upload-artifact from 4 to 6 ([#166](https://github.com/ratatui/crates-tui/pull/166))
+- *(deps)* bump actions/download-artifact from 4 to 7 ([#165](https://github.com/ratatui/crates-tui/pull/165))
+- *(deps)* bump actions/checkout from 4 to 6 ([#163](https://github.com/ratatui/crates-tui/pull/163))
+- *(deps)* bump the cargo-dependencies group across 1 directory with 18 updates ([#167](https://github.com/ratatui/crates-tui/pull/167))
+- Fix clippy lints ([#161](https://github.com/ratatui/crates-tui/pull/161))
+- bump all deps ([#147](https://github.com/ratatui/crates-tui/pull/147))
+- Upgrade to ratatui 0.30  ([#142](https://github.com/ratatui/crates-tui/pull/142))
+- split jobs so they run in parallel ([#146](https://github.com/ratatui/crates-tui/pull/146))
+- update edition to 2024 ([#143](https://github.com/ratatui/crates-tui/pull/143))
+
 ## [0.1.25](https://github.com/ratatui/crates-tui/compare/v0.1.24...v0.1.25) - 2025-02-05
 
 ### Other
