@@ -236,7 +236,7 @@ impl SearchPage {
 
     pub fn clear_all_previous_task_details_handles(&mut self) {
         *self.full_crate_info.lock().unwrap() = None;
-        for (_, v) in self.last_task_details_handle.iter() {
+        for v in self.last_task_details_handle.values() {
             v.abort()
         }
         self.last_task_details_handle.clear()
